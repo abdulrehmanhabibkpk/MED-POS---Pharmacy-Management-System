@@ -23,6 +23,14 @@ const MainLayout: React.FC = () => {
   const [showMobileScanner, setShowMobileScanner] = useState(false);
 
   useEffect(() => {
+    // Check if opened with ?mode=scanner (PWA shortcut or Android launcher)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('mode') === 'scanner') {
+        setShowMobileScanner(true);
+      }
+    }
+
     const handleOpenMobileScanner = () => {
       setShowMobileScanner(true);
     };
@@ -33,13 +41,13 @@ const MainLayout: React.FC = () => {
     };
   }, []);
 
-  if (!isAuthenticated) {
-    return <LoginScreen />;
-  }
-
-  // If user opens the Android Scanner Gun Terminal view
+  // If user opens the Android Scanner Gun Terminal view directly via PWA or button
   if (showMobileScanner) {
     return <MobileScannerTerminal onBack={() => setShowMobileScanner(false)} />;
+  }
+
+  if (!isAuthenticated) {
+    return <LoginScreen />;
   }
 
   const getPageTitle = () => {

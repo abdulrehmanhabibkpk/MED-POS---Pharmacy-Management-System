@@ -2,17 +2,36 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>MED POS - Pharmacy & General Store Management System</title>
     <meta name="description" content="MED POS - Professional Pharmacy and General Store Point of Sale System with Barcode Billing, Stock Management, Thermal Receipt and Reports." />
-    <meta property="og:title" content="My Google AI Studio App" />
-    <meta property="og:description" content="An application built with Google AI Studio." />
+    
+    <!-- PWA & Android Meta Tags -->
+    <meta name="theme-color" content="#002b49" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MED Scanner" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <meta property="og:title" content="MED POS - Pharmacy Management System" />
+    <meta property="og:description" content="Pharmacy Point of Sale and Mobile Barcode Scanner App." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    
+    <!-- Preload Scanner Beep Sound -->
+    <link rel="preload" href="/freesound_community-store-scanner-beep-90395.mp3" as="audio" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Register PWA Service Worker if supported
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>
-

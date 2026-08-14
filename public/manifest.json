@@ -1,0 +1,24 @@
+{
+  "short_name": "MED Scanner",
+  "name": "MED POS - Barcode Scanner & Terminal",
+  "description": "Android Barcode Scanner & POS Terminal for Pharmacy and Retail Store",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/?mode=scanner",
+  "background_color": "#002b49",
+  "theme_color": "#002b49",
+  "display": "standalone",
+  "orientation": "portrait"
+}
