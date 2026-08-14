@@ -1,0 +1,6 @@
+{
+  "name": "MED POS - Pharmacy Management System",
+  "description": "Comprehensive Pharmacy & General Store Point of Sale (POS) system with Sales Invoicing, Stock Management, Bill History, Credit/Khata, Returns, Day Closing, Expense Tracking, Reports, and Thermal Receipt Printing.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
