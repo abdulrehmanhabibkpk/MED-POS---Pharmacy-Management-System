@@ -21,7 +21,13 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
       setDeferredPrompt(e);
     };
 
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+    };
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
@@ -29,19 +35,34 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
   const handleInstallClick = async () => {
+    // Check if the application is running inside a sandbox preview iframe
+    const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
+
+    if (isInsideIframe) {
+      alert("Aap is waqt AI Studio ke preview iframe ke andar hain, jahan browser security installation block karti hai. Hum aapke liye direct app tab open kar rahe hain, wahan 'Install App' par click karke aap real application install kar sakte hain!");
+      window.open(window.location.href, '_blank');
+      return;
+    }
+
     if (deferredPrompt) {
       deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
-      if (choice.outcome === 'accepted') {
-        setIsInstalled(true);
+      try {
+        const choice = await deferredPrompt.userChoice;
+        if (choice.outcome === 'accepted') {
+          setIsInstalled(true);
+        }
+      } catch (err) {
+        console.error('PWA installation error:', err);
       }
       setDeferredPrompt(null);
     } else {
-      alert('To install HACKTES POS: Open in Chrome/Edge, tap menu (⋮), and click "Install App" or "Add to Home Screen".');
+      // Direct user fallback instructions
+      alert('HACKTES POS install karne ke liye:\n\n1. Browser ke top-right 3-dots (⋮) par click karein.\n2. "Install App" ya "Add to Home Screen" par click karein.');
     }
   };
 
