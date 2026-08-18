@@ -99,15 +99,22 @@ const MainLayout: React.FC = () => {
 
   const hasAccess = (): boolean => {
     if (currentUser) {
-      // Custom permissions based check
+      // Custom permissions based check for all tabs
+      if (activeTab === 'dashboard' && !currentUser.permissions.canDashboard) return false;
       if (activeTab === 'sale-invoice' && !currentUser.permissions.canSale) return false;
       if (activeTab === 'sale-return' && !currentUser.permissions.canReturn) return false;
-      if (activeTab === 'products' && !currentUser.permissions.canStock) return false;
-      if (activeTab === 'purchase-stock' && !currentUser.permissions.canStock) return false;
-      if (activeTab === 'store-settings' && !currentUser.permissions.canSettings) return false;
-      if (activeTab === 'reports' && !currentUser.permissions.canReports) return false;
-      if (activeTab === 'day-closing' && !currentUser.permissions.canReports) return false;
+      if (activeTab === 'bill-history' && !currentUser.permissions.canBillHistory) return false;
+      if (activeTab === 'credit-receive' && !currentUser.permissions.canCreditReceive) return false;
+      if (activeTab === 'purchase-stock' && !currentUser.permissions.canPurchaseStock) return false;
+      if (activeTab === 'products' && !currentUser.permissions.canProducts) return false;
+      if (activeTab === 'suppliers' && !currentUser.permissions.canSuppliers) return false;
+      if (activeTab === 'customers' && !currentUser.permissions.canCustomers) return false;
+      if (activeTab === 'barcode-label' && !currentUser.permissions.canBarcodeLabel) return false;
+      if (activeTab === 'day-closing' && !currentUser.permissions.canDayClosing) return false;
       if (activeTab === 'pay-expense' && !currentUser.permissions.canExpenses) return false;
+      if (activeTab === 'reports' && !currentUser.permissions.canReports) return false;
+      if (activeTab === 'store-settings' && !currentUser.permissions.canSettings) return false;
+      if (activeTab === 'plan-prd' && !currentUser.permissions.canPlanPRD) return false;
       
       // 'master-admin' is ONLY for Master Admin
       if (activeTab === 'master-admin' && currentUser.email.toLowerCase() !== 'alitrader@gmail.com') {

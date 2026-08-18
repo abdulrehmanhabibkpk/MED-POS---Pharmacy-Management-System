@@ -91,15 +91,8 @@ export const BarcodeLabelView: React.FC = () => {
 
   const selectedProduct = products.find((p) => p.id === selectedProductId);
 
-  // Sync search query when selected product changes
-  React.useEffect(() => {
-    if (selectedProduct) {
-      setSearchQuery(`${selectedProduct.name} (${selectedProduct.barcode})`);
-    }
-  }, [selectedProductId, selectedProduct]);
-
   // Filter products based on search query
-  const filteredProducts = searchQuery
+  const filteredProducts = searchQuery.trim()
     ? products.filter(
         (p) =>
           p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -140,6 +133,29 @@ export const BarcodeLabelView: React.FC = () => {
             <span>Label Configuration</span>
           </h3>
 
+          {/* Currently Selected Product Details */}
+          <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-lg">
+            <span className="block text-[10px] font-black text-blue-800 uppercase tracking-wider mb-1">
+              Currently Selected Product:
+            </span>
+            {selectedProduct ? (
+              <div>
+                <div className="font-extrabold text-slate-800 text-xs truncate">{selectedProduct.name}</div>
+                <div className="text-[10px] text-slate-500 font-medium">
+                  Barcode: <span className="font-mono text-slate-800 font-bold">{selectedProduct.barcode}</span>
+                </div>
+                <div className="text-[10px] text-slate-500 font-medium truncate">
+                  Brand: {selectedProduct.company}
+                </div>
+                <div className="text-[11px] font-bold text-emerald-600 mt-1">
+                  Price: Rs. {selectedProduct.retailPrice.toLocaleString()}
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs text-slate-400">No product selected. Use search below.</div>
+            )}
+          </div>
+
           {/* Select Product with live search */}
           <div className="space-y-1.5 relative">
             <label className="block text-xs font-bold text-slate-700">Search & Select Product:</label>
@@ -153,7 +169,7 @@ export const BarcodeLabelView: React.FC = () => {
                 }}
                 onFocus={() => setShowDropdown(true)}
                 onBlur={() => setTimeout(() => setShowDropdown(false), 250)}
-                placeholder="Search by product name, brand or barcode..."
+                placeholder="Type name, brand, or barcode..."
                 className="w-full bg-white border border-slate-300 pl-3 pr-8 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
               />
               {searchQuery && (
@@ -161,7 +177,6 @@ export const BarcodeLabelView: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setSearchQuery('');
-                    setShowDropdown(true);
                   }}
                   className="absolute right-8 text-slate-400 hover:text-slate-600 font-bold text-xs"
                 >
@@ -182,17 +197,16 @@ export const BarcodeLabelView: React.FC = () => {
                       key={p.id}
                       onMouseDown={() => {
                         setSelectedProductId(p.id);
-                        setSearchQuery(`${p.name} (${p.barcode})`);
                         setShowDropdown(false);
                       }}
                       className={`p-2 text-xs hover:bg-blue-50 cursor-pointer flex justify-between items-center ${
                         selectedProductId === p.id ? 'bg-blue-50/50 font-bold' : ''
                       }`}
                     >
-                      <div className="text-left">
-                        <div className="font-semibold text-slate-800">{p.name}</div>
-                        <div className="text-[10px] text-slate-500">
-                          Barcode: {p.barcode} | {p.company}
+                      <div className="text-left truncate max-w-[70%]">
+                        <div className="font-semibold text-slate-800 truncate">{p.name}</div>
+                        <div className="text-[10px] text-slate-500 truncate">
+                          Code: {p.barcode} | {p.company}
                         </div>
                       </div>
                       <div className="font-bold text-[#0070ba] text-[10px] shrink-0 font-mono">

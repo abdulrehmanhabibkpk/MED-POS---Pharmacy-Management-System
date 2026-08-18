@@ -30,12 +30,21 @@ export const MasterAdminView: React.FC = () => {
   const [role, setRole] = useState<UserRole>('Cashier');
   
   // New Account Permissions state
+  const [canDashboard, setCanDashboard] = useState(true);
   const [canSale, setCanSale] = useState(true);
   const [canReturn, setCanReturn] = useState(true);
-  const [canStock, setCanStock] = useState(false);
-  const [canSettings, setCanSettings] = useState(false);
-  const [canReports, setCanReports] = useState(false);
+  const [canBillHistory, setCanBillHistory] = useState(true);
+  const [canCreditReceive, setCanCreditReceive] = useState(false);
+  const [canPurchaseStock, setCanPurchaseStock] = useState(false);
+  const [canProducts, setCanProducts] = useState(false);
+  const [canSuppliers, setCanSuppliers] = useState(false);
+  const [canCustomers, setCanCustomers] = useState(false);
+  const [canBarcodeLabel, setCanBarcodeLabel] = useState(true);
+  const [canDayClosing, setCanDayClosing] = useState(false);
   const [canExpenses, setCanExpenses] = useState(false);
+  const [canReports, setCanReports] = useState(false);
+  const [canSettings, setCanSettings] = useState(false);
+  const [canPlanPRD, setCanPlanPRD] = useState(true);
 
   // Edit Account state
   const [editingAccount, setEditingAccount] = useState<UserAccount | null>(null);
@@ -45,64 +54,127 @@ export const MasterAdminView: React.FC = () => {
   const [editRole, setEditRole] = useState<UserRole>('Cashier');
   
   // Edit Permissions state
+  const [editCanDashboard, setEditCanDashboard] = useState(true);
   const [editCanSale, setEditCanSale] = useState(true);
   const [editCanReturn, setEditCanReturn] = useState(true);
-  const [editCanStock, setEditCanStock] = useState(false);
-  const [editCanSettings, setEditCanSettings] = useState(false);
-  const [editCanReports, setEditCanReports] = useState(false);
+  const [editCanBillHistory, setEditCanBillHistory] = useState(true);
+  const [editCanCreditReceive, setEditCanCreditReceive] = useState(false);
+  const [editCanPurchaseStock, setEditCanPurchaseStock] = useState(false);
+  const [editCanProducts, setEditCanProducts] = useState(false);
+  const [editCanSuppliers, setEditCanSuppliers] = useState(false);
+  const [editCanCustomers, setEditCanCustomers] = useState(false);
+  const [editCanBarcodeLabel, setEditCanBarcodeLabel] = useState(true);
+  const [editCanDayClosing, setEditCanDayClosing] = useState(false);
   const [editCanExpenses, setEditCanExpenses] = useState(false);
+  const [editCanReports, setEditCanReports] = useState(false);
+  const [editCanSettings, setEditCanSettings] = useState(false);
+  const [editCanPlanPRD, setEditCanPlanPRD] = useState(true);
 
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const handleRoleChange = (selectedRole: UserRole) => {
     setRole(selectedRole);
     if (selectedRole === 'Admin') {
+      setCanDashboard(true);
       setCanSale(true);
       setCanReturn(true);
-      setCanStock(true);
+      setCanBillHistory(true);
+      setCanCreditReceive(true);
+      setCanPurchaseStock(true);
+      setCanProducts(true);
+      setCanSuppliers(true);
+      setCanCustomers(true);
+      setCanBarcodeLabel(true);
+      setCanDayClosing(true);
+      setCanExpenses(true);
+      setCanReports(true);
       setCanSettings(true);
-      setCanReports(true);
-      setCanExpenses(true);
+      setCanPlanPRD(true);
     } else if (selectedRole === 'Manager') {
+      setCanDashboard(true);
       setCanSale(true);
       setCanReturn(true);
-      setCanStock(true);
-      setCanSettings(false);
-      setCanReports(true);
+      setCanBillHistory(true);
+      setCanCreditReceive(true);
+      setCanPurchaseStock(true);
+      setCanProducts(true);
+      setCanSuppliers(true);
+      setCanCustomers(true);
+      setCanBarcodeLabel(true);
+      setCanDayClosing(true);
       setCanExpenses(true);
+      setCanReports(true);
+      setCanSettings(false);
+      setCanPlanPRD(false);
     } else {
+      setCanDashboard(true);
       setCanSale(true);
       setCanReturn(true);
-      setCanStock(false);
-      setCanSettings(false);
-      setCanReports(false);
+      setCanBillHistory(true);
+      setCanCreditReceive(false);
+      setCanPurchaseStock(false);
+      setCanProducts(false);
+      setCanSuppliers(false);
+      setCanCustomers(false);
+      setCanBarcodeLabel(true);
+      setCanDayClosing(false);
       setCanExpenses(false);
+      setCanReports(false);
+      setCanSettings(false);
+      setCanPlanPRD(true);
     }
   };
 
   const handleEditRoleChange = (selectedRole: UserRole) => {
     setEditRole(selectedRole);
     if (selectedRole === 'Admin') {
+      setEditCanDashboard(true);
       setEditCanSale(true);
       setEditCanReturn(true);
-      setEditCanStock(true);
+      setEditCanBillHistory(true);
+      setEditCanCreditReceive(true);
+      setEditCanPurchaseStock(true);
+      setEditCanProducts(true);
+      setEditCanSuppliers(true);
+      setEditCanCustomers(true);
+      setEditCanBarcodeLabel(true);
+      setEditCanDayClosing(true);
+      setEditCanExpenses(true);
+      setEditCanReports(true);
       setEditCanSettings(true);
-      setEditCanReports(true);
-      setEditCanExpenses(true);
+      setEditCanPlanPRD(true);
     } else if (selectedRole === 'Manager') {
+      setEditCanDashboard(true);
       setEditCanSale(true);
       setEditCanReturn(true);
-      setEditCanStock(true);
-      setEditCanSettings(false);
-      setEditCanReports(true);
+      setEditCanBillHistory(true);
+      setEditCanCreditReceive(true);
+      setEditCanPurchaseStock(true);
+      setEditCanProducts(true);
+      setEditCanSuppliers(true);
+      setEditCanCustomers(true);
+      setEditCanBarcodeLabel(true);
+      setEditCanDayClosing(true);
       setEditCanExpenses(true);
+      setEditCanReports(true);
+      setEditCanSettings(false);
+      setEditCanPlanPRD(false);
     } else {
+      setEditCanDashboard(true);
       setEditCanSale(true);
       setEditCanReturn(true);
-      setEditCanStock(false);
-      setEditCanSettings(false);
-      setEditCanReports(false);
+      setEditCanBillHistory(true);
+      setEditCanCreditReceive(false);
+      setEditCanPurchaseStock(false);
+      setEditCanProducts(false);
+      setEditCanSuppliers(false);
+      setEditCanCustomers(false);
+      setEditCanBarcodeLabel(true);
+      setEditCanDayClosing(false);
       setEditCanExpenses(false);
+      setEditCanReports(false);
+      setEditCanSettings(false);
+      setEditCanPlanPRD(true);
     }
   };
 
@@ -126,12 +198,21 @@ export const MasterAdminView: React.FC = () => {
       password: password,
       role: role,
       permissions: {
+        canDashboard,
         canSale,
         canReturn,
-        canStock,
-        canSettings,
-        canReports,
+        canBillHistory,
+        canCreditReceive,
+        canPurchaseStock,
+        canProducts,
+        canSuppliers,
+        canCustomers,
+        canBarcodeLabel,
+        canDayClosing,
         canExpenses,
+        canReports,
+        canSettings,
+        canPlanPRD,
       },
     });
 
@@ -142,12 +223,21 @@ export const MasterAdminView: React.FC = () => {
     setEmail('');
     setPassword('');
     setRole('Cashier');
+    setCanDashboard(true);
     setCanSale(true);
     setCanReturn(true);
-    setCanStock(false);
-    setCanSettings(false);
-    setCanReports(false);
+    setCanBillHistory(true);
+    setCanCreditReceive(false);
+    setCanPurchaseStock(false);
+    setCanProducts(false);
+    setCanSuppliers(false);
+    setCanCustomers(false);
+    setCanBarcodeLabel(true);
+    setCanDayClosing(false);
     setCanExpenses(false);
+    setCanReports(false);
+    setCanSettings(false);
+    setCanPlanPRD(true);
   };
 
   const handleStartEdit = (acc: UserAccount) => {
@@ -156,12 +246,21 @@ export const MasterAdminView: React.FC = () => {
     setEditEmail(acc.email);
     setEditPassword(acc.password || '');
     setEditRole(acc.role);
+    setEditCanDashboard(acc.permissions.canDashboard ?? true);
     setEditCanSale(acc.permissions.canSale);
     setEditCanReturn(acc.permissions.canReturn);
-    setEditCanStock(acc.permissions.canStock);
-    setEditCanSettings(acc.permissions.canSettings);
-    setEditCanReports(acc.permissions.canReports);
+    setEditCanBillHistory(acc.permissions.canBillHistory ?? true);
+    setEditCanCreditReceive(acc.permissions.canCreditReceive ?? true);
+    setEditCanPurchaseStock(acc.permissions.canPurchaseStock ?? true);
+    setEditCanProducts(acc.permissions.canProducts ?? true);
+    setEditCanSuppliers(acc.permissions.canSuppliers ?? true);
+    setEditCanCustomers(acc.permissions.canCustomers ?? true);
+    setEditCanBarcodeLabel(acc.permissions.canBarcodeLabel ?? true);
+    setEditCanDayClosing(acc.permissions.canDayClosing ?? true);
     setEditCanExpenses(acc.permissions.canExpenses);
+    setEditCanReports(acc.permissions.canReports);
+    setEditCanSettings(acc.permissions.canSettings);
+    setEditCanPlanPRD(acc.permissions.canPlanPRD ?? true);
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
@@ -189,12 +288,21 @@ export const MasterAdminView: React.FC = () => {
       password: editPassword,
       role: editRole,
       permissions: {
+        canDashboard: editCanDashboard,
         canSale: editCanSale,
         canReturn: editCanReturn,
-        canStock: editCanStock,
-        canSettings: editCanSettings,
-        canReports: editCanReports,
+        canBillHistory: editCanBillHistory,
+        canCreditReceive: editCanCreditReceive,
+        canPurchaseStock: editCanPurchaseStock,
+        canProducts: editCanProducts,
+        canSuppliers: editCanSuppliers,
+        canCustomers: editCanCustomers,
+        canBarcodeLabel: editCanBarcodeLabel,
+        canDayClosing: editCanDayClosing,
         canExpenses: editCanExpenses,
+        canReports: editCanReports,
+        canSettings: editCanSettings,
+        canPlanPRD: editCanPlanPRD,
       },
     });
 
@@ -318,7 +426,12 @@ export const MasterAdminView: React.FC = () => {
                       </div>
 
                       {/* Permissions Flags row */}
-                      <div className="flex flex-wrap gap-1.5 mt-2">
+                      <div className="flex flex-wrap gap-1.5 mt-2 max-w-md">
+                        {acc.permissions.canDashboard && (
+                          <span className="bg-slate-50 border border-slate-200 text-slate-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Dashboard
+                          </span>
+                        )}
                         {acc.permissions.canSale && (
                           <span className="bg-emerald-50 border border-emerald-100 text-emerald-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
                             Sales
@@ -329,9 +442,44 @@ export const MasterAdminView: React.FC = () => {
                             Returns
                           </span>
                         )}
-                        {acc.permissions.canStock && (
-                          <span className="bg-blue-50 border border-blue-100 text-blue-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
-                            Stock
+                        {acc.permissions.canBillHistory && (
+                          <span className="bg-teal-50 border border-teal-100 text-teal-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Bill History
+                          </span>
+                        )}
+                        {acc.permissions.canCreditReceive && (
+                          <span className="bg-indigo-50 border border-indigo-100 text-indigo-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Khata
+                          </span>
+                        )}
+                        {acc.permissions.canPurchaseStock && (
+                          <span className="bg-cyan-50 border border-cyan-100 text-cyan-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Purchase
+                          </span>
+                        )}
+                        {acc.permissions.canProducts && (
+                          <span className="bg-violet-50 border border-violet-100 text-violet-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Products
+                          </span>
+                        )}
+                        {acc.permissions.canSuppliers && (
+                          <span className="bg-orange-50 border border-orange-100 text-orange-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Suppliers
+                          </span>
+                        )}
+                        {acc.permissions.canCustomers && (
+                          <span className="bg-sky-50 border border-sky-100 text-sky-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Customers
+                          </span>
+                        )}
+                        {acc.permissions.canBarcodeLabel && (
+                          <span className="bg-lime-50 border border-lime-100 text-lime-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Barcode Label
+                          </span>
+                        )}
+                        {acc.permissions.canDayClosing && (
+                          <span className="bg-pink-50 border border-pink-100 text-pink-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Day Closing
                           </span>
                         )}
                         {acc.permissions.canExpenses && (
@@ -347,6 +495,11 @@ export const MasterAdminView: React.FC = () => {
                         {acc.permissions.canSettings && (
                           <span className="bg-slate-50 border border-slate-100 text-slate-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
                             Settings
+                          </span>
+                        )}
+                        {acc.permissions.canPlanPRD && (
+                          <span className="bg-[#e0f7fa] border border-[#b2ebf2] text-[#006064] text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Roadmap
                           </span>
                         )}
                       </div>
@@ -460,9 +613,19 @@ export const MasterAdminView: React.FC = () => {
                 {/* Granular Permissions Checkboxes */}
                 <div className="pt-2 border-t border-slate-100">
                   <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
-                    CUSTOMIZE PERMISSIONS
+                    CUSTOMIZE PERMISSIONS (Toggle Menu Items & Buttons)
                   </span>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 max-h-[280px] overflow-y-auto pr-1">
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanDashboard}
+                        onChange={(e) => setEditCanDashboard(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Dashboard Tab</span>
+                    </label>
+
                     <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
                       <input
                         type="checkbox"
@@ -470,7 +633,7 @@ export const MasterAdminView: React.FC = () => {
                         onChange={(e) => setEditCanSale(e.target.checked)}
                         className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
                       />
-                      <span className="text-[11px] font-medium text-slate-700">Sale Register</span>
+                      <span className="text-[11px] font-semibold text-slate-700">Sale Invoice Tab</span>
                     </label>
 
                     <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
@@ -480,17 +643,87 @@ export const MasterAdminView: React.FC = () => {
                         onChange={(e) => setEditCanReturn(e.target.checked)}
                         className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
                       />
-                      <span className="text-[11px] font-medium text-slate-700">Sale Return</span>
+                      <span className="text-[11px] font-semibold text-slate-700">Sale Return Tab</span>
                     </label>
 
                     <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
                       <input
                         type="checkbox"
-                        checked={editCanStock}
-                        onChange={(e) => setEditCanStock(e.target.checked)}
+                        checked={editCanBillHistory}
+                        onChange={(e) => setEditCanBillHistory(e.target.checked)}
                         className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
                       />
-                      <span className="text-[11px] font-medium text-slate-700">Manage Stock</span>
+                      <span className="text-[11px] font-semibold text-slate-700">Bill History Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanCreditReceive}
+                        onChange={(e) => setEditCanCreditReceive(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Credit Receive Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanPurchaseStock}
+                        onChange={(e) => setEditCanPurchaseStock(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Purchase Stock Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanProducts}
+                        onChange={(e) => setEditCanProducts(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Products Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanSuppliers}
+                        onChange={(e) => setEditCanSuppliers(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Suppliers Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanCustomers}
+                        onChange={(e) => setEditCanCustomers(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Customers Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanBarcodeLabel}
+                        onChange={(e) => setEditCanBarcodeLabel(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Barcode Generator</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanDayClosing}
+                        onChange={(e) => setEditCanDayClosing(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Day Closing Tab</span>
                     </label>
 
                     <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
@@ -500,7 +733,7 @@ export const MasterAdminView: React.FC = () => {
                         onChange={(e) => setEditCanExpenses(e.target.checked)}
                         className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
                       />
-                      <span className="text-[11px] font-medium text-slate-700">Expenses</span>
+                      <span className="text-[11px] font-semibold text-slate-700">Pay Expense Tab</span>
                     </label>
 
                     <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none col-span-2">
@@ -510,7 +743,7 @@ export const MasterAdminView: React.FC = () => {
                         onChange={(e) => setEditCanReports(e.target.checked)}
                         className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
                       />
-                      <span className="text-[11px] font-medium text-slate-700">Reports & Analysis</span>
+                      <span className="text-[11px] font-semibold text-slate-700">Reports & Analytics Tab</span>
                     </label>
 
                     <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none col-span-2">
@@ -520,7 +753,17 @@ export const MasterAdminView: React.FC = () => {
                         onChange={(e) => setEditCanSettings(e.target.checked)}
                         className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
                       />
-                      <span className="text-[11px] font-medium text-slate-700">Store Settings & Reset</span>
+                      <span className="text-[11px] font-semibold text-slate-700">Store Settings Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={editCanPlanPRD}
+                        onChange={(e) => setEditCanPlanPRD(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Interactive Roadmap Tab</span>
                     </label>
                   </div>
                 </div>
@@ -607,9 +850,19 @@ export const MasterAdminView: React.FC = () => {
                 {/* Granular Permissions Checkboxes */}
                 <div className="pt-2 border-t border-slate-100">
                   <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
-                    SET CUSTOM PERMISSIONS
+                    SET CUSTOM PERMISSIONS (Toggle Menu Items & Buttons)
                   </span>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 max-h-[280px] overflow-y-auto pr-1">
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canDashboard}
+                        onChange={(e) => setCanDashboard(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Dashboard Tab</span>
+                    </label>
+
                     <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
                       <input
                         type="checkbox"
@@ -617,7 +870,7 @@ export const MasterAdminView: React.FC = () => {
                         onChange={(e) => setCanSale(e.target.checked)}
                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
                       />
-                      <span className="text-[11px] font-medium text-slate-700">Sale Register</span>
+                      <span className="text-[11px] font-semibold text-slate-700">Sale Invoice Tab</span>
                     </label>
 
                     <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
@@ -627,17 +880,87 @@ export const MasterAdminView: React.FC = () => {
                         onChange={(e) => setCanReturn(e.target.checked)}
                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
                       />
-                      <span className="text-[11px] font-medium text-slate-700">Sale Return</span>
+                      <span className="text-[11px] font-semibold text-slate-700">Sale Return Tab</span>
                     </label>
 
                     <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
                       <input
                         type="checkbox"
-                        checked={canStock}
-                        onChange={(e) => setCanStock(e.target.checked)}
+                        checked={canBillHistory}
+                        onChange={(e) => setCanBillHistory(e.target.checked)}
                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
                       />
-                      <span className="text-[11px] font-medium text-slate-700">Manage Stock</span>
+                      <span className="text-[11px] font-semibold text-slate-700">Bill History Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canCreditReceive}
+                        onChange={(e) => setCanCreditReceive(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Credit Receive Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canPurchaseStock}
+                        onChange={(e) => setCanPurchaseStock(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Purchase Stock Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canProducts}
+                        onChange={(e) => setCanProducts(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Products Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canSuppliers}
+                        onChange={(e) => setCanSuppliers(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Suppliers Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canCustomers}
+                        onChange={(e) => setCanCustomers(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Customers Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canBarcodeLabel}
+                        onChange={(e) => setCanBarcodeLabel(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Barcode Generator</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canDayClosing}
+                        onChange={(e) => setCanDayClosing(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Day Closing Tab</span>
                     </label>
 
                     <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
@@ -647,7 +970,7 @@ export const MasterAdminView: React.FC = () => {
                         onChange={(e) => setCanExpenses(e.target.checked)}
                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
                       />
-                      <span className="text-[11px] font-medium text-slate-700">Expenses</span>
+                      <span className="text-[11px] font-semibold text-slate-700">Pay Expense Tab</span>
                     </label>
 
                     <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none col-span-2">
@@ -657,7 +980,7 @@ export const MasterAdminView: React.FC = () => {
                         onChange={(e) => setCanReports(e.target.checked)}
                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
                       />
-                      <span className="text-[11px] font-medium text-slate-700">Reports & Analysis</span>
+                      <span className="text-[11px] font-semibold text-slate-700">Reports & Analytics Tab</span>
                     </label>
 
                     <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none col-span-2">
@@ -667,7 +990,17 @@ export const MasterAdminView: React.FC = () => {
                         onChange={(e) => setCanSettings(e.target.checked)}
                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
                       />
-                      <span className="text-[11px] font-medium text-slate-700">Store Settings & Reset</span>
+                      <span className="text-[11px] font-semibold text-slate-700">Store Settings Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={canPlanPRD}
+                        onChange={(e) => setCanPlanPRD(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Interactive Roadmap Tab</span>
                     </label>
                   </div>
                 </div>

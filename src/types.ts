@@ -116,12 +116,21 @@ export interface Customer {
 }
 
 export interface UserPermissions {
+  canDashboard: boolean;
   canSale: boolean;
   canReturn: boolean;
-  canStock: boolean;
-  canSettings: boolean;
-  canReports: boolean;
+  canBillHistory: boolean;
+  canCreditReceive: boolean;
+  canPurchaseStock: boolean;
+  canProducts: boolean;
+  canSuppliers: boolean;
+  canCustomers: boolean;
+  canBarcodeLabel: boolean;
+  canDayClosing: boolean;
   canExpenses: boolean;
+  canReports: boolean;
+  canSettings: boolean;
+  canPlanPRD: boolean;
 }
 
 export interface UserAccount {

@@ -54,6 +54,45 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
     });
   }
 
+  const visibleNavItems = navItems.filter((item) => {
+    // If master admin account, they can see EVERYTHING
+    if (currentUser?.email.toLowerCase() === 'alitrader@gmail.com') {
+      return true;
+    }
+    
+    if (currentUser) {
+      switch (item.id) {
+        case 'dashboard': return currentUser.permissions.canDashboard;
+        case 'sale-invoice': return currentUser.permissions.canSale;
+        case 'sale-return': return currentUser.permissions.canReturn;
+        case 'bill-history': return currentUser.permissions.canBillHistory;
+        case 'credit-receive': return currentUser.permissions.canCreditReceive;
+        case 'purchase-stock': return currentUser.permissions.canPurchaseStock;
+        case 'products': return currentUser.permissions.canProducts;
+        case 'suppliers': return currentUser.permissions.canSuppliers;
+        case 'customers': return currentUser.permissions.canCustomers;
+        case 'barcode-label': return currentUser.permissions.canBarcodeLabel;
+        case 'day-closing': return currentUser.permissions.canDayClosing;
+        case 'pay-expense': return currentUser.permissions.canExpenses;
+        case 'reports': return currentUser.permissions.canReports;
+        case 'store-settings': return currentUser.permissions.canSettings;
+        case 'plan-prd': return currentUser.permissions.canPlanPRD;
+        default: return true;
+      }
+    }
+    
+    // Fallback based on userRole
+    if (userRole === 'Cashier') {
+      const cashierAllowed: ActiveTab[] = ['dashboard', 'sale-invoice', 'sale-return', 'bill-history', 'barcode-label', 'plan-prd'];
+      return cashierAllowed.includes(item.id);
+    }
+    if (userRole === 'Manager') {
+      const managerRestricted: ActiveTab[] = ['store-settings', 'master-admin'];
+      return !managerRestricted.includes(item.id);
+    }
+    return true;
+  });
+
   return (
     <>
       {/* Mobile Backdrop Overlay */}
@@ -81,8 +120,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
             className="p-4 flex items-center justify-between border-b border-[#003366] cursor-pointer hover:bg-[#002d59] transition-colors"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#0070ba] flex items-center justify-center text-white shadow-inner">
-                <Pill className="w-6 h-6 rotate-45" />
+              <div className="w-10 h-10 rounded-full bg-[#001c38] flex items-center justify-center text-white overflow-hidden shrink-0 border border-[#003366] p-1">
+                <img 
+                  src="/WhatsApp_Image_2026-08-07_at_11.56.27_PM-removebg-preview.png" 
+                  alt="HACKTES Logo" 
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // Show fallback pill if image fails to load
+                    e.currentTarget.style.display = 'none';
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      const fallback = document.createElement('div');
+                      fallback.className = 'text-white flex items-center justify-center';
+                      fallback.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pill w-6 h-6 rotate-45"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"></path><path d="m8.5 8.5 7 7"></path></svg>';
+                      parent.appendChild(fallback);
+                    }
+                  }}
+                />
               </div>
               <div>
                 <h1 className="text-base font-black tracking-wide leading-none text-white flex items-center gap-1">
@@ -177,7 +231,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
 
           {/* Navigation List */}
           <nav id="sidebar-nav" className="py-2 space-y-0.5 px-2 max-h-[calc(100vh-270px)] overflow-y-auto no-scrollbar">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = activeTab === item.id;
               return (
                 <button
