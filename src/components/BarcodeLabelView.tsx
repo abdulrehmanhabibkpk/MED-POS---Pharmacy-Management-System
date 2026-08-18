@@ -102,7 +102,29 @@ export const BarcodeLabelView: React.FC = () => {
     : products;
 
   const handlePrint = () => {
+    const printContent = document.getElementById('barcode-sticker-print-area');
+    if (!printContent) {
+      alert('Error: Could not find barcode sticker print area!');
+      return;
+    }
+
+    // Create temporary print-only container
+    const tempContainer = document.createElement('div');
+    tempContainer.id = 'barcode-sticker-print-temp';
+    tempContainer.innerHTML = printContent.innerHTML;
+    document.body.appendChild(tempContainer);
+
+    // Set printing-barcodes class to toggle print layout stylesheet
+    document.body.classList.add('printing-barcodes');
+
+    // Trigger Native Print Dialog
     window.print();
+
+    // Instantly restore and clean up the DOM
+    document.body.classList.remove('printing-barcodes');
+    if (document.body.contains(tempContainer)) {
+      document.body.removeChild(tempContainer);
+    }
   };
 
   // Label configuration details

@@ -135,4 +135,60 @@
   #thermal-receipt-paper.paper-58mm * {
     font-size: inherit;
   }
+
+  /* Force print background graphics for all printing */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }
+
+/* ==========================================
+   BARCODE LABEL STICKER PRINTING RULES
+   ========================================== */
+@media print {
+  body.printing-barcodes {
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  body.printing-barcodes #root {
+    display: none !important;
+  }
+
+  body.printing-barcodes #barcode-sticker-print-temp {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 16px !important;
+    justify-content: center !important;
+    align-items: center !important;
+    background: #ffffff !important;
+    padding: 10px !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  body.printing-barcodes #barcode-sticker-print-temp * {
+    visibility: visible !important;
+  }
+  
+  /* Maintain layout, borders, and colors on the printed sticker labels */
+  body.printing-barcodes #barcode-sticker-print-temp > div {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border: 1px solid #000000 !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    box-shadow: none !important;
+  }
+}
+
