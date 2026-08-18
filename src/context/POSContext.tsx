@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import {
   Product,
   SaleInvoice,
@@ -12,6 +12,8 @@ import {
   UserRole,
   Supplier,
   Customer,
+  CustomerTransaction,
+  SupplierTransaction,
   UserPermissions,
   UserAccount,
 } from '../types';
@@ -22,6 +24,8 @@ import {
   initialCredits,
   initialExpenses,
   initialStoreSettings,
+  initialCustomerTransactions,
+  initialSupplierTransactions,
 } from '../data/initialData';
 
 interface POSContextType {
@@ -39,14 +43,23 @@ interface POSContextType {
   importProducts: (newProducts: Product[]) => void;
   sales: SaleInvoice[];
   addSale: (sale: Omit<SaleInvoice, 'id' | 'invoiceNo'>) => SaleInvoice;
+  updateSale: (sale: SaleInvoice) => void;
+  deleteSale: (id: string) => void;
   returns: SaleReturn[];
   addReturn: (ret: Omit<SaleReturn, 'id' | 'date'>) => void;
+  updateReturn: (ret: SaleReturn) => void;
+  deleteReturn: (id: string) => void;
   purchases: PurchaseRecord[];
   addPurchase: (p: Omit<PurchaseRecord, 'id' | 'date'>) => void;
+  updatePurchase: (p: PurchaseRecord) => void;
+  deletePurchase: (id: string) => void;
   credits: CreditPayment[];
   addCredit: (c: Omit<CreditPayment, 'id' | 'date'>) => void;
+  updateCredit: (c: CreditPayment) => void;
+  deleteCredit: (id: string) => void;
   expenses: ExpenseRecord[];
   addExpense: (e: Omit<ExpenseRecord, 'id' | 'date'>) => void;
+  updateExpense: (e: ExpenseRecord) => void;
   deleteExpense: (id: string) => void;
   suppliers: Supplier[];
   addSupplier: (s: Omit<Supplier, 'id'>) => void;
@@ -56,6 +69,14 @@ interface POSContextType {
   addCustomer: (c: Omit<Customer, 'id'>) => void;
   updateCustomer: (c: Customer) => void;
   deleteCustomer: (id: string) => void;
+  customerTransactions: CustomerTransaction[];
+  addCustomerTransaction: (tx: Omit<CustomerTransaction, 'id'>) => void;
+  updateCustomerTransaction: (tx: CustomerTransaction) => void;
+  deleteCustomerTransaction: (id: string) => void;
+  supplierTransactions: SupplierTransaction[];
+  addSupplierTransaction: (tx: Omit<SupplierTransaction, 'id'>) => void;
+  updateSupplierTransaction: (tx: SupplierTransaction) => void;
+  deleteSupplierTransaction: (id: string) => void;
   storeSettings: StoreSettings;
   updateStoreSettings: (s: StoreSettings) => void;
   previewInvoice: SaleInvoice | null;
@@ -235,6 +256,16 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ];
   });
 
+  const [customerTransactions, setCustomerTransactions] = useState<CustomerTransaction[]>(() => {
+    const saved = localStorage.getItem('medpos_customer_transactions');
+    return saved ? JSON.parse(saved) : initialCustomerTransactions;
+  });
+
+  const [supplierTransactions, setSupplierTransactions] = useState<SupplierTransaction[]>(() => {
+    const saved = localStorage.getItem('medpos_supplier_transactions');
+    return saved ? JSON.parse(saved) : initialSupplierTransactions;
+  });
+
   const [previewInvoice, setPreviewInvoice] = useState<SaleInvoice | null>(null);
   const [thermalPaperSize, setThermalPaperSize] = useState<ThermalPaperSize>(() => {
     const saved = localStorage.getItem('medpos_thermal_paper_size');
@@ -285,6 +316,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('medpos_customers', JSON.stringify(customers));
   }, [customers]);
+
+  useEffect(() => {
+    localStorage.setItem('medpos_customer_transactions', JSON.stringify(customerTransactions));
+  }, [customerTransactions]);
+
+  useEffect(() => {
+    localStorage.setItem('medpos_supplier_transactions', JSON.stringify(supplierTransactions));
+  }, [supplierTransactions]);
 
   useEffect(() => {
     localStorage.setItem('medpos_user_accounts', JSON.stringify(userAccounts));
@@ -440,6 +479,28 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `cust-${Date.now()}`,
     };
     setCustomers((prev) => [newCust, ...prev]);
+
+    // If opening balance is entered, create an opening transaction
+    if (c.balanceReceivable > 0) {
+      const now = new Date();
+      const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+      const opTx: CustomerTransaction = {
+        id: `ctx-${Date.now()}`,
+        customerId: newCust.id,
+        customerName: newCust.name,
+        date: formattedDate,
+        type: 'OPENING_BALANCE',
+        referenceNo: `#OP-${Math.floor(100 + Math.random() * 900)}`,
+        description: 'Opening Khata Balance',
+        itemsSummary: 'Opening account balance carried forward',
+        debit: c.balanceReceivable,
+        credit: 0,
+        balance: c.balanceReceivable,
+        paymentMethod: 'Cash',
+        notes: 'Initial opening balance',
+      };
+      setCustomerTransactions((prev) => [opTx, ...prev]);
+    }
   };
 
   const updateCustomer = (c: Customer) => {
@@ -448,6 +509,91 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteCustomer = (id: string) => {
     setCustomers((prev) => prev.filter((item) => item.id !== id));
+    setCustomerTransactions((prev) => prev.filter((tx) => tx.customerId !== id));
+  };
+
+  const addCustomerTransaction = (txData: Omit<CustomerTransaction, 'id'>) => {
+    const newTx: CustomerTransaction = {
+      ...txData,
+      id: `ctx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    };
+
+    setCustomerTransactions((prev) => [newTx, ...prev]);
+
+    // Sync Customer balance
+    setCustomers((prev) =>
+      prev.map((c) => {
+        if (c.id === txData.customerId || c.name.toLowerCase() === txData.customerName.toLowerCase()) {
+          const delta = txData.debit - txData.credit;
+          return { ...c, balanceReceivable: c.balanceReceivable + delta };
+        }
+        return c;
+      })
+    );
+  };
+
+  const updateCustomerTransaction = (updatedTx: CustomerTransaction) => {
+    setCustomerTransactions((prev) =>
+      prev.map((tx) => (tx.id === updatedTx.id ? updatedTx : tx))
+    );
+  };
+
+  const deleteCustomerTransaction = (id: string) => {
+    const target = customerTransactions.find((tx) => tx.id === id);
+    if (target) {
+      setCustomers((prev) =>
+        prev.map((c) => {
+          if (c.id === target.customerId || c.name.toLowerCase() === target.customerName.toLowerCase()) {
+            const delta = target.debit - target.credit;
+            return { ...c, balanceReceivable: Math.max(0, c.balanceReceivable - delta) };
+          }
+          return c;
+        })
+      );
+    }
+    setCustomerTransactions((prev) => prev.filter((tx) => tx.id !== id));
+  };
+
+  const addSupplierTransaction = (txData: Omit<SupplierTransaction, 'id'>) => {
+    const newTx: SupplierTransaction = {
+      ...txData,
+      id: `stx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    };
+
+    setSupplierTransactions((prev) => [newTx, ...prev]);
+
+    // Sync Supplier balance
+    setSuppliers((prev) =>
+      prev.map((s) => {
+        if (s.id === txData.supplierId || s.name.toLowerCase() === txData.supplierName.toLowerCase()) {
+          const delta = txData.credit - txData.debit;
+          return { ...s, balanceOwed: Math.max(0, s.balanceOwed + delta) };
+        }
+        return s;
+      })
+    );
+  };
+
+  const updateSupplierTransaction = (updatedTx: SupplierTransaction) => {
+    setSupplierTransactions((prev) =>
+      prev.map((tx) => (tx.id === updatedTx.id ? updatedTx : tx))
+    );
+  };
+
+  const deleteSupplierTransaction = (id: string) => {
+    const target = supplierTransactions.find((tx) => tx.id === id);
+    if (target) {
+      setSuppliers((prev) =>
+        prev.map((s) => {
+          if (s.id === target.supplierId || s.name.toLowerCase() === target.supplierName.toLowerCase()) {
+            const delta = target.credit - target.debit;
+            return { ...s, balanceOwed: Math.max(0, s.balanceOwed - delta) };
+          }
+          return s;
+        })
+      );
+    }
+    setSupplierTransactions((prev) => prev.filter((tx) => tx.id !== id));
   };
 
   const addSale = (saleData: Omit<SaleInvoice, 'id' | 'invoiceNo'>): SaleInvoice => {
@@ -476,6 +622,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return newSale;
   };
 
+  const updateSale = (updatedSale: SaleInvoice) => {
+    setSales((prev) => prev.map((s) => (s.id === updatedSale.id ? updatedSale : s)));
+  };
+
+  const deleteSale = (id: string) => {
+    setSales((prev) => prev.filter((s) => s.id !== id));
+  };
+
   const addReturn = (ret: Omit<SaleReturn, 'id' | 'date'>) => {
     const now = new Date();
     const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
@@ -497,6 +651,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     setReturns((prev) => [newReturn, ...prev]);
+  };
+
+  const updateReturn = (updatedRet: SaleReturn) => {
+    setReturns((prev) => prev.map((r) => (r.id === updatedRet.id ? updatedRet : r)));
+  };
+
+  const deleteReturn = (id: string) => {
+    setReturns((prev) => prev.filter((r) => r.id !== id));
   };
 
   const addPurchase = (pur: Omit<PurchaseRecord, 'id' | 'date'>) => {
@@ -545,6 +707,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPurchases((prev) => [newPurchase, ...prev]);
   };
 
+  const updatePurchase = (updatedPur: PurchaseRecord) => {
+    setPurchases((prev) => prev.map((p) => (p.id === updatedPur.id ? updatedPur : p)));
+  };
+
+  const deletePurchase = (id: string) => {
+    setPurchases((prev) => prev.filter((p) => p.id !== id));
+  };
+
   const addCredit = (c: Omit<CreditPayment, 'id' | 'date'>) => {
     const now = new Date();
     const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
@@ -557,6 +727,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCredits((prev) => [newCredit, ...prev]);
   };
 
+  const updateCredit = (updatedCredit: CreditPayment) => {
+    setCredits((prev) => prev.map((c) => (c.id === updatedCredit.id ? updatedCredit : c)));
+  };
+
+  const deleteCredit = (id: string) => {
+    setCredits((prev) => prev.filter((c) => c.id !== id));
+  };
+
   const addExpense = (e: Omit<ExpenseRecord, 'id' | 'date'>) => {
     const now = new Date();
     const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
@@ -567,6 +745,10 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: formattedDate,
     };
     setExpenses((prev) => [newExpense, ...prev]);
+  };
+
+  const updateExpense = (updatedExpense: ExpenseRecord) => {
+    setExpenses((prev) => prev.map((e) => (e.id === updatedExpense.id ? updatedExpense : e)));
   };
 
   const deleteExpense = (id: string) => {
@@ -583,6 +765,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPurchases(initialPurchases);
     setCredits(initialCredits);
     setExpenses(initialExpenses);
+    setCustomerTransactions(initialCustomerTransactions);
+    setSupplierTransactions(initialSupplierTransactions);
     setReturns([]);
     setStoreSettings(initialStoreSettings);
     localStorage.clear();
@@ -596,6 +780,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       purchases,
       credits,
       expenses,
+      customerTransactions,
+      supplierTransactions,
       storeSettings,
       exportedAt: new Date().toISOString(),
     };
@@ -617,6 +803,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (parsed.purchases) setPurchases(parsed.purchases);
       if (parsed.credits) setCredits(parsed.credits);
       if (parsed.expenses) setExpenses(parsed.expenses);
+      if (parsed.customerTransactions) setCustomerTransactions(parsed.customerTransactions);
+      if (parsed.supplierTransactions) setSupplierTransactions(parsed.supplierTransactions);
       if (parsed.storeSettings) setStoreSettings(parsed.storeSettings);
       return true;
     } catch {
@@ -648,14 +836,23 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         importProducts,
         sales,
         addSale,
+        updateSale,
+        deleteSale,
         returns,
         addReturn,
+        updateReturn,
+        deleteReturn,
         purchases,
         addPurchase,
+        updatePurchase,
+        deletePurchase,
         credits,
         addCredit,
+        updateCredit,
+        deleteCredit,
         expenses,
         addExpense,
+        updateExpense,
         deleteExpense,
         suppliers,
         addSupplier,
@@ -665,6 +862,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addCustomer,
         updateCustomer,
         deleteCustomer,
+        customerTransactions,
+        addCustomerTransaction,
+        updateCustomerTransaction,
+        deleteCustomerTransaction,
+        supplierTransactions,
+        addSupplierTransaction,
+        updateSupplierTransaction,
+        deleteSupplierTransaction,
         storeSettings,
         updateStoreSettings,
         previewInvoice,

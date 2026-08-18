@@ -488,6 +488,7 @@ export const ProductsView: React.FC = () => {
                 <th className="py-2.5 px-3 font-semibold text-right">Purchase</th>
                 <th className="py-2.5 px-3 font-semibold text-right">Retail</th>
                 <th className="py-2.5 px-3 font-semibold text-right">Wholesale</th>
+                <th className="py-2.5 px-3 font-semibold text-center">Profit Margin</th>
                 <th className="py-2.5 px-3 font-semibold text-center">Stock</th>
                 <th className="py-2.5 px-3 font-semibold">Category</th>
                 <th className="py-2.5 px-3 font-semibold text-center">Actions</th>
@@ -496,75 +497,113 @@ export const ProductsView: React.FC = () => {
             <tbody className="divide-y divide-slate-100">
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-10 text-center text-slate-400">
+                  <td colSpan={10} className="py-10 text-center text-slate-400">
                     No products found matching your search.
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map((p, idx) => (
-                  <tr
-                    key={p.id}
-                    className={`transition-colors ${
-                      idx === 0
-                        ? 'bg-[#0078d7] text-white font-medium hover:bg-[#006bbd]'
-                        : 'hover:bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    <td className="py-2.5 px-3 font-mono">{p.barcode}</td>
-                    <td className="py-2.5 px-3 font-semibold">{p.name}</td>
-                    <td className="py-2.5 px-3">{p.company}</td>
-                    <td className="py-2.5 px-3 text-right">
-                      {storeSettings.currency}{' '}
-                      {p.purchasePrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-2.5 px-3 text-right">
-                      {storeSettings.currency}{' '}
-                      {p.retailPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-2.5 px-3 text-right">
-                      {storeSettings.currency}{' '}
-                      {p.wholesalePrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-2.5 px-3 text-center font-bold">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded text-xs ${
-                          p.stock <= p.minStockAlert
-                            ? idx === 0
-                              ? 'bg-amber-300 text-amber-900 font-black'
-                              : 'bg-red-100 text-red-700 font-black'
-                            : ''
-                        }`}
-                      >
-                        {p.stock}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3">{p.category}</td>
-                    <td className="py-2.5 px-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(p)}
-                          className={`p-1 hover:scale-110 transition-transform ${
-                            idx === 0 ? 'text-white' : 'text-[#0070ba]'
+                filteredProducts.map((p, idx) => {
+                  const profit = p.retailPrice - p.purchasePrice;
+                  const marginPercent = p.purchasePrice > 0
+                    ? ((profit / p.purchasePrice) * 100)
+                    : (p.retailPrice > 0 ? 100 : 0);
+
+                  return (
+                    <tr
+                      key={p.id}
+                      className={`transition-colors ${
+                        idx === 0
+                          ? 'bg-[#0078d7] text-white font-medium hover:bg-[#006bbd]'
+                          : 'hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      <td className="py-2.5 px-3 font-mono">{p.barcode}</td>
+                      <td className="py-2.5 px-3 font-semibold">{p.name}</td>
+                      <td className="py-2.5 px-3">{p.company}</td>
+                      <td className="py-2.5 px-3 text-right">
+                        {storeSettings.currency}{' '}
+                        {p.purchasePrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        {storeSettings.currency}{' '}
+                        {p.retailPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        {storeSettings.currency}{' '}
+                        {p.wholesalePrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <div className="inline-flex flex-col items-center justify-center">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
+                              idx === 0
+                                ? profit >= 0
+                                  ? 'bg-emerald-300 text-emerald-950 font-black'
+                                  : 'bg-rose-300 text-rose-950 font-black'
+                                : profit > 0
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : profit < 0
+                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                : 'bg-slate-100 text-slate-600 border border-slate-200'
+                            }`}
+                            title={`Purchase: ${storeSettings.currency} ${p.purchasePrice.toFixed(2)} | Retail: ${storeSettings.currency} ${p.retailPrice.toFixed(2)} | Unit Profit: ${storeSettings.currency} ${profit.toFixed(2)}`}
+                          >
+                            {profit > 0 ? '+' : ''}{marginPercent.toFixed(1)}%
+                          </span>
+                          <span
+                            className={`text-[9px] font-semibold mt-0.5 ${
+                              idx === 0
+                                ? 'text-white/80'
+                                : profit >= 0
+                                ? 'text-emerald-600'
+                                : 'text-rose-600'
+                            }`}
+                          >
+                            {profit >= 0 ? '+' : ''}{storeSettings.currency} {profit.toFixed(1)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3 text-center font-bold">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-xs ${
+                            p.stock <= p.minStockAlert
+                              ? idx === 0
+                                ? 'bg-amber-300 text-amber-900 font-black'
+                                : 'bg-red-100 text-red-700 font-black'
+                              : ''
                           }`}
-                          title="Edit Product"
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteProduct(p.id, p.name)}
-                          className={`p-1 hover:scale-110 transition-transform ${
-                            idx === 0 ? 'text-rose-200' : 'text-red-500'
-                          }`}
-                          title="Delete Product"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {p.stock}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3">{p.category}</td>
+                      <td className="py-2.5 px-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(p)}
+                            className={`p-1 hover:scale-110 transition-transform ${
+                              idx === 0 ? 'text-white' : 'text-[#0070ba]'
+                            }`}
+                            title="Edit Product"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProduct(p.id, p.name)}
+                            className={`p-1 hover:scale-110 transition-transform ${
+                              idx === 0 ? 'text-rose-200' : 'text-red-500'
+                            }`}
+                            title="Delete Product"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -713,6 +752,34 @@ export const ProductsView: React.FC = () => {
                 </div>
               </div>
 
+              {/* Live Profit Margin Calculator Indicator */}
+              {retailPrice > 0 && (
+                <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-sm flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-700 text-[11px]">Profit Margin:</span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-xs font-black ${
+                        retailPrice - purchasePrice > 0
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : retailPrice - purchasePrice < 0
+                          ? 'bg-rose-100 text-rose-800'
+                          : 'bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {purchasePrice > 0
+                        ? `${(((retailPrice - purchasePrice) / purchasePrice) * 100).toFixed(1)}%`
+                        : '100.0%'}
+                    </span>
+                  </div>
+                  <div className="text-[11px] font-bold text-slate-700">
+                    Unit Margin:{' '}
+                    <span className={retailPrice - purchasePrice >= 0 ? 'text-emerald-700 font-black' : 'text-rose-700 font-black'}>
+                      {retailPrice - purchasePrice >= 0 ? '+' : ''}{storeSettings.currency} {(retailPrice - purchasePrice).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Current Stock Qty:</label>
@@ -811,31 +878,52 @@ export const ProductsView: React.FC = () => {
                       <th className="py-2 px-2">Category</th>
                       <th className="py-2 px-2 text-right">Purchase Price</th>
                       <th className="py-2 px-2 text-right">Retail Selling Price</th>
+                      <th className="py-2 px-2 text-center">Profit Margin</th>
                       <th className="py-2 px-2 text-center">Opening Stock</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-sans">
-                    {importPreviewList.map((p, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50">
-                        <td className="py-2 px-2 font-mono text-slate-600">{p.barcode}</td>
-                        <td className="py-2 px-2 font-bold text-slate-800">{p.name}</td>
-                        <td className="py-2 px-2 text-slate-600">{p.company}</td>
-                        <td className="py-2 px-2 text-slate-600">
-                          <span className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded-xs text-[9px] uppercase font-bold">
-                            {p.category}
-                          </span>
-                        </td>
-                        <td className="py-2 px-2 text-right text-slate-600 font-mono">
-                          {storeSettings.currency} {p.purchasePrice.toFixed(2)}
-                        </td>
-                        <td className="py-2 px-2 text-right text-slate-800 font-bold font-mono">
-                          {storeSettings.currency} {p.retailPrice.toFixed(2)}
-                        </td>
-                        <td className="py-2 px-2 text-center text-emerald-700 font-bold font-mono bg-emerald-50/30">
-                          {p.stock}
-                        </td>
-                      </tr>
-                    ))}
+                    {importPreviewList.map((p, idx) => {
+                      const profit = p.retailPrice - p.purchasePrice;
+                      const marginPct = p.purchasePrice > 0
+                        ? ((profit / p.purchasePrice) * 100)
+                        : (p.retailPrice > 0 ? 100 : 0);
+
+                      return (
+                        <tr key={idx} className="hover:bg-slate-50">
+                          <td className="py-2 px-2 font-mono text-slate-600">{p.barcode}</td>
+                          <td className="py-2 px-2 font-bold text-slate-800">{p.name}</td>
+                          <td className="py-2 px-2 text-slate-600">{p.company}</td>
+                          <td className="py-2 px-2 text-slate-600">
+                            <span className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded-xs text-[9px] uppercase font-bold">
+                              {p.category}
+                            </span>
+                          </td>
+                          <td className="py-2 px-2 text-right text-slate-600 font-mono">
+                            {storeSettings.currency} {p.purchasePrice.toFixed(2)}
+                          </td>
+                          <td className="py-2 px-2 text-right text-slate-800 font-bold font-mono">
+                            {storeSettings.currency} {p.retailPrice.toFixed(2)}
+                          </td>
+                          <td className="py-2 px-2 text-center">
+                            <span
+                              className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                profit > 0
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : profit < 0
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                  : 'bg-slate-100 text-slate-600'
+                              }`}
+                            >
+                              {profit > 0 ? '+' : ''}{marginPct.toFixed(1)}%
+                            </span>
+                          </td>
+                          <td className="py-2 px-2 text-center text-emerald-700 font-bold font-mono bg-emerald-50/30">
+                            {p.stock}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

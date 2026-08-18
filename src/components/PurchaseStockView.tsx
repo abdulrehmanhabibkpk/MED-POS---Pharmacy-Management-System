@@ -1,12 +1,13 @@
 import React, { useState, useCallback } from 'react';
-import { Package, Search, CheckCircle2, History, Box, ScanLine } from 'lucide-react';
+import { Package, Search, CheckCircle2, History, Box, ScanLine, Edit2, Trash2, Check, X, Printer } from 'lucide-react';
 import { usePOS } from '../context/POSContext';
+import { PurchaseRecord } from '../types';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 import { useHardwareScanner } from '../hooks/useHardwareScanner';
 import { posSound } from '../utils/audio';
 
 export const PurchaseStockView: React.FC = () => {
-  const { products, addPurchase, purchases, storeSettings } = usePOS();
+  const { products, addPurchase, updatePurchase, deletePurchase, purchases, storeSettings } = usePOS();
 
   const [supplierName, setSupplierName] = useState('');
   const [barcode, setBarcode] = useState('');
@@ -17,6 +18,9 @@ export const PurchaseStockView: React.FC = () => {
   const [wholesalePrice, setWholesalePrice] = useState<number>(0);
   const [successMsg, setSuccessMsg] = useState('');
   const [showScannerModal, setShowScannerModal] = useState(false);
+
+  // Edit Modal State
+  const [editingPurchase, setEditingPurchase] = useState<PurchaseRecord | null>(null);
 
   const fetchItemByCode = useCallback((codeToFind: string) => {
     const cleanCode = codeToFind.trim();
@@ -97,13 +101,13 @@ export const PurchaseStockView: React.FC = () => {
   const totalPurchasesAmount = purchases.reduce((acc, p) => acc + p.totalCost, 0);
 
   return (
-    <div id="purchase-stock-container" className="p-6 bg-[#f4f7fa] min-h-full space-y-6">
+    <div id="purchase-stock-container" className="p-4 sm:p-6 bg-[#f4f7fa] min-h-full space-y-6 max-w-7xl mx-auto pb-12">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Form: Stock Purchase Entry (5 cols) */}
+        {/* Left Form: Receive Stock (5 cols) */}
         <div className="lg:col-span-5 bg-white border border-slate-200 p-5 shadow-xs">
           <div className="flex items-center gap-2 text-[#002b49] font-bold text-sm mb-4 border-b border-slate-100 pb-3">
             <Package className="w-5 h-5 text-[#28a745]" />
-            <span>Stock Purchase Entry</span>
+            <span>Receive New Stock / Purchase In</span>
           </div>
 
           {successMsg && (
@@ -116,109 +120,102 @@ export const PurchaseStockView: React.FC = () => {
           <form onSubmit={handleSavePurchase} className="space-y-3.5">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Supplier Name:
+                Distributor / Supplier Name:
               </label>
               <input
-                id="pur-supplier"
+                id="purchase-supplier-name"
                 type="text"
                 value={supplierName}
                 onChange={(e) => setSupplierName(e.target.value)}
-                placeholder="e.g. Al-Madina Pharma Distributors"
+                placeholder="e.g. Al-Madina Medicine Distributors"
                 className="w-full bg-white border border-slate-300 px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-[#28a745]"
               />
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-semibold text-slate-700">
-                  Barcode (Scan Here):
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowScannerModal(true)}
-                  className="text-[11px] text-[#0070ba] hover:text-[#005a96] font-bold flex items-center gap-1"
-                  title="Scan with Camera"
-                >
-                  <span>Camera Scan</span>
-                </button>
-              </div>
-              <div className="flex gap-2">
-                <div className="relative flex-1 flex items-center">
-                  <input
-                    id="pur-barcode"
-                    type="text"
-                    value={barcode}
-                    onChange={(e) => setBarcode(e.target.value)}
-                    placeholder="Scan or enter barcode..."
-                    className="w-full bg-white border border-slate-300 pl-3 pr-9 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-[#28a745]"
-                    required
-                  />
-                  {/* Small Barcode Scanner Button */}
-                  <button
-                    type="button"
-                    onClick={() => setShowScannerModal(true)}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-600 hover:text-[#0070ba] hover:bg-slate-100 rounded transition-colors group"
-                    title="Open Camera Scanner"
-                  >
-                    <div className="relative flex items-center justify-center w-5 h-4 bg-slate-50 border border-slate-300 rounded-xs group-hover:border-[#0070ba]">
-                      <span className="font-mono text-[7px] font-black tracking-tighter text-slate-800">||||</span>
-                      <div className="absolute inset-x-0 h-0.5 bg-red-500"></div>
-                    </div>
-                  </button>
-                </div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Medicine Barcode / Code *:
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="purchase-barcode-input"
+                  type="text"
+                  required
+                  value={barcode}
+                  onChange={(e) => setBarcode(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleFetchItem();
+                    }
+                  }}
+                  placeholder="Scan or enter barcode..."
+                  className="flex-1 bg-white border border-slate-300 px-3 py-1.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-[#28a745]"
+                />
                 <button
                   type="button"
                   onClick={handleFetchItem}
-                  className="bg-[#0070ba] hover:bg-[#005a96] text-white font-bold px-3 py-1.5 text-xs flex items-center gap-1 shrink-0 shadow-xs"
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 text-xs border border-slate-300 cursor-pointer"
+                  title="Search registered product"
                 >
                   <Search className="w-3.5 h-3.5" />
-                  <span>Fetch Item</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowScannerModal(true)}
+                  className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-300 font-bold px-2.5 py-1.5 text-xs flex items-center gap-1 cursor-pointer"
+                  title="Open Camera Scanner"
+                >
+                  <ScanLine className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Item Name:</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Medicine / Item Name *:
+              </label>
               <input
-                id="pur-item-name"
+                id="purchase-item-name"
                 type="text"
+                required
                 value={itemName}
                 onChange={(e) => setItemName(e.target.value)}
-                placeholder="e.g. Cooking Oil 5L / Panadol Extra"
+                placeholder="e.g. Panadol 500mg Strip 10s"
                 className="w-full bg-white border border-slate-300 px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-[#28a745]"
-                required
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Qty Received:
+                  Quantity Received *:
                 </label>
                 <input
-                  id="pur-qty"
+                  id="purchase-qty-input"
                   type="number"
+                  required
                   min="1"
                   value={qtyReceived}
                   onChange={(e) => setQtyReceived(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full bg-white border border-slate-300 px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-[#28a745]"
-                  required
+                  className="w-full bg-white border border-slate-300 px-3 py-1.5 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-[#28a745]"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Unit Cost Price ({storeSettings.currency}):
+                  Unit Cost Price ({storeSettings.currency}) *:
                 </label>
                 <input
-                  id="pur-cost-price"
+                  id="purchase-unit-cost"
                   type="number"
+                  required
                   min="0"
                   step="any"
                   value={unitCostPrice === 0 ? '' : unitCostPrice}
                   onChange={(e) => setUnitCostPrice(parseFloat(e.target.value) || 0)}
                   placeholder="0.00"
-                  className="w-full bg-white border border-slate-300 px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-[#28a745]"
+                  className="w-full bg-white border border-slate-300 px-3 py-1.5 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-[#28a745]"
                 />
               </div>
             </div>
@@ -226,33 +223,31 @@ export const PurchaseStockView: React.FC = () => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Sale Price (Retail):
+                  Retail Sale Price ({storeSettings.currency}):
                 </label>
                 <input
-                  id="pur-retail-price"
                   type="number"
                   min="0"
                   step="any"
                   value={salePriceRetail === 0 ? '' : salePriceRetail}
                   onChange={(e) => setSalePriceRetail(parseFloat(e.target.value) || 0)}
                   placeholder="0.00"
-                  className="w-full bg-white border border-slate-300 px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-[#28a745]"
+                  className="w-full bg-white border border-slate-300 px-3 py-1.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-[#28a745]"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Wholesale Price:
+                  Wholesale Price ({storeSettings.currency}):
                 </label>
                 <input
-                  id="pur-wholesale-price"
                   type="number"
                   min="0"
                   step="any"
                   value={wholesalePrice === 0 ? '' : wholesalePrice}
                   onChange={(e) => setWholesalePrice(parseFloat(e.target.value) || 0)}
                   placeholder="0.00"
-                  className="w-full bg-white border border-slate-300 px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-[#28a745]"
+                  className="w-full bg-white border border-slate-300 px-3 py-1.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-[#28a745]"
                 />
               </div>
             </div>
@@ -261,10 +256,10 @@ export const PurchaseStockView: React.FC = () => {
               <button
                 id="btn-save-purchase-stock"
                 type="submit"
-                className="bg-[#28a745] hover:bg-[#218838] text-white font-bold py-2 px-6 text-xs flex items-center gap-2 shadow transition-colors active:scale-[0.98]"
+                className="bg-[#28a745] hover:bg-[#218838] text-white font-bold py-2 px-6 text-xs flex items-center gap-2 shadow transition-colors cursor-pointer"
               >
                 <Box className="w-4 h-4" />
-                <span>Save Purchase</span>
+                <span>Save Stock Purchase</span>
               </button>
             </div>
           </form>
@@ -275,11 +270,11 @@ export const PurchaseStockView: React.FC = () => {
           <div className="p-3 border-b border-slate-200 flex items-center justify-between">
             <div className="flex items-center gap-2 text-slate-800 font-bold text-xs">
               <History className="w-4 h-4 text-[#28a745]" />
-              <span>Purchase History</span>
+              <span>Purchase History & Stock In Log</span>
             </div>
             <div className="text-xs text-slate-600 font-medium">
               Total Purchases:{' '}
-              <strong className="text-[#28a745]">
+              <strong className="text-[#28a745] font-mono">
                 {storeSettings.currency} {totalPurchasesAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </strong>
             </div>
@@ -296,30 +291,53 @@ export const PurchaseStockView: React.FC = () => {
                   <th className="py-2.5 px-3 font-semibold text-center">Qty</th>
                   <th className="py-2.5 px-3 font-semibold text-right">Cost Price</th>
                   <th className="py-2.5 px-3 font-semibold text-right">Total Cost</th>
+                  <th className="py-2.5 px-3 font-semibold text-center">Manage</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {purchases.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-slate-400">
+                    <td colSpan={8} className="py-10 text-center text-slate-400">
                       No stock receiving records found.
                     </td>
                   </tr>
                 ) : (
                   purchases.map((p) => (
-                    <tr key={p.id} className="hover:bg-green-50 text-slate-700">
-                      <td className="py-2.5 px-3">{p.date}</td>
+                    <tr key={p.id} className="hover:bg-green-50 text-slate-700 transition-colors">
+                      <td className="py-2.5 px-3 font-mono text-[11px] text-slate-500">{p.date}</td>
                       <td className="py-2.5 px-3 font-medium text-slate-900">{p.supplierName}</td>
-                      <td className="py-2.5 px-3 font-mono">{p.barcode}</td>
-                      <td className="py-2.5 px-3">{p.itemName}</td>
-                      <td className="py-2.5 px-3 text-center font-bold">{p.qtyReceived}</td>
-                      <td className="py-2.5 px-3 text-right">
+                      <td className="py-2.5 px-3 font-mono font-bold">{p.barcode}</td>
+                      <td className="py-2.5 px-3 font-bold text-slate-900">{p.itemName}</td>
+                      <td className="py-2.5 px-3 text-center font-bold text-emerald-800">{p.qtyReceived}</td>
+                      <td className="py-2.5 px-3 text-right font-mono font-bold">
                         {storeSettings.currency}{' '}
                         {p.unitCostPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-bold text-[#28a745]">
+                      <td className="py-2.5 px-3 text-right font-bold text-[#28a745] font-mono">
                         {storeSettings.currency}{' '}
                         {p.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => setEditingPurchase(p)}
+                            className="p-1 text-slate-600 hover:text-blue-600 rounded hover:bg-slate-100"
+                            title="Edit Stock Purchase"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Delete purchase record for "${p.itemName}"?`)) {
+                                deletePurchase(p.id);
+                              }
+                            }}
+                            className="p-1 text-slate-600 hover:text-red-600 rounded hover:bg-slate-100"
+                            title="Delete Record"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -329,6 +347,113 @@ export const PurchaseStockView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Purchase Record Modal */}
+      {editingPurchase && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white max-w-lg w-full border border-slate-300 shadow-2xl animate-in fade-in text-slate-800 rounded-xs">
+            <div className="bg-[#28a745] text-white p-3.5 flex items-center justify-between">
+              <span className="font-bold text-xs uppercase tracking-wider">
+                ✏️ Edit Purchase Record ({editingPurchase.itemName})
+              </span>
+              <button onClick={() => setEditingPurchase(null)} className="text-slate-300 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                updatePurchase({
+                  ...editingPurchase,
+                  totalCost: editingPurchase.unitCostPrice * editingPurchase.qtyReceived,
+                });
+                setEditingPurchase(null);
+              }}
+              className="p-5 space-y-3 text-xs"
+            >
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Item / Medicine Name:</label>
+                <input
+                  type="text"
+                  value={editingPurchase.itemName}
+                  onChange={(e) => setEditingPurchase({ ...editingPurchase, itemName: e.target.value })}
+                  className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 focus:outline-none focus:border-[#28a745]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Barcode:</label>
+                  <input
+                    type="text"
+                    value={editingPurchase.barcode}
+                    onChange={(e) => setEditingPurchase({ ...editingPurchase, barcode: e.target.value })}
+                    className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 font-mono focus:outline-none focus:border-[#28a745]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Supplier / Distributor:</label>
+                  <input
+                    type="text"
+                    value={editingPurchase.supplierName}
+                    onChange={(e) => setEditingPurchase({ ...editingPurchase, supplierName: e.target.value })}
+                    className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 focus:outline-none focus:border-[#28a745]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Qty Received:</label>
+                  <input
+                    type="number"
+                    value={editingPurchase.qtyReceived}
+                    onChange={(e) => setEditingPurchase({ ...editingPurchase, qtyReceived: parseInt(e.target.value) || 1 })}
+                    className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 font-mono font-bold focus:outline-none focus:border-[#28a745]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Unit Cost Price:</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editingPurchase.unitCostPrice}
+                    onChange={(e) => setEditingPurchase({ ...editingPurchase, unitCostPrice: parseFloat(e.target.value) || 0 })}
+                    className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 font-mono font-bold focus:outline-none focus:border-[#28a745]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Retail Sale Price:</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editingPurchase.salePriceRetail}
+                    onChange={(e) => setEditingPurchase({ ...editingPurchase, salePriceRetail: parseFloat(e.target.value) || 0 })}
+                    className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 font-mono focus:outline-none focus:border-[#28a745]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setEditingPurchase(null)}
+                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-1.5 text-xs font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-[#28a745] hover:bg-[#218838] text-white px-5 py-1.5 text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Update Purchase</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Barcode Scanner Modal */}
       <BarcodeScannerModal

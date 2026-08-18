@@ -1,16 +1,36 @@
 import React, { useState } from 'react';
-import { Plus, Search, Edit2, Trash2, Phone, Mail, MapPin, User, FileText, TrendingDown, TrendingUp, DollarSign, Check, X, AlertCircle } from 'lucide-react';
+import {
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  Phone,
+  Mail,
+  MapPin,
+  User,
+  FileText,
+  TrendingDown,
+  TrendingUp,
+  DollarSign,
+  Check,
+  X,
+  AlertCircle,
+  Receipt,
+  BookOpen,
+  Printer,
+  Download
+} from 'lucide-react';
 import { usePOS } from '../context/POSContext';
 import { Customer } from '../types';
+import { CustomerLedgerModal } from './CustomerLedgerModal';
 
 export const CustomersView: React.FC = () => {
-  const { customers, addCustomer, updateCustomer, deleteCustomer, storeSettings } = usePOS();
+  const { customers, addCustomer, updateCustomer, deleteCustomer, storeSettings, customerTransactions } = usePOS();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedLedgerCustomer, setSelectedLedgerCustomer] = useState<Customer | null>(null);
 
   // Form State
   const [name, setName] = useState('');
@@ -18,11 +38,6 @@ export const CustomersView: React.FC = () => {
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [balanceReceivable, setBalanceReceivable] = useState<number>(0);
-
-  // Ledger Action Form State
-  const [ledgerActionType, setLedgerActionType] = useState<'RECEIVE' | 'CHARGE'>('RECEIVE');
-  const [ledgerAmount, setLedgerAmount] = useState<number>(0);
-  const [ledgerNotes, setLedgerNotes] = useState('');
 
   const openAddModal = () => {
     setEditingCustomer(null);
@@ -44,12 +59,8 @@ export const CustomersView: React.FC = () => {
     setShowModal(true);
   };
 
-  const openLedgerModal = (c: Customer, initialType: 'RECEIVE' | 'CHARGE') => {
-    setSelectedCustomer(c);
-    setLedgerActionType(initialType);
-    setLedgerAmount(initialType === 'RECEIVE' ? Math.min(c.balanceReceivable, 2000) : 500);
-    setLedgerNotes('');
-    setShowLedgerModal(true);
+  const openLedgerStatement = (c: Customer) => {
+    setSelectedLedgerCustomer(c);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -80,223 +91,246 @@ export const CustomersView: React.FC = () => {
     setShowModal(false);
   };
 
-  const handleRecordLedger = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCustomer || ledgerAmount <= 0) return;
-
-    let updatedBalance = selectedCustomer.balanceReceivable;
-    if (ledgerActionType === 'RECEIVE') {
-      updatedBalance = selectedCustomer.balanceReceivable - ledgerAmount;
-    } else {
-      updatedBalance = selectedCustomer.balanceReceivable + ledgerAmount;
-    }
-
-    updateCustomer({
-      ...selectedCustomer,
-      balanceReceivable: updatedBalance,
-    });
-    
-    setShowLedgerModal(false);
-    
-    const message = ledgerActionType === 'RECEIVE'
-      ? `Successfully received ${storeSettings.currency} ${ledgerAmount.toLocaleString()} payment from ${selectedCustomer.name}! New Balance: ${storeSettings.currency} ${updatedBalance.toLocaleString()}`
-      : `Successfully added ${storeSettings.currency} ${ledgerAmount.toLocaleString()} credit charge to ${selectedCustomer.name}'s account! New Balance: ${storeSettings.currency} ${updatedBalance.toLocaleString()}`;
-    
-    alert(message);
-  };
-
-  const handleDelete = (id: string, custName: string) => {
-    if (window.confirm(`Are you sure you want to remove customer account "${custName}"?`)) {
+  const handleDelete = (id: string, customerName: string) => {
+    if (window.confirm(`Are you sure you want to delete customer "${customerName}" and all associated ledger entries?`)) {
       deleteCustomer(id);
     }
   };
 
-  const filteredCustomers = customers.filter((c) => {
-    const q = searchTerm.toLowerCase().trim();
-    return (
-      c.name.toLowerCase().includes(q) ||
-      c.phone.toLowerCase().includes(q) ||
-      c.address.toLowerCase().includes(q)
-    );
-  });
+  // Filters
+  const filteredCustomers = customers.filter(
+    (c) =>
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.address.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const totalReceivable = customers.reduce((sum, c) => sum + (c.balanceReceivable > 0 ? c.balanceReceivable : 0), 0);
-  const activeDebtors = customers.filter(c => c.balanceReceivable > 0).length;
+  const totalAdvance = customers.reduce((sum, c) => sum + (c.balanceReceivable < 0 ? Math.abs(c.balanceReceivable) : 0), 0);
 
   return (
-    <div className="p-6 bg-[#f4f7fa] min-h-full space-y-4">
-      {/* KPI Header Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* KPI 1 */}
-        <div className="bg-white border border-slate-200 p-4 flex items-center justify-between shadow-xs">
-          <div>
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Total Customer Accounts</span>
-            <h3 className="text-xl font-extrabold text-[#002b49] mt-0.5">{customers.length}</h3>
+    <div className="space-y-4 max-w-7xl mx-auto pb-10">
+      {/* Top Header Card */}
+      <div className="bg-white border border-slate-200 p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
+              Customers Ledger & Khata Management
+            </h1>
+            <span className="bg-blue-100 text-blue-800 text-[11px] font-bold px-2 py-0.5 rounded-full">
+              Khata System
+            </span>
           </div>
-          <div className="p-2 bg-blue-50 text-blue-700 rounded-sm border border-blue-100">
+          <p className="text-xs text-slate-500 mt-1">
+            Track customer khata books, date-wise itemized credit sales, payments received, and print statements.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={openAddModal}
+            className="bg-[#002b49] hover:bg-[#001f35] text-white px-4 py-2 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Add New Customer</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Stats KPI Overview */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Total Customers */}
+        <div className="bg-white border border-slate-200 p-3.5 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              Registered Accounts
+            </span>
+            <span className="text-xl font-extrabold text-slate-900 mt-0.5 block font-mono">
+              {customers.length}
+            </span>
+          </div>
+          <div className="p-2.5 bg-blue-50 text-blue-700 rounded-sm">
             <User className="w-5 h-5" />
           </div>
         </div>
 
-        {/* KPI 2 */}
-        <div className="bg-white border border-slate-200 p-4 flex items-center justify-between shadow-xs">
+        {/* Total Outstanding Receivable */}
+        <div className="bg-white border border-slate-200 p-3.5 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Total Outstanding Khata (Receivables)</span>
-            <h3 className="text-xl font-extrabold text-red-600 mt-0.5">
+            <span className="text-[11px] font-bold text-red-600 uppercase tracking-wider block">
+              Total Khata Receivable
+            </span>
+            <span className="text-xl font-extrabold text-red-600 mt-0.5 block font-mono">
               {storeSettings.currency} {totalReceivable.toLocaleString()}
-            </h3>
+            </span>
           </div>
-          <div className="p-2 bg-red-50 text-red-700 rounded-sm border border-red-100">
+          <div className="p-2.5 bg-red-50 text-red-700 rounded-sm">
+            <TrendingDown className="w-5 h-5" />
+          </div>
+        </div>
+
+        {/* Total Advance Paid */}
+        <div className="bg-white border border-slate-200 p-3.5 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">
+              Advance Balance Paid
+            </span>
+            <span className="text-xl font-extrabold text-emerald-700 mt-0.5 block font-mono">
+              {storeSettings.currency} {totalAdvance.toLocaleString()}
+            </span>
+          </div>
+          <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-sm">
             <TrendingUp className="w-5 h-5" />
           </div>
         </div>
 
-        {/* KPI 3 */}
-        <div className="bg-white border border-slate-200 p-4 flex items-center justify-between shadow-xs">
+        {/* Active Transactions Count */}
+        <div className="bg-white border border-slate-200 p-3.5 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Active Debtors (Pasy Dany Hain)</span>
-            <h3 className="text-xl font-extrabold text-amber-600 mt-0.5">
-              {activeDebtors} Customers
-            </h3>
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              Total Khata Transactions
+            </span>
+            <span className="text-xl font-extrabold text-slate-900 mt-0.5 block font-mono">
+              {customerTransactions.length}
+            </span>
           </div>
-          <div className="p-2 bg-amber-50 text-amber-700 rounded-sm border border-amber-100">
-            <AlertCircle className="w-5 h-5 animate-bounce" />
+          <div className="p-2.5 bg-purple-50 text-purple-700 rounded-sm">
+            <FileText className="w-5 h-5" />
           </div>
         </div>
       </div>
 
-      {/* Control Search Bar */}
-      <div className="bg-white border border-slate-200 p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 flex-1 min-w-[280px]">
-          <label className="text-xs font-bold text-slate-700 shrink-0">Search Customers Ledger:</label>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by customer name, mobile number, area..."
-            className="w-full max-w-md bg-white border border-slate-300 px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
-          />
+      {/* Main Table Card */}
+      <div className="bg-white border border-slate-200 shadow-xs">
+        {/* Search Toolbar */}
+        <div className="p-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
+          <div className="relative w-full max-w-sm">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="Search by customer name, phone, or address..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 text-slate-800 focus:outline-none focus:border-[#0070ba]"
+            />
+          </div>
+          <div className="text-xs text-slate-500 font-semibold">
+            Showing <strong className="text-slate-800">{filteredCustomers.length}</strong> of {customers.length} customers
+          </div>
         </div>
 
-        <button
-          onClick={openAddModal}
-          type="button"
-          className="bg-[#0078d7] hover:bg-[#0066b8] text-white font-bold py-1.5 px-4 text-xs flex items-center gap-1.5 shadow transition-colors active:scale-95 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>+ Add New Customer Account</span>
-        </button>
-      </div>
-
-      {/* Main Customers Ledger Table */}
-      <div className="bg-white border border-slate-200 shadow-xs overflow-hidden">
+        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-[#002b49] text-white">
               <tr>
-                <th className="py-2.5 px-3 font-semibold">Customer Name</th>
+                <th className="py-2.5 px-3 font-semibold">Customer Account</th>
                 <th className="py-2.5 px-3 font-semibold">Contact Details</th>
-                <th className="py-2.5 px-3 font-semibold">Home / Business Address</th>
-                <th className="py-2.5 px-3 font-semibold text-right">Credit Status / Ledger Balance</th>
-                <th className="py-2.5 px-3 font-semibold text-center">Manage Account Ledger (Khata Book)</th>
+                <th className="py-2.5 px-3 font-semibold">Area / Address</th>
+                <th className="py-2.5 px-3 font-semibold text-right">Khata Balance</th>
+                <th className="py-2.5 px-3 font-semibold text-center">Ledger Report & Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {filteredCustomers.length > 0 ? (
-                filteredCustomers.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-50 transition-colors">
-                    {/* Name */}
-                    <td className="py-3 px-3 font-bold text-slate-800">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                        <div>{c.name}</div>
-                      </div>
-                      <span className="text-[10px] text-slate-400 font-normal pl-3.5">ID: {c.id}</span>
-                    </td>
+                filteredCustomers.map((c) => {
+                  const txCount = customerTransactions.filter(
+                    (tx) => tx.customerId === c.id || tx.customerName.toLowerCase() === c.name.toLowerCase()
+                  ).length;
 
-                    {/* Contact */}
-                    <td className="py-3 px-3 text-slate-600">
-                      {c.phone ? (
-                        <div className="flex items-center gap-1 font-mono text-[11px]">
-                          <Phone className="w-3 h-3 text-slate-400" />
-                          <span>{c.phone}</span>
+                  return (
+                    <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                      {/* Name */}
+                      <td className="py-3 px-3 font-bold text-slate-800">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-800 font-bold flex items-center justify-center text-xs">
+                            {c.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="text-slate-900 font-bold">{c.name}</div>
+                            <span className="text-[10px] text-slate-400 font-mono">ID: {c.id}</span>
+                          </div>
                         </div>
-                      ) : (
-                        <span className="text-slate-400 italic">No phone contact</span>
-                      )}
-                      {c.email && (
-                        <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-0.5">
-                          <Mail className="w-3 h-3 text-slate-400" />
-                          <span>{c.email}</span>
+                      </td>
+
+                      {/* Contact */}
+                      <td className="py-3 px-3 text-slate-600">
+                        {c.phone ? (
+                          <div className="flex items-center gap-1 font-mono text-[11px]">
+                            <Phone className="w-3 h-3 text-slate-400" />
+                            <span>{c.phone}</span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 italic">No phone contact</span>
+                        )}
+                        {c.email && (
+                          <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-0.5">
+                            <Mail className="w-3 h-3 text-slate-400" />
+                            <span>{c.email}</span>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Address */}
+                      <td className="py-3 px-3 text-slate-500 max-w-xs truncate">
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-slate-400" />
+                          <span title={c.address}>{c.address || 'Local Customer'}</span>
                         </div>
-                      )}
-                    </td>
+                      </td>
 
-                    {/* Address */}
-                    <td className="py-3 px-3 text-slate-500 max-w-xs truncate">
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-slate-400" />
-                        <span title={c.address}>{c.address || 'Local Customer'}</span>
-                      </div>
-                    </td>
+                      {/* Receivable Balance */}
+                      <td className="py-3 px-3 text-right font-mono">
+                        {c.balanceReceivable > 0 ? (
+                          <span className="inline-block px-2.5 py-1 text-xs font-black rounded-full bg-red-100 text-red-800 border border-red-200">
+                            ⚠️ Receivable: {storeSettings.currency} {c.balanceReceivable.toLocaleString()}
+                          </span>
+                        ) : c.balanceReceivable < 0 ? (
+                          <span className="inline-block px-2.5 py-1 text-xs font-black rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            💵 Advance: {storeSettings.currency} {Math.abs(c.balanceReceivable).toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="inline-block px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-500">
+                            Settled / Nil
+                          </span>
+                        )}
+                      </td>
 
-                    {/* Receivable Balance (Credit Ledger Status) */}
-                    <td className="py-3 px-3 text-right">
-                      {c.balanceReceivable > 0 ? (
-                        <span className="inline-block px-2.5 py-1 text-xs font-black rounded-full bg-red-100 text-red-800 border border-red-200">
-                          ⚠️ Receivable: {storeSettings.currency} {c.balanceReceivable.toLocaleString()}
-                        </span>
-                      ) : c.balanceReceivable < 0 ? (
-                        <span className="inline-block px-2.5 py-1 text-xs font-black rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                          💵 Advance: {storeSettings.currency} {Math.abs(c.balanceReceivable).toLocaleString()}
-                        </span>
-                      ) : (
-                        <span className="inline-block px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-500">
-                          Settled / Nil
-                        </span>
-                      )}
-                    </td>
+                      {/* Ledger Statement Button & Actions */}
+                      <td className="py-3 px-3">
+                        <div className="flex items-center justify-center gap-2">
+                          {/* Main Ledger Statement Button */}
+                          <button
+                            onClick={() => openLedgerStatement(c)}
+                            className="bg-[#002b49] hover:bg-[#001f35] text-white font-bold py-1.5 px-3 text-xs flex items-center gap-1.5 rounded-xs transition-colors shadow-xs cursor-pointer"
+                            title="Open detailed Khata Ledger report, view items given, add/edit payments, and print statement"
+                          >
+                            <BookOpen className="w-3.5 h-3.5 text-blue-300" />
+                            <span>Ledger Report ({txCount})</span>
+                          </button>
 
-                    {/* Managing Credit Account */}
-                    <td className="py-3 px-3">
-                      <div className="flex items-center justify-center gap-2">
-                        {/* Option 1: Receive credit payment */}
-                        <button
-                          onClick={() => openLedgerModal(c, 'RECEIVE')}
-                          className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-1 px-2.5 text-[10px] uppercase transition-colors rounded-xs shadow-xs"
-                          title="Record Cash Payment received from this customer"
-                        >
-                          💸 Receive Cash
-                        </button>
+                          {/* Quick Edit */}
+                          <button
+                            onClick={() => openEditModal(c)}
+                            className="p-1.5 text-slate-500 hover:text-blue-600 rounded hover:bg-slate-100"
+                            title="Edit Customer Profile"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
 
-                        {/* Option 2: Add credit purchase */}
-                        <button
-                          onClick={() => openLedgerModal(c, 'CHARGE')}
-                          className="bg-red-50 text-red-700 hover:bg-red-100 border border-red-300 font-bold py-1 px-2.5 text-[10px] uppercase transition-colors rounded-xs"
-                          title="Add a new credit transaction/charge"
-                        >
-                          ➕ Charge Credit
-                        </button>
-
-                        {/* Standard Controls */}
-                        <button
-                          onClick={() => openEditModal(c)}
-                          className="p-1 text-slate-500 hover:text-blue-600 rounded hover:bg-slate-100 ml-1"
-                          title="Edit Customer Profile"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(c.id, c.name)}
-                          className="p-1 text-slate-500 hover:text-red-600 rounded hover:bg-slate-100"
-                          title="Delete Account"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {/* Quick Delete */}
+                          <button
+                            onClick={() => handleDelete(c.id, c.name)}
+                            className="p-1.5 text-slate-500 hover:text-red-600 rounded hover:bg-slate-100"
+                            title="Delete Customer Account"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={5} className="text-center py-8 text-slate-400 text-xs">
@@ -309,10 +343,22 @@ export const CustomersView: React.FC = () => {
         </div>
       </div>
 
+      {/* Customer Ledger Detailed Modal */}
+      {selectedLedgerCustomer && (
+        <CustomerLedgerModal
+          customer={selectedLedgerCustomer}
+          isOpen={!!selectedLedgerCustomer}
+          onClose={() => {
+            // refresh customer reference from state if updated
+            setSelectedLedgerCustomer(null);
+          }}
+        />
+      )}
+
       {/* Add / Edit Customer Profile Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white max-w-lg w-full border border-slate-300 shadow-2xl animate-in fade-in text-slate-800">
+          <div className="bg-white max-w-lg w-full border border-slate-300 shadow-2xl animate-in fade-in text-slate-800 rounded-xs">
             <div className="bg-[#002b49] text-white p-3.5 flex items-center justify-between">
               <span className="font-bold text-xs uppercase tracking-wider">
                 {editingCustomer ? '✏️ Edit Customer Profile' : '➕ Add New Customer Account'}
@@ -348,7 +394,7 @@ export const CustomersView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Email Address:</label>
+                  <label className="block font-bold text-slate-700 mb-1">Email (Optional):</label>
                   <input
                     type="email"
                     value={email}
@@ -360,115 +406,47 @@ export const CustomersView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Home / Business Address:</label>
+                <label className="block font-bold text-slate-700 mb-1">Address / Location Details:</label>
                 <input
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="e.g. Model Town, Block C, Lahore"
+                  placeholder="e.g. Model Town, Link Road, Lahore"
                   className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 focus:outline-none focus:border-[#0070ba]"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Opening Credit Receivable Balance ({storeSettings.currency}):</label>
-                <input
-                  type="number"
-                  value={balanceReceivable === 0 ? '' : balanceReceivable}
-                  onChange={(e) => setBalanceReceivable(parseFloat(e.target.value) || 0)}
-                  placeholder="e.g. 5000 (Set positive if customer owes you money)"
-                  className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 font-mono focus:outline-none focus:border-[#0070ba]"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Keep it 0 for new accounts. Set a positive balance if this customer is carrying outstanding debt from prior logs.
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-1.5 font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-[#0078d7] hover:bg-[#0066b8] text-white px-5 py-1.5 font-bold flex items-center gap-1.5 shadow"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>{editingCustomer ? 'Update Profile' : 'Save Account'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Ledger Book Payment/Debit Modal */}
-      {showLedgerModal && selectedCustomer && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white max-w-sm w-full border border-slate-300 shadow-2xl animate-in fade-in text-slate-800">
-            <div className={`text-white p-3.5 flex items-center justify-between ${ledgerActionType === 'RECEIVE' ? 'bg-[#0f5132]' : 'bg-[#842029]'}`}>
-              <span className="font-bold text-xs uppercase tracking-wider">
-                {ledgerActionType === 'RECEIVE' ? '💸 Receive Payment (Vsoli)' : '⚠️ Charge Credit account'}
-              </span>
-              <button onClick={() => setShowLedgerModal(false)} className="text-white hover:opacity-85">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleRecordLedger} className="p-5 space-y-4 text-xs">
-              <div className="bg-slate-50 p-3 rounded border border-slate-200">
-                <div className="font-bold text-slate-700">{selectedCustomer.name}</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">Current Credit/Khata Balance:</div>
-                <div className={`text-base font-extrabold font-mono mt-0.5 ${selectedCustomer.balanceReceivable > 0 ? 'text-red-700' : 'text-slate-900'}`}>
-                  {storeSettings.currency} {selectedCustomer.balanceReceivable.toLocaleString()}
-                </div>
-              </div>
-
-              <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  {ledgerActionType === 'RECEIVE' ? 'Cash Amount Received *:' : 'New Credit Amount Charged *:'}
+                  Opening Khata Balance ({storeSettings.currency}):
                 </label>
                 <input
                   type="number"
-                  min="1"
-                  required
-                  value={ledgerAmount === 0 ? '' : ledgerAmount}
-                  onChange={(e) => setLedgerAmount(parseFloat(e.target.value) || 0)}
-                  placeholder="e.g. 1500"
-                  className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 font-extrabold font-mono text-sm focus:outline-none focus:border-slate-500"
+                  step="any"
+                  value={balanceReceivable === 0 ? '' : balanceReceivable}
+                  onChange={(e) => setBalanceReceivable(parseFloat(e.target.value) || 0)}
+                  placeholder="0.00"
+                  className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 font-mono font-bold focus:outline-none focus:border-[#0070ba]"
                 />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Enter positive amount if customer already owes money to the store.
+                </p>
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Ref / Invoice / Ledger Notes:</label>
-                <input
-                  type="text"
-                  value={ledgerNotes}
-                  onChange={(e) => setLedgerNotes(e.target.value)}
-                  placeholder="e.g. Invoice #102 or Partial Cash paid"
-                  className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 focus:outline-none focus:border-slate-500"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
                 <button
                   type="button"
-                  onClick={() => setShowLedgerModal(false)}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-1.5 font-semibold"
+                  onClick={() => setShowModal(false)}
+                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-1.5 text-xs font-bold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className={`text-white px-5 py-1.5 font-bold flex items-center gap-1.5 shadow ${
-                    ledgerActionType === 'RECEIVE' ? 'bg-[#198754] hover:bg-[#157347]' : 'bg-[#dc3545] hover:bg-[#bb2d3b]'
-                  }`}
+                  className="bg-[#002b49] hover:bg-[#001f35] text-white px-5 py-1.5 text-xs font-bold flex items-center gap-1.5 shadow-sm"
                 >
                   <Check className="w-3.5 h-3.5" />
-                  <span>{ledgerActionType === 'RECEIVE' ? 'Record Cash Received' : 'Record Credit Debt'}</span>
+                  <span>{editingCustomer ? 'Update Profile' : 'Save Customer'}</span>
                 </button>
               </div>
             </form>

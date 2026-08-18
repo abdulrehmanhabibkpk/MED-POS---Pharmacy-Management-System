@@ -115,6 +115,38 @@ export interface Customer {
   balanceReceivable: number; // Positive = they owe us money (receivable)
 }
 
+export interface CustomerTransaction {
+  id: string;
+  customerId: string;
+  customerName: string;
+  date: string; // YYYY-MM-DD HH:mm:ss
+  type: 'INVOICE_CREDIT' | 'PAYMENT_RECEIVED' | 'OPENING_BALANCE' | 'RETURN_REFUND' | 'MANUAL_ADJUSTMENT';
+  referenceNo: string; // e.g. "#INV-1002", "#REC-45", "#ADJ-1"
+  description: string;
+  itemsSummary?: string; // e.g. "Panadol Extra 500mg x 2, Brufen 400mg x 1"
+  debit: number; // Items/Credit given (increases customer debt/receivable)
+  credit: number; // Cash/Payment received (reduces customer debt/receivable)
+  balance: number; // Running balance after this transaction
+  paymentMethod?: string; // e.g. 'Cash', 'Bank Transfer', 'Easypaisa', 'Cheque'
+  notes?: string;
+}
+
+export interface SupplierTransaction {
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  date: string; // YYYY-MM-DD HH:mm:ss
+  type: 'PURCHASE_BILL' | 'PAYMENT_PAID' | 'OPENING_BALANCE' | 'PURCHASE_RETURN' | 'MANUAL_ADJUSTMENT';
+  referenceNo: string; // e.g. "#PUR-101", "#PAY-20", "#ADJ-5"
+  description: string;
+  itemsSummary?: string; // e.g. "Panadol 500mg (50 packs), Augmentin (20 boxes)"
+  debit: number; // Payment paid to supplier (reduces balance owed)
+  credit: number; // Stock received/Bill (increases balance owed)
+  balance: number; // Running balance owed
+  paymentMethod?: string;
+  notes?: string;
+}
+
 export interface UserPermissions {
   canDashboard: boolean;
   canSale: boolean;
