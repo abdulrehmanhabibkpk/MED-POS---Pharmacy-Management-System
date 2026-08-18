@@ -4,20 +4,20 @@ import { usePOS } from '../context/POSContext';
 
 export const LoginScreen: React.FC = () => {
   const { login, storeSettings } = usePOS();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin');
+  const [username, setUsername] = useState('alitrader@gmail.com');
+  const [password, setPassword] = useState('alitrader');
   const [error, setError] = useState('');
   const [showAgreementModal, setShowAgreementModal] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim()) {
-      setError('Please enter a valid username');
+      setError('Please enter a valid email or username');
       return;
     }
     const success = login(username, password);
     if (!success) {
-      setError('Invalid login credentials');
+      setError('Invalid login credentials. Hint: alitrader@gmail.com / alitrader');
     }
   };
 
@@ -107,8 +107,8 @@ export const LoginScreen: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Username
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Email or Username
               </label>
               <input
                 id="login-username"
@@ -116,13 +116,13 @@ export const LoginScreen: React.FC = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-[#0070ba] text-sm text-slate-800"
-                placeholder="admin"
+                placeholder="alitrader@gmail.com"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 Password
               </label>
               <input
@@ -133,6 +133,12 @@ export const LoginScreen: React.FC = () => {
                 className="w-full px-3 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-[#0070ba] text-sm text-slate-800"
                 placeholder="••••••••"
               />
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 p-2.5 rounded text-[11px] text-blue-800">
+              <strong>Master Admin Creds:</strong><br />
+              Email: <span className="font-mono font-bold">alitrader@gmail.com</span><br />
+              Password: <span className="font-mono font-bold">alitrader</span>
             </div>
 
             <button

@@ -53,7 +53,7 @@ export const SaleReturnView: React.FC = () => {
   };
 
   return (
-    <div id="sale-return-container" className="p-6 bg-[#f4f7fa] min-h-full space-y-6">
+    <div id="sale-return-container" className="p-3 md:p-6 bg-[#f4f7fa] min-h-full space-y-4 md:space-y-6">
       {/* Return Card */}
       <div className="bg-white border border-slate-200 p-6 shadow-xs max-w-xl">
         <div className="flex items-center gap-2 text-[#c0392b] font-bold text-base mb-6">

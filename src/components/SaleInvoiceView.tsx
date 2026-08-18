@@ -497,7 +497,84 @@ export const SaleInvoiceView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Table Area (8 or 9 cols) */}
         <div className="lg:col-span-8 xl:col-span-9 bg-white border border-slate-200 shadow-xs overflow-hidden flex flex-col min-h-[380px]">
-          <div className="overflow-x-auto flex-1">
+          
+          {/* Mobile View Cart Cards */}
+          <div className="md:hidden space-y-2.5 p-3">
+            {cart.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <Pill className="w-8 h-8 text-slate-300" />
+                  <span>No items added to invoice yet.<br/>Scan barcode or search above.</span>
+                </div>
+              </div>
+            ) : (
+              cart.map((item, idx) => (
+                <div key={`${item.product.id}-${idx}`} className="bg-white p-3 rounded-lg shadow-xs border border-slate-200 flex justify-between items-center">
+                  <div>
+                    <div className="font-bold text-slate-800 text-xs sm:text-sm">{item.product.name}</div>
+                    <div className="text-[11px] text-slate-500 mt-1">
+                      Rate: {storeSettings.currency} {item.rate}
+                      {item.discount > 0 && ` | Disc: ${storeSettings.currency}${item.discount}`}
+                    </div>
+                    
+                    {/* Qty edit triggers */}
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateCartItemQty(idx, item.qty - 1)}
+                        className="w-6 h-6 bg-slate-100 active:bg-slate-200 hover:bg-slate-200 text-slate-800 font-bold rounded flex items-center justify-center border border-slate-300"
+                      >
+                        -
+                      </button>
+                      <span className="w-8 text-center text-xs font-black">{item.qty}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateCartItemQty(idx, item.qty + 1)}
+                        className="w-6 h-6 bg-slate-100 active:bg-slate-200 hover:bg-slate-200 text-slate-800 font-bold rounded flex items-center justify-center border border-slate-300"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right flex flex-col items-end gap-1.5">
+                    <div className="font-black text-[#0070ba] text-xs sm:text-sm">
+                      {storeSettings.currency} {item.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </div>
+                    
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newRate = prompt('Enter new unit rate:', item.rate.toString());
+                          if (newRate && !isNaN(Number(newRate))) {
+                            const r = Number(newRate);
+                            setCart((prev) => {
+                              const up = [...prev];
+                              up[idx] = { ...up[idx], rate: r, subtotal: Math.max(0, r * up[idx].qty - up[idx].discount) };
+                              return up;
+                            });
+                          }
+                        }}
+                        className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded"
+                      >
+                        Rate
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItem(idx)}
+                        className="text-[10px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-200"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="overflow-x-auto flex-1 hidden md:block">
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-[#002b49] text-white">
                 <tr>

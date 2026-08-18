@@ -115,6 +115,24 @@ export interface Customer {
   balanceReceivable: number; // Positive = they owe us money (receivable)
 }
 
+export interface UserPermissions {
+  canSale: boolean;
+  canReturn: boolean;
+  canStock: boolean;
+  canSettings: boolean;
+  canReports: boolean;
+  canExpenses: boolean;
+}
+
+export interface UserAccount {
+  id: string;
+  name: string;
+  email: string;
+  password?: string;
+  role: 'Admin' | 'Manager' | 'Cashier';
+  permissions: UserPermissions;
+}
+
 export type UserRole = 'Admin' | 'Manager' | 'Cashier';
 
 export type ActiveTab =
@@ -132,4 +150,5 @@ export type ActiveTab =
   | 'reports'
   | 'store-settings'
   | 'barcode-label'
-  | 'plan-prd';
+  | 'plan-prd'
+  | 'master-admin';

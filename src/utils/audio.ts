@@ -27,18 +27,20 @@ class POSSoundEngine {
       // Pre-fetch and decode array buffer for instant AudioBufferSourceNode playback
       const res = await fetch('/freesound_community-store-scanner-beep-90395.mp3');
       if (res.ok) {
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.toLowerCase().includes('html')) {
+          // Do not attempt decoding HTML payload as audio
+          return;
+        }
         const arrayBuf = await res.arrayBuffer();
         const ctx = this.getContext();
         if (ctx) {
-          ctx.decodeAudioData(
-            arrayBuf,
-            (decoded) => {
-              this.audioBuffer = decoded;
-            },
-            () => {
-              // fallback
-            }
-          );
+          try {
+            const decoded = await ctx.decodeAudioData(arrayBuf);
+            this.audioBuffer = decoded;
+          } catch (e) {
+            // Silently fall back
+          }
         }
       }
     } catch {

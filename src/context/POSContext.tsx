@@ -12,6 +12,8 @@ import {
   UserRole,
   Supplier,
   Customer,
+  UserPermissions,
+  UserAccount,
 } from '../types';
 import {
   initialProducts,
@@ -66,14 +68,78 @@ interface POSContextType {
   resetToDefaults: () => void;
   exportDatabase: () => void;
   importDatabase: (jsonData: string) => boolean;
+  userAccounts: UserAccount[];
+  addUserAccount: (acc: Omit<UserAccount, 'id'>) => void;
+  updateUserAccount: (acc: UserAccount) => void;
+  deleteUserAccount: (id: string) => void;
+  currentUser: UserAccount | null;
+  setCurrentUser: (user: UserAccount | null) => void;
 }
 
 const POSContext = createContext<POSContextType | undefined>(undefined);
 
+const defaultAccounts: UserAccount[] = [
+  {
+    id: 'acc-master',
+    name: 'Ali Trader (Master)',
+    email: 'alitrader@gmail.com',
+    password: 'alitrader',
+    role: 'Admin',
+    permissions: {
+      canSale: true,
+      canReturn: true,
+      canStock: true,
+      canSettings: true,
+      canReports: true,
+      canExpenses: true,
+    }
+  },
+  {
+    id: 'acc-cashier',
+    name: 'Asif Khan',
+    email: 'cashier@gmail.com',
+    password: 'cashier',
+    role: 'Cashier',
+    permissions: {
+      canSale: true,
+      canReturn: true,
+      canStock: false,
+      canSettings: false,
+      canReports: false,
+      canExpenses: false,
+    }
+  },
+  {
+    id: 'acc-manager',
+    name: 'Manager Malik',
+    email: 'manager@gmail.com',
+    password: 'manager',
+    role: 'Manager',
+    permissions: {
+      canSale: true,
+      canReturn: true,
+      canStock: true,
+      canSettings: false,
+      canReports: true,
+      canExpenses: true,
+    }
+  }
+];
+
 export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [userAccounts, setUserAccounts] = useState<UserAccount[]>(() => {
+    const saved = localStorage.getItem('medpos_user_accounts');
+    return saved ? JSON.parse(saved) : defaultAccounts;
+  });
+
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
+    const saved = localStorage.getItem('medpos_current_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     const saved = localStorage.getItem('medpos_auth');
-    return saved ? JSON.parse(saved) : true; // Default logged in for immediate viewing, or can toggle
+    return saved ? JSON.parse(saved) : false; // Default false to enforce security based login
   });
 
   const [userRole, setUserRoleState] = useState<UserRole>(() => {
@@ -193,26 +259,92 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('medpos_customers', JSON.stringify(customers));
   }, [customers]);
 
+  useEffect(() => {
+    localStorage.setItem('medpos_user_accounts', JSON.stringify(userAccounts));
+  }, [userAccounts]);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('medpos_current_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('medpos_current_user');
+    }
+  }, [currentUser]);
+
   const login = (u: string, p: string) => {
-    const usernameLower = u.trim().toLowerCase();
-    const passwordLower = p.trim().toLowerCase();
-    
-    if (usernameLower.length > 0) {
+    const emailLower = u.trim().toLowerCase();
+    const passwordLower = p.trim();
+
+    // Look up in our custom accounts
+    const found = userAccounts.find(
+      (acc) => acc.email.trim().toLowerCase() === emailLower && acc.password === passwordLower
+    );
+
+    if (found) {
       setIsAuthenticated(true);
-      if (usernameLower === 'cashier' || passwordLower === 'cashier') {
-        setUserRole('Cashier');
-      } else if (usernameLower === 'manager' || passwordLower === 'manager') {
-        setUserRole('Manager');
+      setCurrentUser(found);
+      setUserRole(found.role);
+      if (emailLower === 'alitrader@gmail.com') {
+        setActiveTab('master-admin');
       } else {
-        setUserRole('Admin');
+        setActiveTab('dashboard');
       }
       return true;
     }
+
+    // Fallback default system accounts for testing/safety
+    if (emailLower === 'admin' && passwordLower === 'admin') {
+      const fallbackAdmin: UserAccount = {
+        id: 'acc-fallback-admin',
+        name: 'Default Admin',
+        email: 'admin',
+        password: 'admin',
+        role: 'Admin',
+        permissions: {
+          canSale: true,
+          canReturn: true,
+          canStock: true,
+          canSettings: true,
+          canReports: true,
+          canExpenses: true,
+        }
+      };
+      setIsAuthenticated(true);
+      setCurrentUser(fallbackAdmin);
+      setUserRole('Admin');
+      setActiveTab('dashboard');
+      return true;
+    }
+
     return false;
   };
 
   const logout = () => {
     setIsAuthenticated(false);
+    setCurrentUser(null);
+  };
+
+  const addUserAccount = (acc: Omit<UserAccount, 'id'>) => {
+    const newAcc: UserAccount = {
+      ...acc,
+      id: `acc-${Date.now()}`,
+    };
+    setUserAccounts((prev) => [...prev, newAcc]);
+  };
+
+  const updateUserAccount = (acc: UserAccount) => {
+    setUserAccounts((prev) => prev.map((item) => (item.id === acc.id ? acc : item)));
+    if (currentUser && currentUser.id === acc.id) {
+      setCurrentUser(acc);
+    }
+  };
+
+  const deleteUserAccount = (id: string) => {
+    if (id === 'acc-master') return; // Do not delete Master Admin!
+    setUserAccounts((prev) => prev.filter((item) => item.id !== id));
+    if (currentUser && currentUser.id === id) {
+      logout();
+    }
   };
 
   const addProduct = (p: Omit<Product, 'id'>) => {
@@ -509,6 +641,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         resetToDefaults,
         exportDatabase,
         importDatabase,
+        userAccounts,
+        addUserAccount,
+        updateUserAccount,
+        deleteUserAccount,
+        currentUser,
+        setCurrentUser,
       }}
     >
       {children}

@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { LoginScreen } from './components/LoginScreen';
 import { DashboardView } from './components/DashboardView';
+import { MasterAdminView } from './components/MasterAdminView';
 import { SaleInvoiceView } from './components/SaleInvoiceView';
 import { SaleReturnView } from './components/SaleReturnView';
 import { BillHistoryView } from './components/BillHistoryView';
@@ -21,11 +22,11 @@ import { PlanPRDView } from './components/PlanPRDView';
 import { ReceiptModal } from './components/ReceiptModal';
 import { AndroidSyncModal } from './components/AndroidSyncModal';
 import { MobileScannerTerminal } from './components/MobileScannerTerminal';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert, LayoutDashboard, FileText, ClipboardList, Tag, Menu } from 'lucide-react';
 import { ActiveTab } from './types';
 
 const MainLayout: React.FC = () => {
-  const { isAuthenticated, activeTab, setActiveTab, userRole } = usePOS();
+  const { isAuthenticated, activeTab, setActiveTab, userRole, currentUser } = usePOS();
   const [showMobileScanner, setShowMobileScanner] = useState(false);
 
   useEffect(() => {
@@ -88,21 +89,41 @@ const MainLayout: React.FC = () => {
         return 'Store Business Settings';
       case 'plan-prd':
         return 'Interactive POS Roadmap & PRD Plan';
+      case 'master-admin':
+        return 'Master Admin Panel';
       default:
         return 'Dashboard';
     }
   };
 
   const hasAccess = (): boolean => {
-    if (userRole === 'Cashier') {
-      const cashierAllowed: ActiveTab[] = ['dashboard', 'sale-invoice', 'sale-return', 'bill-history', 'barcode-label', 'plan-prd'];
-      return cashierAllowed.includes(activeTab);
+    if (currentUser) {
+      // Custom permissions based check
+      if (activeTab === 'sale-invoice' && !currentUser.permissions.canSale) return false;
+      if (activeTab === 'sale-return' && !currentUser.permissions.canReturn) return false;
+      if (activeTab === 'products' && !currentUser.permissions.canStock) return false;
+      if (activeTab === 'purchase-stock' && !currentUser.permissions.canStock) return false;
+      if (activeTab === 'store-settings' && !currentUser.permissions.canSettings) return false;
+      if (activeTab === 'reports' && !currentUser.permissions.canReports) return false;
+      if (activeTab === 'day-closing' && !currentUser.permissions.canReports) return false;
+      if (activeTab === 'pay-expense' && !currentUser.permissions.canExpenses) return false;
+      
+      // 'master-admin' is ONLY for Master Admin
+      if (activeTab === 'master-admin' && currentUser.email.toLowerCase() !== 'alitrader@gmail.com') {
+        return false;
+      }
+    } else {
+      // Fallback
+      if (userRole === 'Cashier') {
+        const cashierAllowed: ActiveTab[] = ['dashboard', 'sale-invoice', 'sale-return', 'bill-history', 'barcode-label', 'plan-prd'];
+        return cashierAllowed.includes(activeTab);
+      }
+      if (userRole === 'Manager') {
+        const managerRestricted: ActiveTab[] = ['store-settings', 'master-admin'];
+        return !managerRestricted.includes(activeTab);
+      }
     }
-    if (userRole === 'Manager') {
-      const managerRestricted: ActiveTab[] = ['store-settings'];
-      return !managerRestricted.includes(activeTab);
-    }
-    return true; // Admin has total coverage
+    return true;
   };
 
   const PermissionShield = () => (
@@ -140,17 +161,25 @@ const MainLayout: React.FC = () => {
     </div>
   );
 
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#f4f7fa]">
-      {/* Fixed Left Sidebar */}
-      <Sidebar />
+      {/* Sidebar - static on desktop, sliding drawer with overlay on mobile */}
+      <Sidebar 
+        isOpenOnMobile={mobileSidebarOpen} 
+        onCloseMobile={() => setMobileSidebarOpen(false)} 
+      />
 
-      {/* Main Right Content Area */}
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
-        <Header title={getPageTitle()} />
+        <Header 
+          title={getPageTitle()} 
+          onMenuClick={() => setMobileSidebarOpen(true)} 
+        />
 
         {/* Scrollable View Area */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
           {!hasAccess() ? (
             <PermissionShield />
           ) : (
@@ -170,9 +199,66 @@ const MainLayout: React.FC = () => {
               {activeTab === 'reports' && <ReportsView />}
               {activeTab === 'store-settings' && <StoreSettingsView />}
               {activeTab === 'plan-prd' && <PlanPRDView />}
+              {activeTab === 'master-admin' && <MasterAdminView />}
             </>
           )}
         </main>
+
+        {/* Bottom Tab Bar for Mobile Navigation */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg flex justify-around items-center h-16 px-2 z-30 select-none">
+          <button
+            type="button"
+            onClick={() => setActiveTab('dashboard')}
+            className={`flex flex-col items-center justify-center flex-1 h-full py-1 ${
+              activeTab === 'dashboard' ? 'text-[#0070ba] font-bold' : 'text-slate-500 font-medium'
+            }`}
+          >
+            <LayoutDashboard className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] tracking-tight">Dashboard</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('sale-invoice')}
+            className={`flex flex-col items-center justify-center flex-1 h-full py-1 ${
+              activeTab === 'sale-invoice' ? 'text-[#0070ba] font-bold' : 'text-slate-500 font-medium'
+            }`}
+          >
+            <FileText className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] tracking-tight">New Sale</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('bill-history')}
+            className={`flex flex-col items-center justify-center flex-1 h-full py-1 ${
+              activeTab === 'bill-history' ? 'text-[#0070ba] font-bold' : 'text-slate-500 font-medium'
+            }`}
+          >
+            <ClipboardList className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] tracking-tight">History</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('products')}
+            className={`flex flex-col items-center justify-center flex-1 h-full py-1 ${
+              activeTab === 'products' ? 'text-[#0070ba] font-bold' : 'text-slate-500 font-medium'
+            }`}
+          >
+            <Tag className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] tracking-tight">Products</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileSidebarOpen(true)}
+            className="flex flex-col items-center justify-center flex-1 h-full py-1 text-slate-500 font-medium"
+          >
+            <Menu className="w-5 h-5 mb-0.5 text-slate-600" />
+            <span className="text-[10px] tracking-tight">More</span>
+          </button>
+        </div>
       </div>
 
       {/* Global Modals */}

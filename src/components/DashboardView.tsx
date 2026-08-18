@@ -10,6 +10,7 @@ import {
   CalendarCheck,
   CheckSquare,
   TrendingUp,
+  History,
 } from 'lucide-react';
 import { usePOS } from '../context/POSContext';
 
@@ -41,138 +42,140 @@ export const DashboardView: React.FC = () => {
   const recentSales = [...sales].slice(0, 10);
 
   return (
-    <div id="dashboard-container" className="p-6 space-y-6 bg-[#f4f7fa] min-h-full">
-      {/* 6 Metric KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {/* Card 1: Total Sales */}
-        <div
-          id="kpi-total-sales"
-          onClick={() => setActiveTab('bill-history')}
-          className="bg-[#0088cc] hover:bg-[#0077b5] cursor-pointer text-white p-4 rounded-none shadow-sm transition-transform active:scale-[0.98] flex flex-col justify-between h-28"
-        >
-          <div className="flex items-center gap-2">
-            <ShoppingCart className="w-5 h-5 opacity-90" />
-            <span className="text-xs font-semibold tracking-wide">Total Sales</span>
-          </div>
-          <div>
-            <div className="text-lg font-bold">
-              {storeSettings.currency} {totalSalesAmount.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+    <div id="dashboard-container" className="p-3 md:p-6 space-y-4 md:space-y-6 bg-[#f4f7fa] min-h-full pb-20 md:pb-6">
+      
+      {/* 5 Grid KPI Cards + Spanning Low Stock Bar */}
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-4">
+          {/* Card 1: Total Sales */}
+          <div
+            id="kpi-total-sales"
+            onClick={() => setActiveTab('bill-history')}
+            className="bg-[#0081d4] hover:bg-[#0070b8] cursor-pointer text-white p-3 md:p-4 rounded-xl shadow-sm transition-all active:scale-[0.98] flex flex-col justify-between h-24 md:h-28"
+          >
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <ShoppingCart className="w-4 h-4 opacity-90" />
+              <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Total Sales</span>
             </div>
-            <div className="text-[11px] opacity-90">({totalBillsCount} Bills)</div>
+            <div>
+              <div className="text-sm md:text-lg font-black">
+                {storeSettings.currency} {totalSalesAmount.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+              </div>
+              <div className="text-[9px] md:text-[11px] opacity-80 font-medium">({totalBillsCount} Bills)</div>
+            </div>
+          </div>
+
+          {/* Card 2: Total Purchases */}
+          <div
+            id="kpi-total-purchases"
+            onClick={() => setActiveTab('purchase-stock')}
+            className="bg-[#1baf55] hover:bg-[#158c43] cursor-pointer text-white p-3 md:p-4 rounded-xl shadow-sm transition-all active:scale-[0.98] flex flex-col justify-between h-24 md:h-28"
+          >
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <Box className="w-4 h-4 opacity-90" />
+              <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Total Purchases</span>
+            </div>
+            <div>
+              <div className="text-sm md:text-lg font-black">
+                {storeSettings.currency} {totalPurchasesAmount.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+              </div>
+              <div className="text-[9px] md:text-[11px] opacity-80 font-medium">&nbsp;</div>
+            </div>
+          </div>
+
+          {/* Card 3: Total Expenses */}
+          <div
+            id="kpi-total-expenses"
+            onClick={() => setActiveTab('pay-expense')}
+            className="bg-[#d93a49] hover:bg-[#bc2f3c] cursor-pointer text-white p-3 md:p-4 rounded-xl shadow-sm transition-all active:scale-[0.98] flex flex-col justify-between h-24 md:h-28"
+          >
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <Receipt className="w-4 h-4 opacity-90" />
+              <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Total Expenses</span>
+            </div>
+            <div>
+              <div className="text-sm md:text-lg font-black">
+                {storeSettings.currency} {totalExpensesAmount.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+              </div>
+              <div className="text-[9px] md:text-[11px] opacity-80 font-medium">&nbsp;</div>
+            </div>
+          </div>
+
+          {/* Card 4: Credit Received */}
+          <div
+            id="kpi-credit-received"
+            onClick={() => setActiveTab('credit-receive')}
+            className="bg-[#8545b6] hover:bg-[#6c3499] cursor-pointer text-white p-3 md:p-4 rounded-xl shadow-sm transition-all active:scale-[0.98] flex flex-col justify-between h-24 md:h-28"
+          >
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <Wallet className="w-4 h-4 opacity-90" />
+              <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Credit Received</span>
+            </div>
+            <div>
+              <div className="text-sm md:text-lg font-black">
+                {storeSettings.currency} {totalCreditsAmount.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+              </div>
+              <div className="text-[9px] md:text-[11px] opacity-80 font-medium">&nbsp;</div>
+            </div>
+          </div>
+
+          {/* Card 5: Products */}
+          <div
+            id="kpi-products"
+            onClick={() => setActiveTab('products')}
+            className="bg-[#1499b8] hover:bg-[#0f7a94] cursor-pointer text-white p-3 md:p-4 rounded-xl shadow-sm transition-all active:scale-[0.98] flex flex-col justify-between h-24 md:h-28 col-span-2 sm:col-span-1"
+          >
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <Tag className="w-4 h-4 opacity-90" />
+              <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Products</span>
+            </div>
+            <div>
+              <div className="text-sm md:text-lg font-black">
+                {totalProductItems} Items
+              </div>
+              <div className="text-[9px] md:text-[11px] opacity-80 font-medium">+ {totalProductUnits} Units</div>
+            </div>
           </div>
         </div>
 
-        {/* Card 2: Total Purchases */}
-        <div
-          id="kpi-total-purchases"
-          onClick={() => setActiveTab('purchase-stock')}
-          className="bg-[#27ae60] hover:bg-[#219653] cursor-pointer text-white p-4 rounded-none shadow-sm transition-transform active:scale-[0.98] flex flex-col justify-between h-28"
-        >
-          <div className="flex items-center gap-2">
-            <Box className="w-5 h-5 opacity-90" />
-            <span className="text-xs font-semibold tracking-wide">Total Purchases</span>
-          </div>
-          <div>
-            <div className="text-lg font-bold">
-              {storeSettings.currency} {totalPurchasesAmount.toLocaleString('en-US', { minimumFractionDigits: 0 })}
-            </div>
-            <div className="text-[11px] opacity-90">&nbsp;</div>
-          </div>
-        </div>
-
-        {/* Card 3: Total Expenses */}
-        <div
-          id="kpi-total-expenses"
-          onClick={() => setActiveTab('pay-expense')}
-          className="bg-[#c0392b] hover:bg-[#a93226] cursor-pointer text-white p-4 rounded-none shadow-sm transition-transform active:scale-[0.98] flex flex-col justify-between h-28"
-        >
-          <div className="flex items-center gap-2">
-            <Receipt className="w-5 h-5 opacity-90" />
-            <span className="text-xs font-semibold tracking-wide">Total Expenses</span>
-          </div>
-          <div>
-            <div className="text-lg font-bold">
-              {storeSettings.currency} {totalExpensesAmount.toLocaleString('en-US', { minimumFractionDigits: 0 })}
-            </div>
-            <div className="text-[11px] opacity-90">&nbsp;</div>
-          </div>
-        </div>
-
-        {/* Card 4: Credit Received */}
-        <div
-          id="kpi-credit-received"
-          onClick={() => setActiveTab('credit-receive')}
-          className="bg-[#8e44ad] hover:bg-[#7d3c98] cursor-pointer text-white p-4 rounded-none shadow-sm transition-transform active:scale-[0.98] flex flex-col justify-between h-28"
-        >
-          <div className="flex items-center gap-2">
-            <Wallet className="w-5 h-5 opacity-90" />
-            <span className="text-xs font-semibold tracking-wide">Credit Received</span>
-          </div>
-          <div>
-            <div className="text-lg font-bold">
-              {storeSettings.currency} {totalCreditsAmount.toLocaleString('en-US', { minimumFractionDigits: 0 })}
-            </div>
-            <div className="text-[11px] opacity-90">&nbsp;</div>
-          </div>
-        </div>
-
-        {/* Card 5: Products */}
-        <div
-          id="kpi-products"
-          onClick={() => setActiveTab('products')}
-          className="bg-[#16a085] hover:bg-[#138d75] cursor-pointer text-white p-4 rounded-none shadow-sm transition-transform active:scale-[0.98] flex flex-col justify-between h-28"
-        >
-          <div className="flex items-center gap-2">
-            <Tag className="w-5 h-5 opacity-90" />
-            <span className="text-xs font-semibold tracking-wide">Products</span>
-          </div>
-          <div>
-            <div className="text-lg font-bold">
-              {totalProductItems} Items
-            </div>
-            <div className="text-[11px] opacity-90">• {totalProductUnits} Units</div>
-          </div>
-        </div>
-
-        {/* Card 6: Low Stock Items */}
+        {/* Spanning Wide Orange Banner: Low Stock Items */}
         <div
           id="kpi-low-stock"
           onClick={() => setActiveTab('products')}
-          className="bg-[#d35400] hover:bg-[#ba4a00] cursor-pointer text-white p-4 rounded-none shadow-sm transition-transform active:scale-[0.98] flex flex-col justify-between h-28"
+          className="bg-[#d35400] hover:bg-[#ba4a00] cursor-pointer text-white p-3.5 px-4 rounded-xl shadow-sm transition-all active:scale-[0.98] flex items-center justify-between"
         >
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 opacity-90" />
-            <span className="text-xs font-semibold tracking-wide">Low Stock Items</span>
+            <AlertTriangle className="w-5 h-5 opacity-90 text-amber-200" />
+            <span className="text-xs md:text-sm font-extrabold uppercase tracking-wider">LOW STOCK ITEMS</span>
           </div>
-          <div>
-            <div className="text-lg font-bold">
-              {lowStockCount} Products
-            </div>
-            <div className="text-[11px] opacity-90">&nbsp;</div>
+          <div className="text-sm md:text-lg font-black">
+            {lowStockCount} Products
           </div>
         </div>
       </div>
 
-      {/* Middle Split: Recent Sales & Low Stock Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Recent Sales Table (7 cols) */}
-        <div className="lg:col-span-7 bg-white border border-slate-200 shadow-xs flex flex-col">
-          <div className="p-3 border-b border-slate-200 flex items-center gap-2">
-            <span className="text-[#002b49] font-bold text-sm flex items-center gap-2">
-              <Receipt className="w-4 h-4 text-[#0070ba]" />
+      {/* Middle Grid: Recent Sales & Low Stock Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+        
+        {/* Recent Sales Panel (7 cols) */}
+        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+          <div className="p-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+            <Receipt className="w-4 h-4 text-[#0070ba]" />
+            <span className="text-[#002b49] font-black text-xs md:text-sm uppercase tracking-wide">
               Recent Sales (Last 10)
             </span>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Desktop View Table */}
+          <div className="overflow-x-auto hidden md:block">
             <table className="w-full text-left text-xs">
               <thead className="bg-[#002b49] text-white">
                 <tr>
-                  <th className="py-2.5 px-3 font-semibold">Invoice#</th>
-                  <th className="py-2.5 px-3 font-semibold">Date</th>
-                  <th className="py-2.5 px-3 font-semibold">Customer</th>
-                  <th className="py-2.5 px-3 font-semibold">Type</th>
-                  <th className="py-2.5 px-3 font-semibold text-right">Net Amount</th>
+                  <th className="py-2.5 px-3 font-bold">Invoice#</th>
+                  <th className="py-2.5 px-3 font-bold">Date</th>
+                  <th className="py-2.5 px-3 font-bold">Customer</th>
+                  <th className="py-2.5 px-3 font-bold">Type</th>
+                  <th className="py-2.5 px-3 font-bold text-right">Net Amount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -183,19 +186,21 @@ export const DashboardView: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  recentSales.map((s, idx) => (
+                  recentSales.map((s) => (
                     <tr
                       key={s.id}
                       onClick={() => setPreviewInvoice(s)}
-                      className={`cursor-pointer transition-colors ${
-                        idx === 0 ? 'bg-[#0078d7] text-white font-medium hover:bg-[#006bbd]' : 'hover:bg-blue-50 text-slate-700'
-                      }`}
+                      className="hover:bg-blue-50 text-slate-700 cursor-pointer transition-colors"
                     >
-                      <td className="py-2.5 px-3">{s.invoiceNo}</td>
-                      <td className="py-2.5 px-3">{s.date}</td>
-                      <td className="py-2.5 px-3">{s.customerName}</td>
-                      <td className="py-2.5 px-3">{s.saleType}</td>
-                      <td className="py-2.5 px-3 text-right font-semibold">
+                      <td className="py-2.5 px-3 font-bold">Inv #{s.invoiceNo}</td>
+                      <td className="py-2.5 px-3 text-slate-500">{s.date}</td>
+                      <td className="py-2.5 px-3 font-medium text-slate-800">{s.customerName}</td>
+                      <td className="py-2.5 px-3">
+                        <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                          {s.saleType}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-black text-slate-900">
                         {storeSettings.currency} {s.netAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
                     </tr>
@@ -204,119 +209,150 @@ export const DashboardView: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Card List (Exact layout of Image) */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {recentSales.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                No sales recorded yet.
+              </div>
+            ) : (
+              recentSales.map((s) => (
+                <div
+                  key={s.id}
+                  onClick={() => setPreviewInvoice(s)}
+                  className="p-3 hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer flex flex-col gap-1 text-slate-800"
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-extrabold text-slate-900 text-xs sm:text-sm">Inv #{s.invoiceNo}</span>
+                    <span className="font-black text-slate-900 text-xs sm:text-sm">
+                      {storeSettings.currency} {s.netAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-[11px] text-slate-500">
+                    <span className="font-medium">{s.date}</span>
+                    <span className="font-bold text-slate-400 uppercase tracking-wider text-[9px] bg-slate-100 px-1 py-0.2 rounded-xs">
+                      {s.saleType}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-600 font-semibold">{s.customerName}</div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         {/* Low Stock Alerts (5 cols) */}
-        <div className="lg:col-span-5 bg-white border border-slate-200 shadow-xs flex flex-col">
-          <div className="p-3 border-b border-slate-200 flex items-center gap-2">
+        <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col overflow-hidden">
+          <div className="p-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-[#d35400]" />
-            <span className="text-[#c0392b] font-bold text-sm">Low Stock Alerts</span>
+            <span className="text-[#c0392b] font-black text-xs md:text-sm uppercase tracking-wide">
+              Low Stock Alerts
+            </span>
           </div>
 
-          <div className="p-4 flex-1 flex flex-col justify-start overflow-y-auto max-h-64">
+          <div className="p-3 flex-1 flex flex-col justify-start overflow-y-auto max-h-72 space-y-2">
             {lowStockProducts.length === 0 ? (
-              <div className="flex items-center gap-2 text-slate-700 text-xs py-2">
-                <CheckSquare className="w-4 h-4 text-slate-600" />
+              <div className="flex items-center gap-2 text-slate-500 text-xs py-4 justify-center">
+                <CheckSquare className="w-4 h-4 text-emerald-600" />
                 <span>All products have sufficient stock!</span>
               </div>
             ) : (
-              <div className="space-y-2">
-                {lowStockProducts.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between p-2 bg-amber-50 border border-amber-200 text-xs"
-                  >
-                    <div>
-                      <div className="font-semibold text-amber-900">{p.name}</div>
-                      <div className="text-slate-500 text-[10px]">
-                        Barcode: {p.barcode} • Alert below: {p.minStockAlert}
-                      </div>
+              lowStockProducts.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between p-2.5 bg-[#fffbeb] border border-[#fef3c7] rounded-lg text-xs"
+                >
+                  <div>
+                    <div className="font-extrabold text-slate-900 text-xs">{p.name}</div>
+                    <div className="text-slate-500 text-[10px] mt-0.5 font-medium">
+                      Barcode: {p.barcode} • Alert below: {p.minStockAlert}
                     </div>
-                    <span className="font-bold text-red-600 px-2 py-1 bg-red-100 rounded text-[11px]">
-                      {p.stock} left
-                    </span>
                   </div>
-                ))}
-              </div>
+                  <span className="font-bold text-red-600 px-2 py-0.5 bg-red-50 border border-red-200 rounded text-[10px]">
+                    {p.stock} left
+                  </span>
+                </div>
+              ))
             )}
           </div>
         </div>
       </div>
 
-      {/* Quick Actions Bar */}
-      <div>
-        <div className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+      {/* QUICK ACTIONS SECTION (Matches Image) */}
+      <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm space-y-2">
+        <div className="text-[10px] md:text-xs font-black text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
           <TrendingUp className="w-3.5 h-3.5 text-[#0070ba]" />
-          <span>Quick Actions</span>
+          <span>⚡ QUICK ACTIONS</span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           <button
             id="btn-quick-new-sale"
             onClick={() => setActiveTab('sale-invoice')}
-            className="bg-[#0078d7] hover:bg-[#0066b8] text-white font-bold py-2.5 px-4 rounded-none shadow-sm flex items-center justify-center gap-2 text-xs transition-colors active:scale-[0.99]"
+            className="bg-[#0081d4] hover:bg-[#0070b8] text-white font-bold py-2 px-3 rounded-lg shadow-xs flex items-center justify-center gap-1 text-[11px] md:text-xs transition-colors active:scale-[0.98]"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             <span>+ New Sale Invoice</span>
           </button>
 
           <button
             id="btn-quick-purchase"
             onClick={() => setActiveTab('purchase-stock')}
-            className="bg-[#28a745] hover:bg-[#218838] text-white font-bold py-2.5 px-4 rounded-none shadow-sm flex items-center justify-center gap-2 text-xs transition-colors active:scale-[0.99]"
+            className="bg-[#1baf55] hover:bg-[#158c43] text-white font-bold py-2 px-3 rounded-lg shadow-xs flex items-center justify-center gap-1 text-[11px] md:text-xs transition-colors active:scale-[0.98]"
           >
-            <Box className="w-4 h-4" />
-            <span>Add Purchase</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>+ Add Purchase</span>
           </button>
 
           <button
             id="btn-quick-product"
             onClick={() => setActiveTab('products')}
-            className="bg-[#8e44ad] hover:bg-[#7d3c98] text-white font-bold py-2.5 px-4 rounded-none shadow-sm flex items-center justify-center gap-2 text-xs transition-colors active:scale-[0.99]"
+            className="bg-[#8545b6] hover:bg-[#6c3499] text-white font-bold py-2 px-3 rounded-lg shadow-xs flex items-center justify-center gap-1 text-[11px] md:text-xs transition-colors active:scale-[0.98]"
           >
-            <Tag className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5 rotate-45" />
             <span>Add Product</span>
           </button>
 
           <button
             id="btn-quick-day-closing"
             onClick={() => setActiveTab('day-closing')}
-            className="bg-[#17a2b8] hover:bg-[#138496] text-white font-bold py-2.5 px-4 rounded-none shadow-sm flex items-center justify-center gap-2 text-xs transition-colors active:scale-[0.99]"
+            className="bg-[#1499b8] hover:bg-[#0f7a94] text-white font-bold py-2 px-3 rounded-lg shadow-xs flex items-center justify-center gap-1 text-[11px] md:text-xs transition-colors active:scale-[0.98]"
           >
-            <CalendarCheck className="w-4 h-4" />
-            <span>Day Closing</span>
+            <CalendarCheck className="w-3.5 h-3.5" />
+            <span>📅 Day Closing</span>
           </button>
         </div>
       </div>
 
-      {/* SALES OVERVIEW TREND Chart (Exact visual styling as screenshot) */}
-      <div className="bg-white border border-slate-200 p-4 shadow-xs">
-        <div className="text-xs font-bold text-[#002b49] uppercase tracking-wider mb-4 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-[#0078d7]" />
-          <span>SALES OVERVIEW TREND</span>
+      {/* SALES OVERVIEW TREND Chart (Exact wave line representation) */}
+      <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+        <div className="text-[10px] md:text-xs font-black text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+          <TrendingUp className="w-4 h-4 text-[#0081d4]" />
+          <span>📈 SALES OVERVIEW TREND</span>
         </div>
 
-        <div className="h-44 w-full relative">
-          <svg className="w-full h-full" viewBox="0 0 800 150" preserveAspectRatio="none">
-            {/* Grid lines */}
-            <line x1="0" y1="30" x2="800" y2="30" stroke="#f1f5f9" strokeWidth="1" />
-            <line x1="0" y1="70" x2="800" y2="70" stroke="#f1f5f9" strokeWidth="1" />
-            <line x1="0" y1="110" x2="800" y2="110" stroke="#f1f5f9" strokeWidth="1" />
-            <line x1="0" y1="140" x2="800" y2="140" stroke="#e2e8f0" strokeWidth="1.5" />
+        <div className="h-28 md:h-36 w-full relative">
+          <svg className="w-full h-full" viewBox="0 0 800 120" preserveAspectRatio="none">
+            {/* Horizontal grid lines */}
+            <line x1="0" y1="20" x2="800" y2="20" stroke="#f1f5f9" strokeWidth="1" />
+            <line x1="0" y1="50" x2="800" y2="50" stroke="#f1f5f9" strokeWidth="1" />
+            <line x1="0" y1="80" x2="800" y2="80" stroke="#f1f5f9" strokeWidth="1" />
+            <line x1="0" y1="110" x2="800" y2="110" stroke="#e2e8f0" strokeWidth="1.5" />
 
-            {/* Sales Trend Line */}
+            {/* Sales Trend Curve matching screenshot */}
             <path
-              d="M 60,130 Q 180,105 200,105 T 340,65 T 480,50 T 620,30"
+              d="M 50,100 C 150,95 230,85 300,75 C 400,60 480,55 580,55 C 680,55 720,25 760,25"
               fill="none"
-              stroke="#0088cc"
-              strokeWidth="3.5"
+              stroke="#0081d4"
+              strokeWidth="4"
+              strokeLinecap="round"
             />
 
-            {/* Nodes */}
-            <circle cx="60" cy="130" r="5" fill="#ffffff" stroke="#0088cc" strokeWidth="3" />
-            <circle cx="200" cy="105" r="5" fill="#ffffff" stroke="#0088cc" strokeWidth="3" />
-            <circle cx="340" cy="65" r="5" fill="#ffffff" stroke="#0088cc" strokeWidth="3" />
-            <circle cx="480" cy="50" r="5" fill="#ffffff" stroke="#0088cc" strokeWidth="3" />
-            <circle cx="620" cy="30" r="5" fill="#ffffff" stroke="#0088cc" strokeWidth="3" />
+            {/* Glowing nodes with white centers */}
+            <circle cx="50" cy="100" r="6" fill="#ffffff" stroke="#0081d4" strokeWidth="4.5" />
+            <circle cx="300" cy="75" r="6" fill="#ffffff" stroke="#0081d4" strokeWidth="4.5" />
+            <circle cx="580" cy="55" r="6" fill="#ffffff" stroke="#0081d4" strokeWidth="4.5" />
+            <circle cx="760" cy="25" r="6" fill="#ffffff" stroke="#0081d4" strokeWidth="4.5" />
           </svg>
         </div>
       </div>
