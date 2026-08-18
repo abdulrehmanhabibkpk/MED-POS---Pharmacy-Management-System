@@ -28,6 +28,7 @@ import { ActiveTab } from './types';
 const MainLayout: React.FC = () => {
   const { isAuthenticated, activeTab, setActiveTab, userRole, currentUser } = usePOS();
   const [showMobileScanner, setShowMobileScanner] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     // Check if opened with ?mode=scanner (PWA shortcut or Android launcher)
@@ -160,8 +161,6 @@ const MainLayout: React.FC = () => {
       </div>
     </div>
   );
-
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#f4f7fa]">
