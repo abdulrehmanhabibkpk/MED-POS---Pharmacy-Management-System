@@ -258,7 +258,7 @@ export const PlanPRDView: React.FC = () => {
 
           <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
             <span>MED POS System Architecture v3.1</span>
-            <span className="font-semibold text-[#0070ba]">Verified & Sealed by THE PAK HACKERS</span>
+            <span className="font-semibold text-[#0070ba]">Verified & Sealed by THE PAK HACKTES</span>
           </div>
         </div>
 

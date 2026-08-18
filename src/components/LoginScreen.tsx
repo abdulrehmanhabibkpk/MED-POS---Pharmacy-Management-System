@@ -72,7 +72,7 @@ export const LoginScreen: React.FC = () => {
               <span className="text-white/70">Store Loc: {storeSettings.address || 'Main Market, Pakistan'}</span>
             </div>
             <p className="text-[10px] text-white/50 pt-1 font-mono">
-              © Developed & Powered by THE PAK HACKERS
+              © Developed & Powered by THE PAK HACKTES
             </p>
           </div>
         </div>
@@ -150,13 +150,13 @@ export const LoginScreen: React.FC = () => {
               <ArrowRight className="w-4 h-4" />
             </button>
 
-            <button
+             <button
               type="button"
               id="btn-user-agreement"
               onClick={() => setShowAgreementModal(true)}
               className="w-full bg-[#1e7e34] hover:bg-[#155724] text-white font-bold py-2.5 px-4 rounded-none shadow transition-colors text-xs tracking-wide"
             >
-              © User Agreement | THE PAK HACKERS
+              © User Agreement | THE PAK HACKTES
             </button>
           </form>
         </div>
@@ -178,7 +178,7 @@ export const LoginScreen: React.FC = () => {
                 <strong>Offline-First & Security:</strong> All sales, customer ledgers, inventory counts, and financial reports are securely stored locally on this terminal with automatic recovery and cloud synchronization support.
               </p>
               <p>
-                <strong>Support & Maintenance:</strong> Developed & powered by <strong>THE PAK HACKERS</strong>. For custom integrations, Android sync, or technical assistance, contact your system administrator.
+                <strong>Support & Maintenance:</strong> Developed & powered by <strong>THE PAK HACKTES</strong>. For custom integrations, Android sync, or technical assistance, contact your system administrator.
               </p>
             </div>
             <div className="flex justify-end pt-3 border-t border-slate-200">

@@ -142,7 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
                 <h1 className="text-base font-black tracking-wide leading-none text-white flex items-center gap-1">
                   HACKTES POS
                 </h1>
-                <p className="text-xs text-[#7ec8e3] mt-1 font-medium">Pharmacy System</p>
+                <p className="text-xs text-[#7ec8e3] mt-1 font-medium">POS System</p>
               </div>
             </div>
 
@@ -283,7 +283,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
 
           <div className="text-center pt-2">
             <p className="text-[11px] text-slate-400 font-sans tracking-wide">
-              © THE PAK HACKERS 2025
+              © THE PAK HACKTES 2025
             </p>
           </div>
         </div>

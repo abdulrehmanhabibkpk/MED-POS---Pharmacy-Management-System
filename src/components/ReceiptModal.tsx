@@ -252,7 +252,7 @@ export const ReceiptModal: React.FC = () => {
 
               <div className="border-t border-dashed border-black my-1"></div>
               <div className={`text-center ${is58mm ? 'text-[7px]' : 'text-[8px]'} text-slate-500`}>
-                Software by THE PAK HACKERS
+                Software by THE PAK HACKTES
               </div>
             </div>
           </div>
