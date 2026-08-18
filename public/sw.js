@@ -32,14 +32,25 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Only handle GET requests
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      return (
-        cachedResponse ||
-        fetch(event.request).catch(() => {
-          return cachedResponse;
-        })
-      );
-    })
+    fetch(event.request)
+      .then((response) => {
+        // If valid response, return it
+        return response;
+      })
+      .catch(() => {
+        // Fallback to cache
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
+          
+          // If it's a navigation request, return index.html
+          if (event.request.mode === 'navigate') {
+            return caches.match('/index.html') || caches.match('/');
+          }
+        });
+      })
   );
 });
