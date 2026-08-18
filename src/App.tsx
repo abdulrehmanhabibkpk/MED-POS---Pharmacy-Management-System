@@ -37,6 +37,10 @@ const MainLayout: React.FC = () => {
       if (params.get('mode') === 'scanner') {
         setShowMobileScanner(true);
       }
+      const tabParam = params.get('tab') as ActiveTab;
+      if (tabParam) {
+        setActiveTab(tabParam);
+      }
     }
 
     const handleOpenMobileScanner = () => {

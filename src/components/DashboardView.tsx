@@ -154,6 +154,8 @@ export const DashboardView: React.FC = () => {
         </div>
       </div>
 
+
+
       {/* Middle Grid: Recent Sales & Low Stock Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
         
