@@ -16,45 +16,119 @@
     size: auto;
   }
 
-  html, body {
+  /* Hide everything in root except the receipt modal backdrop during printing */
+  #root > div > *:not(#receipt-modal-backdrop) {
+    display: none !important;
+  }
+
+  /* Reset body and html container limits to prevent any clipping */
+  html, body, #root, #root > div {
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    width: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: #ffffff !important;
+    box-shadow: none !important;
   }
 
-  body * {
-    visibility: hidden;
-  }
-  
-  #thermal-receipt-paper,
-  #thermal-receipt-paper * {
-    visibility: visible;
+  /* Strip fixed full-screen overlay styles from the modal backdrop */
+  #receipt-modal-backdrop {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    z-index: auto !important;
   }
 
+  /* Strip borders, overflow constraints and max-height from preview window frame */
+  #receipt-modal-backdrop > div {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Strip padding and background from the canvas area container */
+  #receipt-modal-backdrop > div > div:not(.no-print) {
+    position: relative !important;
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* CRITICAL: Force zoomLevel transform to none during print to prevent size shrinkage or off-screen offsets */
+  #receipt-modal-backdrop > div > div:not(.no-print) > div {
+    position: relative !important;
+    display: block !important;
+    transform: none !important;
+    transform-origin: top left !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: transparent !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide any other non-printing content explicitly */
+  .no-print, .print\:hidden {
+    display: none !important;
+  }
+
+  /* Render receipt paper statically so it flows cleanly on page */
   #thermal-receipt-paper {
-    position: absolute;
-    left: 0;
-    top: 0;
+    display: block !important;
+    position: relative !important;
     margin: 0 !important;
     box-shadow: none !important;
     border: none !important;
     color: #000000 !important;
     background: #ffffff !important;
     page-break-after: avoid;
+    page-break-inside: avoid;
+    visibility: visible !important;
   }
 
+  #thermal-receipt-paper * {
+    visibility: visible !important;
+  }
+
+  /* Absolute precise widths for standard 80mm thermal paper slips */
   #thermal-receipt-paper.paper-80mm {
     width: 80mm !important;
     max-width: 80mm !important;
-    padding: 2.5mm 3mm !important;
-    font-size: 10pt !important;
+    padding: 2mm 3mm !important;
+    font-size: 10.5pt !important;
   }
 
+  /* Absolute precise widths for compact 58mm mini thermal paper slips */
   #thermal-receipt-paper.paper-58mm {
     width: 58mm !important;
     max-width: 58mm !important;
-    padding: 1.5mm 2mm !important;
-    font-size: 8pt !important;
+    padding: 1mm 1.5mm !important;
+    font-size: 8.5pt !important;
     line-height: 1.15 !important;
   }
 

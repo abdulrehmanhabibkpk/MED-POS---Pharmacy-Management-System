@@ -10,16 +10,22 @@ import { BillHistoryView } from './components/BillHistoryView';
 import { CreditReceiveView } from './components/CreditReceiveView';
 import { PurchaseStockView } from './components/PurchaseStockView';
 import { ProductsView } from './components/ProductsView';
+import { SuppliersView } from './components/SuppliersView';
+import { CustomersView } from './components/CustomersView';
 import { DayClosingView } from './components/DayClosingView';
 import { PayExpenseView } from './components/PayExpenseView';
 import { ReportsView } from './components/ReportsView';
 import { StoreSettingsView } from './components/StoreSettingsView';
+import { BarcodeLabelView } from './components/BarcodeLabelView';
+import { PlanPRDView } from './components/PlanPRDView';
 import { ReceiptModal } from './components/ReceiptModal';
 import { AndroidSyncModal } from './components/AndroidSyncModal';
 import { MobileScannerTerminal } from './components/MobileScannerTerminal';
+import { ShieldAlert } from 'lucide-react';
+import { ActiveTab } from './types';
 
 const MainLayout: React.FC = () => {
-  const { isAuthenticated, activeTab } = usePOS();
+  const { isAuthenticated, activeTab, setActiveTab, userRole } = usePOS();
   const [showMobileScanner, setShowMobileScanner] = useState(false);
 
   useEffect(() => {
@@ -66,6 +72,12 @@ const MainLayout: React.FC = () => {
         return 'Purchase / Stock Receiving';
       case 'products':
         return 'Products Management';
+      case 'suppliers':
+        return 'Suppliers Registry & Payables';
+      case 'customers':
+        return 'Customers Credit Ledger (Khata Book)';
+      case 'barcode-label':
+        return 'Sticker Barcode Label Generator';
       case 'day-closing':
         return 'Day Closing Report';
       case 'pay-expense':
@@ -74,10 +86,59 @@ const MainLayout: React.FC = () => {
         return 'Reports Analytics';
       case 'store-settings':
         return 'Store Business Settings';
+      case 'plan-prd':
+        return 'Interactive POS Roadmap & PRD Plan';
       default:
         return 'Dashboard';
     }
   };
+
+  const hasAccess = (): boolean => {
+    if (userRole === 'Cashier') {
+      const cashierAllowed: ActiveTab[] = ['dashboard', 'sale-invoice', 'sale-return', 'bill-history', 'barcode-label', 'plan-prd'];
+      return cashierAllowed.includes(activeTab);
+    }
+    if (userRole === 'Manager') {
+      const managerRestricted: ActiveTab[] = ['store-settings'];
+      return !managerRestricted.includes(activeTab);
+    }
+    return true; // Admin has total coverage
+  };
+
+  const PermissionShield = () => (
+    <div className="flex items-center justify-center min-h-[400px] p-6 bg-[#f4f7fa]">
+      <div className="bg-white p-8 max-w-md w-full text-center space-y-4 border border-slate-200 shadow-sm">
+        <div className="w-16 h-16 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto border border-red-100">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <div>
+          <h3 className="text-base font-bold text-slate-800">Permission Restricted</h3>
+          <p className="text-slate-500 text-xs mt-1.5 leading-relaxed">
+            The view <strong className="text-slate-700">"{getPageTitle()}"</strong> requires higher security clearance than your active <strong className="text-slate-700">"{userRole}"</strong> role session.
+          </p>
+          <p className="text-slate-500 text-xs mt-1 leading-relaxed">
+            You can elevate your privileges instantly inside the <span className="font-semibold text-[#0070ba] cursor-pointer hover:underline" onClick={() => setActiveTab('plan-prd')}>Interactive Plan</span> switcher.
+          </p>
+        </div>
+        <div className="pt-2 flex gap-3 justify-center">
+          <button
+            type="button"
+            onClick={() => setActiveTab('dashboard')}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2 px-4 rounded transition-all"
+          >
+            Go Dashboard
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('plan-prd')}
+            className="bg-[#0070ba] hover:bg-[#005a96] text-white text-xs font-bold py-2 px-4 rounded shadow transition-all"
+          >
+            Switch Role
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#f4f7fa]">
@@ -90,17 +151,27 @@ const MainLayout: React.FC = () => {
 
         {/* Scrollable View Area */}
         <main className="flex-1 overflow-y-auto">
-          {activeTab === 'dashboard' && <DashboardView />}
-          {activeTab === 'sale-invoice' && <SaleInvoiceView />}
-          {activeTab === 'sale-return' && <SaleReturnView />}
-          {activeTab === 'bill-history' && <BillHistoryView />}
-          {activeTab === 'credit-receive' && <CreditReceiveView />}
-          {activeTab === 'purchase-stock' && <PurchaseStockView />}
-          {activeTab === 'products' && <ProductsView />}
-          {activeTab === 'day-closing' && <DayClosingView />}
-          {activeTab === 'pay-expense' && <PayExpenseView />}
-          {activeTab === 'reports' && <ReportsView />}
-          {activeTab === 'store-settings' && <StoreSettingsView />}
+          {!hasAccess() ? (
+            <PermissionShield />
+          ) : (
+            <>
+              {activeTab === 'dashboard' && <DashboardView />}
+              {activeTab === 'sale-invoice' && <SaleInvoiceView />}
+              {activeTab === 'sale-return' && <SaleReturnView />}
+              {activeTab === 'bill-history' && <BillHistoryView />}
+              {activeTab === 'credit-receive' && <CreditReceiveView />}
+              {activeTab === 'purchase-stock' && <PurchaseStockView />}
+              {activeTab === 'products' && <ProductsView />}
+              {activeTab === 'suppliers' && <SuppliersView />}
+              {activeTab === 'customers' && <CustomersView />}
+              {activeTab === 'barcode-label' && <BarcodeLabelView />}
+              {activeTab === 'day-closing' && <DayClosingView />}
+              {activeTab === 'pay-expense' && <PayExpenseView />}
+              {activeTab === 'reports' && <ReportsView />}
+              {activeTab === 'store-settings' && <StoreSettingsView />}
+              {activeTab === 'plan-prd' && <PlanPRDView />}
+            </>
+          )}
         </main>
       </div>
 

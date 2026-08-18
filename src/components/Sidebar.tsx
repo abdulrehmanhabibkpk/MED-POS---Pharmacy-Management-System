@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   LayoutDashboard,
   FileText,
@@ -14,12 +14,15 @@ import {
   Smartphone,
   LogOut,
   Pill,
+  Truck,
+  Users,
 } from 'lucide-react';
 import { usePOS } from '../context/POSContext';
 import { ActiveTab } from '../types';
 
 export const Sidebar: React.FC = () => {
-  const { activeTab, setActiveTab, logout, setShowSyncModal } = usePOS();
+  const { activeTab, setActiveTab, logout, setShowSyncModal, userRole, setUserRole } = usePOS();
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
   const navItems: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -29,6 +32,9 @@ export const Sidebar: React.FC = () => {
     { id: 'credit-receive', label: 'Credit Receive', icon: <WalletCards className="w-5 h-5" /> },
     { id: 'purchase-stock', label: 'Purchase Stock', icon: <Package className="w-5 h-5" /> },
     { id: 'products', label: 'Products', icon: <Tag className="w-5 h-5" /> },
+    { id: 'suppliers', label: 'Suppliers List', icon: <Truck className="w-5 h-5" /> },
+    { id: 'customers', label: 'Customers Ledger', icon: <Users className="w-5 h-5" /> },
+    { id: 'barcode-label', label: 'Label Generator', icon: <Tag className="w-5 h-5" /> },
     { id: 'day-closing', label: 'Day Closing', icon: <CalendarCheck className="w-5 h-5" /> },
     { id: 'pay-expense', label: 'Pay Expense', icon: <Receipt className="w-5 h-5" /> },
     { id: 'reports', label: 'Reports', icon: <BarChart3 className="w-5 h-5" /> },
@@ -51,15 +57,85 @@ export const Sidebar: React.FC = () => {
             <Pill className="w-6 h-6 rotate-45" />
           </div>
           <div>
-            <h1 className="text-xl font-black tracking-wide leading-none text-white flex items-center gap-1">
-              MED POS
+            <h1 className="text-base font-black tracking-wide leading-none text-white flex items-center gap-1">
+              HACKTES POS
             </h1>
             <p className="text-xs text-[#7ec8e3] mt-1 font-medium">Pharmacy System</p>
           </div>
         </div>
 
+        {/* User Role Indicator Profile Block */}
+        <div className="relative mx-3 mt-3 mb-2">
+          <div
+            onClick={() => setShowRoleDropdown(!showRoleDropdown)}
+            className="p-3 bg-[#001c38] border border-[#003366] rounded-sm flex items-center justify-between gap-2.5 cursor-pointer hover:bg-[#002850] transition-colors"
+            title="Click to Switch User Role"
+          >
+            <div className="flex items-center gap-2.5 truncate">
+              <div className="w-8 h-8 rounded-full bg-[#0070ba] flex items-center justify-center font-bold text-white text-xs shrink-0">
+                {userRole.charAt(0)}
+              </div>
+              <div className="truncate text-left">
+                <div className="text-xs font-bold text-white leading-tight uppercase tracking-wider">{userRole} Session</div>
+                <span className="text-[10px] text-emerald-400 font-mono">
+                  ID: {userRole === 'Admin' ? 'PK-001' : userRole === 'Manager' ? 'PK-002' : 'PK-003'}
+                </span>
+              </div>
+            </div>
+            <span className="text-slate-400 text-xs">▼</span>
+          </div>
+
+          {/* Role selection dropdown */}
+          {showRoleDropdown && (
+            <div className="absolute left-0 right-0 mt-1 bg-white text-slate-800 border border-slate-200 shadow-xl rounded-sm z-50 overflow-hidden text-xs">
+              <div className="p-1.5 bg-slate-100 font-bold text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                Switch Active Role
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setUserRole('Admin');
+                  setShowRoleDropdown(false);
+                }}
+                className={`w-full text-left px-3 py-2 hover:bg-slate-50 font-semibold flex items-center justify-between ${
+                  userRole === 'Admin' ? 'bg-slate-100 text-[#0070ba]' : 'text-slate-700'
+                }`}
+              >
+                <span>👑 Admin Role</span>
+                {userRole === 'Admin' && <span className="text-[#0070ba] font-bold">✓</span>}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUserRole('Manager');
+                  setShowRoleDropdown(false);
+                }}
+                className={`w-full text-left px-3 py-2 hover:bg-slate-50 font-semibold flex items-center justify-between ${
+                  userRole === 'Manager' ? 'bg-slate-100 text-[#0070ba]' : 'text-slate-700'
+                }`}
+              >
+                <span>💼 Manager Role</span>
+                {userRole === 'Manager' && <span className="text-[#0070ba] font-bold">✓</span>}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUserRole('Cashier');
+                  setShowRoleDropdown(false);
+                }}
+                className={`w-full text-left px-3 py-2 hover:bg-slate-50 font-semibold flex items-center justify-between ${
+                  userRole === 'Cashier' ? 'bg-slate-100 text-[#0070ba]' : 'text-slate-700'
+                }`}
+              >
+                <span>🛒 Cashier Role</span>
+                {userRole === 'Cashier' && <span className="text-[#0070ba] font-bold">✓</span>}
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Navigation List */}
-        <nav id="sidebar-nav" className="py-2 space-y-0.5 px-2">
+        <nav id="sidebar-nav" className="py-2 space-y-0.5 px-2 max-h-[calc(100vh-270px)] overflow-y-auto">
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
             return (

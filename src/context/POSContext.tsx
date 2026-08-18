@@ -9,6 +9,9 @@ import {
   StoreSettings,
   ActiveTab,
   ThermalPaperSize,
+  UserRole,
+  Supplier,
+  Customer,
 } from '../types';
 import {
   initialProducts,
@@ -23,12 +26,15 @@ interface POSContextType {
   isAuthenticated: boolean;
   login: (u: string, p: string) => boolean;
   logout: () => void;
+  userRole: UserRole;
+  setUserRole: (role: UserRole) => void;
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   products: Product[];
   addProduct: (p: Omit<Product, 'id'>) => void;
   updateProduct: (p: Product) => void;
   deleteProduct: (id: string) => void;
+  importProducts: (newProducts: Product[]) => void;
   sales: SaleInvoice[];
   addSale: (sale: Omit<SaleInvoice, 'id' | 'invoiceNo'>) => SaleInvoice;
   returns: SaleReturn[];
@@ -40,6 +46,14 @@ interface POSContextType {
   expenses: ExpenseRecord[];
   addExpense: (e: Omit<ExpenseRecord, 'id' | 'date'>) => void;
   deleteExpense: (id: string) => void;
+  suppliers: Supplier[];
+  addSupplier: (s: Omit<Supplier, 'id'>) => void;
+  updateSupplier: (s: Supplier) => void;
+  deleteSupplier: (id: string) => void;
+  customers: Customer[];
+  addCustomer: (c: Omit<Customer, 'id'>) => void;
+  updateCustomer: (c: Customer) => void;
+  deleteCustomer: (id: string) => void;
   storeSettings: StoreSettings;
   updateStoreSettings: (s: StoreSettings) => void;
   previewInvoice: SaleInvoice | null;
@@ -61,6 +75,16 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = localStorage.getItem('medpos_auth');
     return saved ? JSON.parse(saved) : true; // Default logged in for immediate viewing, or can toggle
   });
+
+  const [userRole, setUserRoleState] = useState<UserRole>(() => {
+    const saved = localStorage.getItem('medpos_user_role');
+    return (saved === 'Admin' || saved === 'Manager' || saved === 'Cashier') ? saved : 'Admin';
+  });
+
+  const setUserRole = (role: UserRole) => {
+    setUserRoleState(role);
+    localStorage.setItem('medpos_user_role', role);
+  };
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
 
@@ -97,6 +121,25 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [storeSettings, setStoreSettings] = useState<StoreSettings>(() => {
     const saved = localStorage.getItem('medpos_settings');
     return saved ? JSON.parse(saved) : initialStoreSettings;
+  });
+
+  const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
+    const saved = localStorage.getItem('medpos_suppliers');
+    return saved ? JSON.parse(saved) : [
+      { id: 'sup-1', name: 'Al-Madina Medicine Distributors', company: 'GlaxoSmithKline & Getz Pharma', phone: '0300-1234567', email: 'madina@dist.com', address: 'Medicine Market, Lahore', balanceOwed: 45000 },
+      { id: 'sup-2', name: 'Zaman Surgical & Pharma Store', company: 'Abbott Laboratories', phone: '0321-7654321', email: 'zaman@surgicals.com', address: 'Katchery Road, Multan', balanceOwed: 12000 },
+      { id: 'sup-3', name: 'Global Health Wholesalers', company: 'Pfizer & Reckitt', phone: '0333-9876543', email: 'info@globalhealth.com', address: 'I.I Chundrigar Road, Karachi', balanceOwed: 0 },
+    ];
+  });
+
+  const [customers, setCustomers] = useState<Customer[]>(() => {
+    const saved = localStorage.getItem('medpos_customers');
+    return saved ? JSON.parse(saved) : [
+      { id: 'cust-1', name: 'Muhammad Ali', phone: '0345-1112223', email: 'ali@gmail.com', address: 'Model Town, Lahore', balanceReceivable: 8500 },
+      { id: 'cust-2', name: 'Dr. Tariq Mahmood', phone: '0312-3334445', email: 'tariq@health.com', address: 'Defense Phase 5, Karachi', balanceReceivable: 1500 },
+      { id: 'cust-3', name: 'Ayesha Bibi (Regular)', phone: '0322-5556667', email: '', address: 'Samanabad, Lahore', balanceReceivable: 0 },
+      { id: 'cust-4', name: 'Zahid Khan', phone: '0301-9998887', email: 'zahid@yahoo.com', address: 'Gulgasht Colony, Multan', balanceReceivable: 12000 },
+    ];
   });
 
   const [previewInvoice, setPreviewInvoice] = useState<SaleInvoice | null>(null);
@@ -142,9 +185,27 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('medpos_settings', JSON.stringify(storeSettings));
   }, [storeSettings]);
 
-  const login = (u: string, _p: string) => {
-    if (u.trim().length > 0) {
+  useEffect(() => {
+    localStorage.setItem('medpos_suppliers', JSON.stringify(suppliers));
+  }, [suppliers]);
+
+  useEffect(() => {
+    localStorage.setItem('medpos_customers', JSON.stringify(customers));
+  }, [customers]);
+
+  const login = (u: string, p: string) => {
+    const usernameLower = u.trim().toLowerCase();
+    const passwordLower = p.trim().toLowerCase();
+    
+    if (usernameLower.length > 0) {
       setIsAuthenticated(true);
+      if (usernameLower === 'cashier' || passwordLower === 'cashier') {
+        setUserRole('Cashier');
+      } else if (usernameLower === 'manager' || passwordLower === 'manager') {
+        setUserRole('Manager');
+      } else {
+        setUserRole('Admin');
+      }
       return true;
     }
     return false;
@@ -168,6 +229,57 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteProduct = (id: string) => {
     setProducts((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const importProducts = (newProducts: Product[]) => {
+    setProducts((prev) => {
+      const updated = [...prev];
+      newProducts.forEach((newP) => {
+        const idx = updated.findIndex((p) => p.barcode.trim() === newP.barcode.trim());
+        if (idx !== -1) {
+          // Keep existing ID, overwrite attributes
+          updated[idx] = { ...updated[idx], ...newP };
+        } else {
+          updated.push({
+            ...newP,
+            id: newP.id || `p-${Date.now()}-${Math.floor(Math.random() * 100000)}`
+          });
+        }
+      });
+      return updated;
+    });
+  };
+
+  const addSupplier = (s: Omit<Supplier, 'id'>) => {
+    const newSup: Supplier = {
+      ...s,
+      id: `sup-${Date.now()}`,
+    };
+    setSuppliers((prev) => [newSup, ...prev]);
+  };
+
+  const updateSupplier = (s: Supplier) => {
+    setSuppliers((prev) => prev.map((item) => (item.id === s.id ? s : item)));
+  };
+
+  const deleteSupplier = (id: string) => {
+    setSuppliers((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const addCustomer = (c: Omit<Customer, 'id'>) => {
+    const newCust: Customer = {
+      ...c,
+      id: `cust-${Date.now()}`,
+    };
+    setCustomers((prev) => [newCust, ...prev]);
+  };
+
+  const updateCustomer = (c: Customer) => {
+    setCustomers((prev) => prev.map((item) => (item.id === c.id ? c : item)));
+  };
+
+  const deleteCustomer = (id: string) => {
+    setCustomers((prev) => prev.filter((item) => item.id !== id));
   };
 
   const addSale = (saleData: Omit<SaleInvoice, 'id' | 'invoiceNo'>): SaleInvoice => {
@@ -357,12 +469,15 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isAuthenticated,
         login,
         logout,
+        userRole,
+        setUserRole,
         activeTab,
         setActiveTab,
         products,
         addProduct,
         updateProduct,
         deleteProduct,
+        importProducts,
         sales,
         addSale,
         returns,
@@ -374,6 +489,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         expenses,
         addExpense,
         deleteExpense,
+        suppliers,
+        addSupplier,
+        updateSupplier,
+        deleteSupplier,
+        customers,
+        addCustomer,
+        updateCustomer,
+        deleteCustomer,
         storeSettings,
         updateStoreSettings,
         previewInvoice,

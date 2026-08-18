@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Sale Invoice - Mobile POS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Hanken Grotesk', 'sans-serif'],
+          },
+          colors: {
+            primary: '#001b3d', // From design system custom_color
+            surface: '#f7fafc',
+            'surface-low': '#f1f4f6',
+            accent: {
+              green: '#10b981', // Approximate for the vivid green
+              blue: '#3b82f6',
+              cyan: '#06b6d4',
+              red: '#ef4444',
+              dark: '#1e293b'
+            }
+          },
+          borderRadius: {
+            'md': '0.375rem', // ROUND_FOUR equivalent
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-styles">
+    body {
+      background-color: #f1f4f6;
+      -webkit-font-smoothing: antialiased;
+    }
+    /* Hide scrollbar for cleaner mobile look */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
+    
+    /* Ensure inputs have enough touch area */
+    input[type="text"], input[type="number"] {
+      font-size: 16px; /* Prevents iOS zoom */
+    }
+  </style>
+</head>
+<body class="text-slate-800 font-sans h-screen flex flex-col overflow-hidden">
+<!-- BEGIN: TopAppBar -->
+<header class="bg-primary text-white flex items-center justify-between px-4 py-3 shrink-0 shadow-md relative z-10" data-purpose="app-header">
+<div class="flex items-center gap-3">
+<button aria-label="Menu" class="p-1 -ml-1 focus:outline-none" type="button">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<h1 class="text-lg font-semibold tracking-wide">Sale Invoice</h1>
+</div>
+<div class="flex items-center gap-2">
+<div class="text-xs text-slate-300 hidden sm:block">18-Aug-2026</div>
+<button class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm border border-blue-400">
+        A
+      </button>
+</div>
+</header>
+<!-- END: TopAppBar -->
+<!-- BEGIN: MainContent -->
+<main class="flex-1 overflow-y-auto no-scrollbar flex flex-col bg-surface" data-purpose="main-scroll-area">
+<!-- BEGIN: Store Header Info -->
+<section class="bg-slate-800 text-white px-4 py-2 text-sm flex flex-col gap-2 shadow-inner" data-purpose="store-info-bar">
+<div class="flex items-center gap-2 font-medium">
+<svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        MY MEDICAL STORE
+      </div>
+<div class="flex flex-wrap justify-between items-center gap-2 text-xs">
+<div class="flex items-center gap-1">
+<span class="text-slate-400">Printer:</span>
+<span class="bg-blue-600 px-1.5 py-0.5 rounded text-white">80mm</span>
+</div>
+<div class="flex gap-3">
+<label class="flex items-center gap-1 cursor-pointer">
+<input checked="" class="w-3 h-3 text-blue-500 bg-slate-700 border-slate-600 focus:ring-blue-600" name="rate_type" type="radio"/>
+<span>Retail</span>
+</label>
+<label class="flex items-center gap-1 cursor-pointer">
+<input class="w-3 h-3 text-blue-500 bg-slate-700 border-slate-600 focus:ring-blue-600" name="rate_type" type="radio"/>
+<span>Wholesale</span>
+</label>
+</div>
+</div>
+</section>
+<!-- END: Store Header Info -->
+<!-- BEGIN: ItemInputForm -->
+<section class="p-4 bg-white border-b border-slate-200 shadow-sm" data-purpose="item-entry-form">
+<div class="flex flex-col gap-3">
+<!-- Barcode Input -->
+<div class="relative">
+<label class="block text-xs font-medium text-slate-500 mb-1">Barcode / Name:</label>
+<div class="relative flex items-center">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<input class="block w-full pl-9 pr-10 py-2.5 sm:text-sm border-slate-300 rounded-md focus:ring-primary focus:border-primary shadow-sm" placeholder="Scan or type..." type="text"/>
+<button class="absolute inset-y-0 right-0 pr-3 flex items-center text-blue-500 hover:text-blue-700" title="Live Cam" type="button">
+<svg class="h-5 w-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+</div>
+<div class="flex gap-3">
+<!-- Qty -->
+<div class="w-1/3">
+<label class="block text-xs font-medium text-slate-500 mb-1">Qty:</label>
+<input class="block w-full py-2.5 sm:text-sm border-slate-300 rounded-md focus:ring-primary focus:border-primary shadow-sm text-center" min="1" type="number" value="1"/>
+</div>
+<!-- Discount -->
+<div class="w-2/3">
+<label class="block text-xs font-medium text-slate-500 mb-1">Discount Rs:</label>
+<input class="block w-full py-2.5 sm:text-sm border-slate-300 rounded-md focus:ring-primary focus:border-primary shadow-sm text-right" min="0" type="number" value="0"/>
+</div>
+</div>
+<!-- Customer -->
+<div>
+<label class="block text-xs font-medium text-slate-500 mb-1">Customer:</label>
+<input class="block w-full py-2.5 sm:text-sm border-slate-300 rounded-md focus:ring-primary focus:border-primary shadow-sm bg-slate-50" type="text" value="Cash Customer"/>
+</div>
+<!-- Add Button -->
+<button class="mt-1 w-full bg-accent-green hover:bg-green-600 text-white font-medium py-3 px-4 rounded-md shadow-sm transition-colors flex items-center justify-center gap-2 text-sm active:scale-95" type="button">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          Add Item [Enter]
+        </button>
+</div>
+</section>
+<!-- END: ItemInputForm -->
+<!-- BEGIN: CartList Area -->
+<section class="flex-1 min-h-[200px] p-4 flex flex-col" data-purpose="cart-items-display">
+<!-- Empty State -->
+<div class="flex-1 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-lg p-6 bg-slate-50/50">
+<svg class="w-12 h-12 mb-3 text-slate-300" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+<p class="text-sm text-center">No items added to invoice yet.<br/>Scan barcode or search above.</p>
+</div>
+<!-- Placeholder for actual list items (hidden for now based on reference image empty state) -->
+<!-- 
+      <div class="space-y-2">
+        <div class="bg-white p-3 rounded shadow-sm border border-slate-100 flex justify-between items-center">
+          <div>
+            <div class="font-medium text-sm">Panadol Extra 500mg</div>
+            <div class="text-xs text-slate-500">Qty: 2 | Rate: Rs. 50.00</div>
+          </div>
+          <div class="text-right">
+            <div class="font-bold text-slate-800">Rs. 100.00</div>
+            <button class="text-red-500 text-xs mt-1">Remove</button>
+          </div>
+        </div>
+      </div>
+      -->
+</section>
+<!-- END: CartList Area -->
+<!-- Spacer to ensure content isn't hidden behind bottom panel -->
+<div class="h-4"></div>
+</main>
+<!-- END: MainContent -->
+<!-- BEGIN: CheckoutPanel -->
+<footer class="bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe relative z-20 shrink-0" data-purpose="checkout-summary-actions">
+<div class="p-4">
+<!-- Totals Summary -->
+<div class="flex justify-between items-end mb-4 border-b border-slate-100 pb-3">
+<div class="space-y-1">
+<div class="text-sm text-slate-500">Total: <span class="font-medium text-slate-700">Rs. 0.00</span></div>
+<div class="text-sm text-red-500">Discount: <span>Rs. 0.00</span></div>
+</div>
+<div class="text-right">
+<div class="text-xs font-bold text-accent-green uppercase tracking-wider mb-1">Net Amount</div>
+<div class="text-2xl font-bold text-accent-green leading-none">Rs. 0.00</div>
+</div>
+</div>
+<!-- Payment Inputs -->
+<div class="flex gap-4 mb-4">
+<div class="flex-1">
+<label class="block text-xs font-medium text-slate-500 mb-1">Paid Amount (Rs.):</label>
+<input class="block w-full py-2 sm:text-sm border-slate-300 rounded-md focus:ring-primary focus:border-primary" type="number" value="0"/>
+</div>
+<div class="flex-1 flex flex-col justify-end">
+<div class="text-xs text-slate-500 mb-1">Change:</div>
+<div class="font-semibold text-accent-green text-lg py-1">Rs. 0.00</div>
+</div>
+</div>
+<!-- Printer Selection -->
+<div class="flex items-center justify-between mb-3 text-xs">
+<div class="flex items-center gap-1 text-slate-600">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          Thermal Printer:
+        </div>
+<div class="flex bg-slate-100 p-0.5 rounded-md border border-slate-200">
+<button class="px-3 py-1 bg-primary text-white rounded shadow-sm">80mm</button>
+<button class="px-3 py-1 text-slate-600 hover:bg-slate-200 rounded">58mm</button>
+</div>
+</div>
+<!-- Action Buttons Grid -->
+<div class="grid grid-cols-2 gap-2">
+<!-- Main Action spans both columns -->
+<button class="col-span-2 bg-accent-green hover:bg-green-600 text-white font-bold py-3 rounded-md shadow-sm flex justify-center items-center gap-2 active:scale-95 transition-transform" type="button">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          SAVE &amp; PRINT (80mm)
+        </button>
+<button class="bg-accent-blue hover:bg-blue-600 text-white font-medium py-2 rounded-md shadow-sm text-sm flex justify-center items-center gap-1 active:scale-95 transition-transform" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          Print 80mm
+        </button>
+<button class="bg-accent-cyan hover:bg-cyan-600 text-white font-medium py-2 rounded-md shadow-sm text-sm flex justify-center items-center gap-1 active:scale-95 transition-transform" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          Print 58mm
+        </button>
+<button class="bg-slate-600 hover:bg-slate-700 text-white font-medium py-2 rounded-md shadow-sm text-sm flex justify-center items-center gap-1 active:scale-95 transition-transform" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          Draft Slip
+        </button>
+<button class="bg-accent-red hover:bg-red-600 text-white font-medium py-2 rounded-md shadow-sm text-sm flex justify-center items-center gap-1 active:scale-95 transition-transform" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          Clear Cart
+        </button>
+</div>
+</div>
+</footer>
+<!-- END: CheckoutPanel -->
+</body></html>

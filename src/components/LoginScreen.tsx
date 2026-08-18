@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pill, MapPin, Phone, ShieldCheck, ArrowRight, FileCheck2 } from 'lucide-react';
+import { Pill, MapPin, Phone, ShieldCheck, ArrowRight, FileCheck2, Mail } from 'lucide-react';
 import { usePOS } from '../context/POSContext';
 
 export const LoginScreen: React.FC = () => {
@@ -29,32 +29,50 @@ export const LoginScreen: React.FC = () => {
         className="md:w-5/12 bg-[#004b87] text-white p-8 md:p-14 flex flex-col justify-between relative overflow-hidden shadow-2xl"
       >
         <div>
-          {/* Sub Store Header */}
-          <div className="flex items-center gap-2 text-white/90 text-sm font-semibold tracking-wider uppercase mb-8">
-            <Pill className="w-5 h-5 text-white" />
+          {/* Sub Store Header - Dynamically showing the name from Store Settings */}
+          <div className="flex items-center gap-2 text-white/95 text-sm font-bold tracking-wider uppercase mb-8 bg-white/10 px-3.5 py-2 rounded-xs border border-white/10">
+            <Pill className="w-5 h-5 text-[#00ff88]" />
             <span>{storeSettings.storeName || 'MY MEDICAL STORE'}</span>
           </div>
 
-          {/* Big Title */}
-          <h1 className="text-6xl md:text-7xl font-black tracking-tight text-white mb-2">
-            MED POS
-          </h1>
-          <p className="text-lg md:text-xl text-white/90 font-medium tracking-wide">
-            {storeSettings.tagline || 'Pharmacy General Store'}
+          {/* Software Logo & Big Title */}
+          <div className="flex flex-col gap-4 mb-4">
+            <img 
+              src="/WhatsApp_Image_2026-08-07_at_11.56.27_PM-removebg-preview.png" 
+              alt="HACKTES Logo" 
+              className="h-28 w-auto object-contain self-start drop-shadow-lg"
+              onError={(e) => {
+                // Fallback invisibly if not loaded
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+            <h1 className="text-5xl md:text-6xl font-black tracking-tight text-white">
+              HACKTES POS
+            </h1>
+          </div>
+          <p className="text-md text-white/90 font-semibold tracking-wide">
+            {storeSettings.tagline || 'Pharmacy & General Store Management System'}
           </p>
 
-          {/* Meta Information */}
-          <div className="mt-12 space-y-2 text-xs md:text-sm text-white/80">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-white shrink-0" />
-              <span>{storeSettings.address || 'Main Market, Pakistan'}</span>
+          {/* Contact & Support Meta Information */}
+          <div className="mt-12 space-y-3.5 text-xs md:text-sm text-white/90 bg-black/10 p-4 border border-white/5 rounded-xs">
+            <div className="text-xs font-extrabold uppercase tracking-widest text-[#00ff88] mb-1">
+              Developer Support & Contact:
             </div>
-            <div className="flex items-center gap-2">
-              <Phone className="w-4 h-4 text-white shrink-0" />
-              <span>{storeSettings.phone || '0300-1234567'}</span>
+            <div className="flex items-center gap-2.5">
+              <Phone className="w-4 h-4 text-[#00ff88] shrink-0" />
+              <span>WhatsApp: <strong className="font-mono text-white select-all">03195702823</strong></span>
             </div>
-            <p className="text-xs text-white/60 pt-2">
-              © Powered by THE PAK HACKERS
+            <div className="flex items-center gap-2.5">
+              <Mail className="w-4 h-4 text-[#00ff88] shrink-0" />
+              <span>Email: <strong className="font-mono text-white select-all">teemthepakhacktes.com@gmail.com</strong></span>
+            </div>
+            <div className="flex items-center gap-2.5 pt-1.5 border-t border-white/10">
+              <MapPin className="w-4 h-4 text-white/60 shrink-0" />
+              <span className="text-white/70">Store Loc: {storeSettings.address || 'Main Market, Pakistan'}</span>
+            </div>
+            <p className="text-[10px] text-white/50 pt-1 font-mono">
+              © Developed & Powered by THE PAK HACKERS
             </p>
           </div>
         </div>
@@ -144,7 +162,7 @@ export const LoginScreen: React.FC = () => {
           <div className="bg-white max-w-lg w-full p-6 shadow-2xl border border-slate-300 text-slate-800 animate-in fade-in">
             <div className="flex items-center gap-2 text-[#1e7e34] font-bold text-lg border-b border-slate-200 pb-3">
               <FileCheck2 className="w-6 h-6" />
-              <span>MED POS - Terms & License Agreement</span>
+              <span>HACKTES POS - Terms & License Agreement</span>
             </div>
             <div className="py-4 text-xs space-y-3 leading-relaxed text-slate-600 max-h-80 overflow-y-auto">
               <p>

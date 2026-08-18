@@ -96,6 +96,27 @@ export interface StoreSettings {
   defaultPaperSize?: ThermalPaperSize;
 }
 
+export interface Supplier {
+  id: string;
+  name: string;
+  company: string;
+  phone: string;
+  email: string;
+  address: string;
+  balanceOwed: number; // Positive = we owe them money (payable)
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  balanceReceivable: number; // Positive = they owe us money (receivable)
+}
+
+export type UserRole = 'Admin' | 'Manager' | 'Cashier';
+
 export type ActiveTab =
   | 'dashboard'
   | 'sale-invoice'
@@ -104,7 +125,11 @@ export type ActiveTab =
   | 'credit-receive'
   | 'purchase-stock'
   | 'products'
+  | 'suppliers'
+  | 'customers'
   | 'day-closing'
   | 'pay-expense'
   | 'reports'
-  | 'store-settings';
+  | 'store-settings'
+  | 'barcode-label'
+  | 'plan-prd';

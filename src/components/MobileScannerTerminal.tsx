@@ -9,7 +9,7 @@ interface MobileScannerTerminalProps {
 }
 
 export const MobileScannerTerminal: React.FC<MobileScannerTerminalProps> = ({ onBack }) => {
-  const { products, addToCart } = usePOS();
+  const { products } = usePOS();
   const [isWholesale, setIsWholesale] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
@@ -111,10 +111,6 @@ export const MobileScannerTerminal: React.FC<MobileScannerTerminalProps> = ({ on
     });
     setScanCount((c) => c + 1);
 
-    if (found) {
-      addToCart(found, 1, rate);
-    }
-
     // Real-time Cross-Device broadcast to PC Sale Invoice
     try {
       if (typeof window !== 'undefined') {
@@ -132,7 +128,7 @@ export const MobileScannerTerminal: React.FC<MobileScannerTerminalProps> = ({ on
         }
       }
     } catch {}
-  }, [products, addToCart, isWholesale, soundOn]);
+  }, [products, isWholesale, soundOn]);
 
   // High-Speed Camera Scanner with Native BarcodeDetector (Ultra-Fast 60fps) + Html5Qrcode Fallback
   useEffect(() => {

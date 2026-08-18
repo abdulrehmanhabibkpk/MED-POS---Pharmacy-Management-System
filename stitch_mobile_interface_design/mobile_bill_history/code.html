@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Bill History - Mobile</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- FontAwesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<!-- Tailwind Config based on Design System -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Hanken Grotesk"', 'sans-serif'],
+          },
+          colors: {
+            primary: '#001b3d',
+            'on-primary': '#ffffff',
+            'primary-container': '#1f3e67',
+            'on-primary-container': '#e1e9fb',
+            secondary: '#485e71',
+            'on-secondary': '#ffffff',
+            'secondary-container': '#cde3f9',
+            'on-secondary-container': '#001b2a',
+            surface: '#f7fafc',
+            'on-surface': '#181c1f',
+            'surface-container-lowest': '#ffffff',
+            'surface-container': '#ecefec',
+            outline: '#71787d',
+            'outline-variant': '#c1c7cc',
+            error: '#ba1a1a',
+            'on-error': '#ffffff',
+            success: '#146c2e',
+            'on-success': '#ffffff',
+          },
+          borderRadius: {
+            'none': '0px',
+            'sm': '2px',
+            DEFAULT: '4px',
+            'md': '6px',
+            'lg': '8px',
+            'xl': '12px',
+            '2xl': '16px',
+            '3xl': '24px',
+            'full': '9999px',
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-styles">
+    body {
+      background-color: theme('colors.surface');
+      color: theme('colors.on-surface');
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Hide scrollbar for clean mobile look */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .shadow-elevation-1 {
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    
+    .shadow-elevation-2 {
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+<!-- BEGIN: Top App Bar -->
+<header class="bg-primary text-on-primary sticky top-0 z-50 shadow-elevation-2" data-purpose="top-app-bar">
+<div class="flex items-center justify-between px-4 py-3">
+<div class="flex items-center gap-3">
+<button aria-label="Menu" class="text-on-primary hover:bg-white/10 p-2 rounded-full transition-colors">
+<i class="fas fa-bars text-lg"></i>
+</button>
+<h1 class="text-xl font-semibold tracking-tight">Bill History</h1>
+</div>
+<div class="flex items-center gap-2">
+<button aria-label="Scanner" class="text-on-primary hover:bg-white/10 p-2 rounded-full transition-colors">
+<i class="fas fa-barcode text-lg"></i>
+</button>
+<div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">
+          A
+        </div>
+</div>
+</div>
+</header>
+<!-- END: Top App Bar -->
+<!-- BEGIN: Search & Filter Sticky Bar -->
+<section class="bg-surface-container-lowest border-b border-outline-variant sticky top-[56px] z-40 px-4 py-3 flex gap-2 items-center" data-purpose="search-filter-bar">
+<div class="relative flex-1">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<i class="fas fa-search text-outline text-sm"></i>
+</div>
+<input class="block w-full pl-9 pr-3 py-2 border border-outline-variant rounded-full text-sm focus:ring-primary focus:border-primary bg-surface-container-lowest placeholder-outline/70 transition-shadow" placeholder="Search customer, invoice..." type="text"/>
+</div>
+<button class="flex-shrink-0 bg-surface-container border border-outline-variant text-on-surface rounded-full px-4 py-2 text-sm font-medium hover:bg-surface-container/80 transition-colors flex items-center gap-2" id="filterBtn">
+<i class="fas fa-filter text-xs text-outline"></i>
+      Filter
+    </button>
+</section>
+<!-- END: Search & Filter Sticky Bar -->
+<!-- BEGIN: Main Content - Invoice List -->
+<main class="flex-1 p-4 pb-24 overflow-y-auto space-y-4" data-purpose="invoice-list">
+<!-- Invoice Card 1 -->
+<article class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 shadow-elevation-1 active:bg-surface-container transition-colors" data-purpose="invoice-card">
+<div class="flex justify-between items-start mb-3">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-sm font-bold text-primary">INV-#3</span>
+<span class="px-2 py-0.5 rounded-full bg-[#e3f2fd] text-[#1976d2] text-[10px] font-semibold tracking-wide uppercase">Retail</span>
+</div>
+<p class="text-xs text-outline font-medium flex items-center gap-1">
+<i class="far fa-calendar-alt"></i> 14-Aug-2026, 17:31
+          </p>
+</div>
+<div class="text-right">
+<p class="text-lg font-bold text-on-surface">Rs. 2,500.00</p>
+<p class="text-xs text-success font-medium">Paid: Rs. 2,500.00</p>
+</div>
+</div>
+<div class="py-2 border-t border-b border-outline-variant/50 my-3 text-sm flex items-center gap-2 text-secondary">
+<i class="far fa-user text-outline"></i>
+<span class="font-medium">Cash Customer</span>
+</div>
+<div class="flex items-center justify-between mt-2">
+<div class="flex gap-2">
+<button class="px-3 py-1.5 border border-primary text-primary rounded-md text-xs font-semibold hover:bg-primary/5 transition-colors flex items-center gap-1">
+<i class="fas fa-print"></i> 80mm
+           </button>
+<button class="px-3 py-1.5 border border-primary text-primary rounded-md text-xs font-semibold hover:bg-primary/5 transition-colors flex items-center gap-1">
+<i class="fas fa-print"></i> 58mm
+           </button>
+</div>
+<button aria-label="More options" class="text-primary hover:bg-primary/10 p-2 rounded-full transition-colors">
+<i class="fas fa-ellipsis-v"></i>
+</button>
+</div>
+</article>
+<!-- Invoice Card 2 -->
+<article class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 shadow-elevation-1 active:bg-surface-container transition-colors" data-purpose="invoice-card">
+<div class="flex justify-between items-start mb-3">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-sm font-bold text-primary">INV-#2</span>
+<span class="px-2 py-0.5 rounded-full bg-[#f3e5f5] text-[#7b1fa2] text-[10px] font-semibold tracking-wide uppercase">Wholesale</span>
+</div>
+<p class="text-xs text-outline font-medium flex items-center gap-1">
+<i class="far fa-calendar-alt"></i> 13-Aug-2026, 23:53
+          </p>
+</div>
+<div class="text-right">
+<p class="text-lg font-bold text-on-surface">Rs. 5,560.00</p>
+<p class="text-xs text-success font-medium">Paid: Rs. 5,560.00</p>
+</div>
+</div>
+<div class="py-2 border-t border-b border-outline-variant/50 my-3 text-sm flex items-center gap-2 text-secondary">
+<i class="far fa-user text-outline"></i>
+<span class="font-medium">Cash Customer</span>
+</div>
+<div class="flex items-center justify-between mt-2">
+<div class="flex gap-2">
+<button class="px-3 py-1.5 border border-outline-variant text-secondary rounded-md text-xs font-semibold hover:bg-surface-container transition-colors flex items-center gap-1">
+<i class="fas fa-print"></i> 80mm
+           </button>
+<button class="px-3 py-1.5 border border-outline-variant text-secondary rounded-md text-xs font-semibold hover:bg-surface-container transition-colors flex items-center gap-1">
+<i class="fas fa-print"></i> 58mm
+           </button>
+</div>
+<button aria-label="More options" class="text-primary hover:bg-primary/10 p-2 rounded-full transition-colors">
+<i class="fas fa-ellipsis-v"></i>
+</button>
+</div>
+</article>
+<!-- Invoice Card 3 -->
+<article class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 shadow-elevation-1 active:bg-surface-container transition-colors" data-purpose="invoice-card">
+<div class="flex justify-between items-start mb-3">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-sm font-bold text-primary">INV-#1</span>
+<span class="px-2 py-0.5 rounded-full bg-[#f3e5f5] text-[#7b1fa2] text-[10px] font-semibold tracking-wide uppercase">Wholesale</span>
+</div>
+<p class="text-xs text-outline font-medium flex items-center gap-1">
+<i class="far fa-calendar-alt"></i> 05-Aug-2026, 17:46
+          </p>
+</div>
+<div class="text-right">
+<p class="text-lg font-bold text-on-surface">Rs. 16,720.00</p>
+<div class="flex flex-col items-end">
+<p class="text-[10px] text-error font-medium line-through">Rs. 16,720.00</p>
+<p class="text-xs text-success font-medium">Net: Rs. 16,220.00</p>
+</div>
+</div>
+</div>
+<div class="py-2 border-t border-b border-outline-variant/50 my-3 text-sm flex items-center gap-2 text-secondary">
+<i class="far fa-user text-outline"></i>
+<span class="font-medium">Cash Customer</span>
+<span class="ml-auto text-xs bg-error/10 text-error px-2 py-0.5 rounded font-medium">Disc: Rs. 500</span>
+</div>
+<div class="flex items-center justify-between mt-2">
+<div class="flex gap-2">
+<button class="px-3 py-1.5 border border-outline-variant text-secondary rounded-md text-xs font-semibold hover:bg-surface-container transition-colors flex items-center gap-1">
+<i class="fas fa-print"></i> 80mm
+           </button>
+<button class="px-3 py-1.5 border border-outline-variant text-secondary rounded-md text-xs font-semibold hover:bg-surface-container transition-colors flex items-center gap-1">
+<i class="fas fa-print"></i> 58mm
+           </button>
+</div>
+<button aria-label="More options" class="text-primary hover:bg-primary/10 p-2 rounded-full transition-colors">
+<i class="fas fa-ellipsis-v"></i>
+</button>
+</div>
+</article>
+<!-- Load More -->
+<div class="text-center py-4">
+<button class="text-sm text-primary font-medium hover:underline">Load More Records</button>
+</div>
+</main>
+<!-- END: Main Content -->
+<!-- BEGIN: Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full bg-surface-container-lowest border-t border-outline-variant pb-safe shadow-[0_-1px_3px_rgba(0,0,0,0.05)] z-40" data-purpose="bottom-nav">
+<div class="flex justify-around items-center h-16">
+<a class="flex flex-col items-center justify-center w-full h-full text-secondary hover:text-primary transition-colors" href="#">
+<i class="fas fa-home text-lg mb-1"></i>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full text-secondary hover:text-primary transition-colors" href="#">
+<i class="fas fa-file-invoice-dollar text-lg mb-1"></i>
+<span class="text-[10px] font-medium">New Sale</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full text-primary relative" href="#">
+<div class="absolute -top-1 w-10 h-1 bg-primary rounded-b-full"></div>
+<i class="fas fa-history text-lg mb-1"></i>
+<span class="text-[10px] font-bold">History</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full text-secondary hover:text-primary transition-colors" href="#">
+<i class="fas fa-boxes text-lg mb-1"></i>
+<span class="text-[10px] font-medium">Stock</span>
+</a>
+</div>
+</nav>
+<!-- END: Bottom Navigation Bar -->
+<!-- BEGIN: Filter Bottom Sheet (Hidden by default) -->
+<div aria-hidden="true" class="fixed inset-0 bg-black/50 z-[60] hidden transition-opacity duration-300 opacity-0" id="filterSheetOverlay"></div>
+<div class="fixed bottom-0 left-0 right-0 bg-surface-container-lowest rounded-t-2xl z-[70] transform translate-y-full transition-transform duration-300 ease-out shadow-[0_-4px_16px_rgba(0,0,0,0.1)] flex flex-col max-h-[90vh]" id="filterSheet">
+<!-- Drag handle -->
+<div class="w-full flex justify-center py-3" id="closeFilterDrag">
+<div class="w-12 h-1.5 bg-outline-variant rounded-full"></div>
+</div>
+<div class="px-5 pb-4 border-b border-outline-variant flex justify-between items-center shrink-0">
+<h2 class="text-lg font-bold text-on-surface">Filter History</h2>
+<button class="text-outline hover:text-on-surface p-2 rounded-full bg-surface-container transition-colors" id="closeFilterBtn">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="p-5 overflow-y-auto space-y-5">
+<!-- Date Range -->
+<div>
+<label class="block text-sm font-semibold text-on-surface mb-2">Date Range</label>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="block text-xs text-secondary mb-1">From</label>
+<input class="w-full border-outline-variant rounded-lg text-sm focus:ring-primary focus:border-primary bg-surface py-2 px-3" type="date" value="2026-07-14"/>
+</div>
+<div>
+<label class="block text-xs text-secondary mb-1">To</label>
+<input class="w-full border-outline-variant rounded-lg text-sm focus:ring-primary focus:border-primary bg-surface py-2 px-3" type="date" value="2026-08-14"/>
+</div>
+</div>
+</div>
+<!-- Type Filter -->
+<div>
+<label class="block text-sm font-semibold text-on-surface mb-2">Sale Type</label>
+<div class="flex gap-2 flex-wrap">
+<label class="inline-flex items-center px-3 py-1.5 rounded-full border border-primary bg-primary/5 text-primary text-sm font-medium cursor-pointer">
+<input checked="" class="hidden" name="saleType" type="radio"/>
+<span>All Types</span>
+</label>
+<label class="inline-flex items-center px-3 py-1.5 rounded-full border border-outline-variant text-secondary text-sm font-medium cursor-pointer hover:bg-surface-container">
+<input class="hidden" name="saleType" type="radio"/>
+<span>Retail</span>
+</label>
+<label class="inline-flex items-center px-3 py-1.5 rounded-full border border-outline-variant text-secondary text-sm font-medium cursor-pointer hover:bg-surface-container">
+<input class="hidden" name="saleType" type="radio"/>
+<span>Wholesale</span>
+</label>
+</div>
+</div>
+</div>
+<div class="p-5 border-t border-outline-variant flex gap-3 shrink-0 bg-surface-container-lowest pb-safe">
+<button class="flex-1 py-3 border border-outline-variant text-secondary rounded-xl font-bold text-sm hover:bg-surface-container transition-colors">
+        Reset
+      </button>
+<button class="flex-[2] py-3 bg-primary text-on-primary rounded-xl font-bold text-sm shadow-elevation-1 hover:bg-primary/90 transition-colors flex justify-center items-center gap-2">
+<i class="fas fa-check"></i> Apply Filters
+      </button>
+</div>
+</div>
+<!-- END: Filter Bottom Sheet -->
+<script data-purpose="sheet-interaction">
+    document.addEventListener('DOMContentLoaded', () => {
+      const filterBtn = document.getElementById('filterBtn');
+      const filterSheet = document.getElementById('filterSheet');
+      const filterSheetOverlay = document.getElementById('filterSheetOverlay');
+      const closeFilterBtn = document.getElementById('closeFilterBtn');
+      const closeFilterDrag = document.getElementById('closeFilterDrag');
+
+      function openSheet() {
+        filterSheetOverlay.classList.remove('hidden');
+        // Small delay to allow display:block to apply before animating opacity
+        setTimeout(() => {
+          filterSheetOverlay.classList.remove('opacity-0');
+          filterSheet.classList.remove('translate-y-full');
+        }, 10);
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+      }
+
+      function closeSheet() {
+        filterSheet.classList.add('translate-y-full');
+        filterSheetOverlay.classList.add('opacity-0');
+        setTimeout(() => {
+          filterSheetOverlay.classList.add('hidden');
+        }, 300); // match duration-300
+        document.body.style.overflow = '';
+      }
+
+      filterBtn.addEventListener('click', openSheet);
+      closeFilterBtn.addEventListener('click', closeSheet);
+      filterSheetOverlay.addEventListener('click', closeSheet);
+      closeFilterDrag.addEventListener('click', closeSheet); // Simple click on drag handle closes it for now
+      
+      // Simple toggle for fake radio buttons in filter
+      const typeLabels = document.querySelectorAll('label:has(input[name="saleType"])');
+      typeLabels.forEach(label => {
+        label.addEventListener('click', function() {
+           typeLabels.forEach(l => {
+             l.classList.remove('border-primary', 'bg-primary/5', 'text-primary');
+             l.classList.add('border-outline-variant', 'text-secondary');
+           });
+           this.classList.remove('border-outline-variant', 'text-secondary');
+           this.classList.add('border-primary', 'bg-primary/5', 'text-primary');
+        });
+      });
+    });
+  </script>
+<!-- Add safe area padding for modern mobile devices -->
+<style>
+    @supports (padding-bottom: env(safe-area-inset-bottom)) {
+      .pb-safe {
+        padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+      }
+    }
+  </style>
+</body></html>

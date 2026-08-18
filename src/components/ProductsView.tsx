@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, RefreshCw, Edit2, Trash2, Search, Tag, X, Check, ScanLine } from 'lucide-react';
+import { Plus, RefreshCw, Edit2, Trash2, Search, Tag, X, Check, ScanLine, FileSpreadsheet, Download, Upload, AlertCircle } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { usePOS } from '../context/POSContext';
 import { Product } from '../types';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
@@ -7,12 +8,16 @@ import { useHardwareScanner } from '../hooks/useHardwareScanner';
 import { posSound } from '../utils/audio';
 
 export const ProductsView: React.FC = () => {
-  const { products, addProduct, updateProduct, deleteProduct, storeSettings } = usePOS();
+  const { products, addProduct, updateProduct, deleteProduct, importProducts, storeSettings } = usePOS();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showScannerModal, setShowScannerModal] = useState(false);
+
+  // Excel CSV State
+  const [importPreviewList, setImportPreviewList] = useState<Product[] | null>(null);
+  const [importStatusMsg, setImportStatusMsg] = useState<string>('');
 
   // Form State
   const [barcode, setBarcode] = useState('');
@@ -109,6 +114,265 @@ export const ProductsView: React.FC = () => {
     }
   };
 
+  // Spreadsheet CSV column configuration (matching standard and complex fields from Image 2)
+  const csvHeaders = [
+    'NAME',
+    'BRAND',
+    'UNIT',
+    'CATEGORY',
+    'SUB-CATEGORY',
+    'SKU (Leave blank to auto generate sku)',
+    'BARCODE TYPE',
+    'MANAGE STOCK (1=yes 0=No)',
+    'ALERT QUANTITY',
+    'EXPIRES IN',
+    'EXPIRY PERIOD UNIT (months/days)',
+    'APPLICABLE TAX',
+    'Selling Price Tax Type (inclusive or exclusive)',
+    'PRODUCT TYPE (single or variable)',
+    'VARIATION NAME (Keep blank if product type is single)',
+    'VARIATION VALUES',
+    'VARIATION SKUs',
+    'PURCHASE PRICE (Including tax)',
+    'PURCHASE PRICE (Excluding tax)',
+    'PROFIT MARGIN',
+    'SELLING PRICE',
+    'OPENING STOCK',
+    'OPENING STOCK LOCATION',
+    'EXPIRY DATE',
+    'ENABLE IMEI OR SERIAL NUMBER(1=yes 0=No)',
+    'WEIGHT',
+    'RACK',
+    'ROW',
+    'POSITION',
+    'IMAGE',
+    'PRODUCT DESCRIPTION',
+    'CUSTOM FIELD 1',
+    'CUSTOM FIELD 2',
+    'CUSTOM FIELD 3',
+    'CUSTOM FIELD 4',
+    'NOT FOR SELLING(1=yes 0=No)',
+    'PRODUCT LOCATIONS'
+  ];
+
+  const escapeCSV = (val: any) => {
+    if (val === null || val === undefined) return '';
+    const str = String(val);
+    if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const parseCSV = (text: string): string[][] => {
+    const lines: string[][] = [];
+    let row: string[] = [''];
+    let inQuotes = false;
+    
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+      
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          row[row.length - 1] += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        row.push('');
+      } else if ((char === '\r' || char === '\n') && !inQuotes) {
+        if (char === '\r' && nextChar === '\n') {
+          i++;
+        }
+        lines.push(row);
+        row = [''];
+      } else {
+        row[row.length - 1] += char;
+      }
+    }
+    if (row.length > 1 || row[0] !== '') {
+      lines.push(row);
+    }
+    return lines;
+  };
+
+  const downloadCSVTemplate = () => {
+    const csvContent = [
+      csvHeaders.join(','),
+      `"Panadol Extra 500mg","GSK","Packs","Pharmacy","Tablets","8801234567890","EAN13","1","10","","","","","single","","","","15.50","15.50","20.00","25.00","500","Main Aisle 1","2027-12-31","0","","A1","R2","P3","","Pain relief and fever reduction","","","","","0","Main Warehouse"`,
+      `"Surbex Z Multivitamins","Abbott","Bottles","Pharmacy","Vitamins","8809876543210","EAN13","1","5","","","","","single","","","","220.00","220.00","15.00","270.00","150","Vitamin Rack","2027-10-31","0","","B2","R1","P2","","High potency zinc and b-complex","","","","","0","Main Store"`,
+      `"Dettol Antiseptic liquid","Reckitt","Bottles","Personal Care","Liquid","5011321360052","EAN13","1","15","","","","","single","","","","180.00","180.00","10.00","200.00","80","Hygiene Shelf","2028-06-30","0","","C1","R4","P1","","First aid and personal hygiene","","","","","0","Main Store"`
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'medpos_products_template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToCSV = () => {
+    const csvRows = [csvHeaders.join(',')];
+    
+    products.forEach((p) => {
+      const margin = p.purchasePrice > 0 ? (((p.retailPrice - p.purchasePrice) / p.purchasePrice) * 100).toFixed(1) : '0';
+      const row = [
+        escapeCSV(p.name),
+        escapeCSV(p.company),
+        'Packs', // UNIT
+        escapeCSV(p.category),
+        '', // SUB-CATEGORY
+        escapeCSV(p.barcode),
+        'EAN13', // BARCODE TYPE
+        '1', // MANAGE STOCK
+        escapeCSV(p.minStockAlert),
+        '', '', '', '', 'single', '', '', '', // placeholders
+        escapeCSV(p.purchasePrice), // PURCHASE PRICE (Including tax)
+        escapeCSV(p.purchasePrice), // PURCHASE PRICE (Excluding tax)
+        margin, // PROFIT MARGIN
+        escapeCSV(p.retailPrice), // SELLING PRICE
+        escapeCSV(p.stock), // OPENING STOCK
+        'Main Warehouse', // OPENING STOCK LOCATION
+        '', // EXPIRY DATE
+        '0', // ENABLE IMEI
+        '', '', '', '', '', '', '', '', '', '', '0', 'Main Store'
+      ];
+      csvRows.push(row.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `medpos_exported_products_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+    const reader = new FileReader();
+    
+    reader.onload = (event) => {
+      try {
+        let parsedLines: string[][] = [];
+        
+        if (isXlsx) {
+          const data = new Uint8Array(event.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          // Convert sheet to JSON array of arrays
+          const rawRows = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
+          parsedLines = rawRows.map(row => 
+            row.map(cell => cell === null || cell === undefined ? '' : String(cell).trim())
+          );
+        } else {
+          const text = event.target?.result as string;
+          if (!text) {
+            alert('Could not read file content.');
+            return;
+          }
+          parsedLines = parseCSV(text);
+        }
+        
+        if (parsedLines.length < 2) {
+          alert('Spreadsheet file is empty or only has headers.');
+          return;
+        }
+        
+        // Clean and process headers
+        const headerRow = parsedLines[0].map(h => h.trim().toUpperCase());
+        
+        const nameIdx = headerRow.findIndex(h => h === 'NAME' || h === 'PRODUCT NAME' || h === 'PRODUCT' || h === 'TITLE');
+        const brandIdx = headerRow.findIndex(h => h === 'BRAND' || h === 'COMPANY' || h === 'MANUFACTURER');
+        const categoryIdx = headerRow.findIndex(h => h === 'CATEGORY');
+        const skuIdx = headerRow.findIndex(h => h.includes('SKU') || h.includes('BARCODE') || h === 'CODE');
+        const alertQtyIdx = headerRow.findIndex(h => h.includes('ALERT QUANTITY') || h.includes('MIN STOCK') || h.includes('ALERT LIMIT'));
+        const purchaseIdx = headerRow.findIndex(h => h.includes('PURCHASE PRICE') || h === 'PURCHASE' || h.includes('PURCHASE_PRICE'));
+        const sellingIdx = headerRow.findIndex(h => h === 'SELLING PRICE' || h === 'SELLING_PRICE' || h === 'RETAIL PRICE' || h === 'RETAIL_PRICE' || h === 'PRICE');
+        const stockIdx = headerRow.findIndex(h => h.includes('OPENING STOCK') || h === 'STOCK' || h === 'QTY' || h === 'QUANTITY');
+        
+        if (nameIdx === -1) {
+          alert('Invalid Spreadsheet structure. The sheet must contain a "NAME" or "PRODUCT NAME" column.');
+          return;
+        }
+        
+        const tempProducts: Product[] = [];
+        
+        for (let i = 1; i < parsedLines.length; i++) {
+          const row = parsedLines[i];
+          // Skip empty rows or rows without name
+          if (!row || row.length === 0 || !row[nameIdx]?.trim()) continue;
+          
+          const productName = row[nameIdx]?.trim();
+          const productBrand = brandIdx !== -1 && row[brandIdx] ? row[brandIdx].trim() : 'General';
+          const productCategory = categoryIdx !== -1 && row[categoryIdx] ? row[categoryIdx].trim() : 'Pharmacy';
+          
+          let productBarcode = skuIdx !== -1 && row[skuIdx] ? row[skuIdx].trim() : '';
+          if (!productBarcode) {
+            // Auto-generate barcode if blank
+            productBarcode = Math.floor(100000000000 + Math.random() * 900000000000).toString();
+          }
+          
+          const alertQty = alertQtyIdx !== -1 && row[alertQtyIdx] ? parseInt(row[alertQtyIdx]) || 5 : 5;
+          const purchasePriceVal = purchaseIdx !== -1 && row[purchaseIdx] ? parseFloat(row[purchaseIdx]) || 0 : 0;
+          const retailPriceVal = sellingIdx !== -1 && row[sellingIdx] ? parseFloat(row[sellingIdx]) || 0 : 0;
+          const stockVal = stockIdx !== -1 && row[stockIdx] ? parseInt(row[stockIdx]) || 0 : 0;
+          
+          tempProducts.push({
+            id: `p-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
+            barcode: productBarcode,
+            name: productName,
+            company: productBrand,
+            category: productCategory,
+            purchasePrice: purchasePriceVal,
+            retailPrice: retailPriceVal,
+            wholesalePrice: retailPriceVal * 0.9, // Wholesale defaults to 90%
+            stock: stockVal,
+            minStockAlert: alertQty
+          });
+        }
+        
+        if (tempProducts.length === 0) {
+          alert('No valid product rows could be imported. Please verify your data.');
+          return;
+        }
+        
+        setImportPreviewList(tempProducts);
+        setImportStatusMsg(`Loaded ${tempProducts.length} products from sheet. Review them below before confirming:`);
+      } catch (err: any) {
+        alert('An error occurred during parsing: ' + err.message);
+      }
+    };
+    
+    if (isXlsx) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file);
+    }
+    // Reset file input so same file can be uploaded again
+    e.target.value = '';
+  };
+
+  const handleConfirmImport = () => {
+    if (importPreviewList) {
+      importProducts(importPreviewList);
+      posSound.playDoubleBeep();
+      setImportPreviewList(null);
+    }
+  };
+
   const filteredProducts = products.filter((p) => {
     const q = searchTerm.toLowerCase().trim();
     return (
@@ -156,6 +420,59 @@ export const ProductsView: React.FC = () => {
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Refresh</span>
           </button>
+        </div>
+      </div>
+
+      {/* Excel/CSV Utilities Row */}
+      <div className="bg-white border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-4 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-sm">
+            <FileSpreadsheet className="w-5 h-5 animate-pulse" />
+          </div>
+          <div>
+            <h4 className="text-xs font-black text-[#002b49] uppercase tracking-wide">Excel / CSV Spreadsheet Integration</h4>
+            <p className="text-[10px] text-slate-500 font-medium">Bulk import or export products in Microsoft Excel standard format</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={downloadCSVTemplate}
+            className="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold py-1.5 px-3.5 text-xs flex items-center gap-1.5 transition-colors active:scale-95 shadow-xs cursor-pointer"
+            title="Download Template with standard columns"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <span>Download Sample Template</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={exportToCSV}
+            className="bg-slate-700 hover:bg-slate-800 text-white font-bold py-1.5 px-3.5 text-xs flex items-center gap-1.5 transition-colors active:scale-95 shadow-xs cursor-pointer"
+            title="Export stock database to CSV"
+          >
+            <Upload className="w-3.5 h-3.5 text-slate-300" />
+            <span>Export Products</span>
+          </button>
+
+          <div className="relative">
+            <input
+              type="file"
+              accept=".csv, .xlsx, .xls"
+              onChange={handleCSVImport}
+              id="csv-file-uploader-view"
+              className="hidden"
+            />
+            <label
+              htmlFor="csv-file-uploader-view"
+              className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-1.5 px-4 text-xs flex items-center gap-1.5 transition-colors active:scale-95 shadow-xs cursor-pointer select-none inline-flex items-center"
+              title="Upload your Excel sheet"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200 mr-1.5" />
+              <span>Import Products Sheet</span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -453,6 +770,101 @@ export const ProductsView: React.FC = () => {
         }}
         title="Add Product Barcode Scanner"
       />
+
+      {/* Excel Import Preview Modal */}
+      {importPreviewList && (
+        <div className="fixed inset-0 bg-black/60 z-55 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white max-w-4xl w-full border border-slate-300 shadow-2xl animate-in fade-in text-slate-800 flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="bg-[#0f5132] text-white p-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-sm">
+                <FileSpreadsheet className="w-5 h-5 text-emerald-300 animate-bounce" />
+                <span>Excel Spreadsheet - Import Preview ({importPreviewList.length} Rows Detected)</span>
+              </div>
+              <button
+                onClick={() => setImportPreviewList(null)}
+                className="text-emerald-100 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 overflow-y-auto space-y-4 flex-1 text-xs">
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 flex gap-2 items-start">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-emerald-700" />
+                <div>
+                  <h5 className="font-bold text-emerald-900">Excel Parsing Successful!</h5>
+                  <p className="text-[11px] leading-relaxed mt-0.5 text-emerald-950">
+                    We mapped your spreadsheet columns to match our standard POS system schema. Below is the preview of what will be written to local storage. Overlapping barcodes will update existing products, while new barcodes will be appended.
+                  </p>
+                </div>
+              </div>
+
+              <div className="border border-slate-200 rounded-sm overflow-hidden">
+                <table className="w-full text-left text-[11px] border-collapse">
+                  <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                    <tr>
+                      <th className="py-2 px-2">Barcode SKU</th>
+                      <th className="py-2 px-2">Product Name</th>
+                      <th className="py-2 px-2">Brand / Company</th>
+                      <th className="py-2 px-2">Category</th>
+                      <th className="py-2 px-2 text-right">Purchase Price</th>
+                      <th className="py-2 px-2 text-right">Retail Selling Price</th>
+                      <th className="py-2 px-2 text-center">Opening Stock</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-sans">
+                    {importPreviewList.map((p, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="py-2 px-2 font-mono text-slate-600">{p.barcode}</td>
+                        <td className="py-2 px-2 font-bold text-slate-800">{p.name}</td>
+                        <td className="py-2 px-2 text-slate-600">{p.company}</td>
+                        <td className="py-2 px-2 text-slate-600">
+                          <span className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded-xs text-[9px] uppercase font-bold">
+                            {p.category}
+                          </span>
+                        </td>
+                        <td className="py-2 px-2 text-right text-slate-600 font-mono">
+                          {storeSettings.currency} {p.purchasePrice.toFixed(2)}
+                        </td>
+                        <td className="py-2 px-2 text-right text-slate-800 font-bold font-mono">
+                          {storeSettings.currency} {p.retailPrice.toFixed(2)}
+                        </td>
+                        <td className="py-2 px-2 text-center text-emerald-700 font-bold font-mono bg-emerald-50/30">
+                          {p.stock}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-slate-50 p-3 border-t border-slate-200 flex justify-between items-center text-xs">
+              <span className="text-slate-500 font-medium">Click "Confirm" to write changes locally.</span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setImportPreviewList(null)}
+                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 font-bold transition-all rounded-xs cursor-pointer"
+                >
+                  Cancel & Reject
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmImport}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white px-5 py-2 font-bold flex items-center gap-1.5 transition-all shadow-md rounded-xs cursor-pointer"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Confirm & Save Products</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

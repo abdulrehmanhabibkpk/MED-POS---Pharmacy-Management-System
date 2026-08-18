@@ -30,7 +30,7 @@ export const ReceiptModal: React.FC = () => {
       {/* Receipt Preview Window Frame matching Image 13 */}
       <div className="bg-slate-100 border border-slate-400 shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[95vh]">
         {/* Window Title & Action Toolbar matching Image 13 */}
-        <div className="bg-slate-200 border-b border-slate-300 px-3 py-2 flex flex-wrap items-center justify-between text-xs select-none gap-2">
+        <div className="bg-slate-200 border-b border-slate-300 px-3 py-2 flex flex-wrap items-center justify-between text-xs select-none gap-2 no-print print:hidden">
           <div className="flex items-center gap-2 font-bold text-slate-800">
             <Printer className="w-4 h-4 text-[#0070ba]" />
             <span>Receipt Preview</span>
@@ -259,7 +259,7 @@ export const ReceiptModal: React.FC = () => {
         </div>
 
         {/* Modal Bottom Toolbar */}
-        <div className="bg-slate-200 border-t border-slate-300 p-2.5 flex flex-wrap items-center justify-between gap-2">
+        <div className="bg-slate-200 border-t border-slate-300 p-2.5 flex flex-wrap items-center justify-between gap-2 no-print print:hidden">
           {/* Quick Paper Switcher in footer */}
           <div className="flex items-center gap-1 text-xs">
             <span className="text-slate-600 font-semibold text-[11px]">Printer Size:</span>

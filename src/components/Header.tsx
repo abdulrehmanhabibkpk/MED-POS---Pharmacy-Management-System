@@ -40,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
       }
       setDeferredPrompt(null);
     } else {
-      alert('To install MED POS: Open in Chrome/Edge, tap menu (⋮), and click "Install App" or "Add to Home Screen".');
+      alert('To install HACKTES POS: Open in Chrome/Edge, tap menu (⋮), and click "Install App" or "Add to Home Screen".');
     }
   };
 
