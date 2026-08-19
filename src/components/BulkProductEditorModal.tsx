@@ -31,6 +31,7 @@ export const BulkProductEditorModal: React.FC<BulkProductEditorModalProps> = ({
   const [bulkBrand, setBulkBrand] = useState<string>('');
   const [bulkSupplierId, setBulkSupplierId] = useState<string>('');
   const [bulkStockAdd, setBulkStockAdd] = useState<number>(0);
+  const [bulkUtilityAmount, setBulkUtilityAmount] = useState<number>(0);
 
   // Synchronize when modal opens
   React.useEffect(() => {
@@ -41,6 +42,7 @@ export const BulkProductEditorModal: React.FC<BulkProductEditorModalProps> = ({
       setBulkBrand('');
       setBulkSupplierId('');
       setBulkStockAdd(0);
+      setBulkUtilityAmount(0);
     }
   }, [isOpen, selectedProducts]);
 
@@ -115,6 +117,42 @@ export const BulkProductEditorModal: React.FC<BulkProductEditorModalProps> = ({
     setItems((prev) => prev.map((item) => ({ ...item, stock: Math.max(0, item.stock + bulkStockAdd) })));
   };
 
+  // Proportional utility distribution algorithm
+  const handleApplyBulkUtility = () => {
+    if (bulkUtilityAmount <= 0) {
+      alert('Please enter a positive utility amount.');
+      return;
+    }
+
+    const totalCostSum = items.reduce((sum, item) => sum + item.purchasePrice, 0);
+
+    setItems((prev) => {
+      return prev.map((item) => {
+        let allocatedUtility = 0;
+        if (totalCostSum > 0) {
+          // Proportionate share based on cost: (item.purchasePrice / totalCostSum) * utility
+          allocatedUtility = bulkUtilityAmount * (item.purchasePrice / totalCostSum);
+        } else {
+          // If all costs are 0, divide equally
+          allocatedUtility = bulkUtilityAmount / prev.length;
+        }
+
+        const newPurchasePrice = Math.round((item.purchasePrice + allocatedUtility) * 100) / 100;
+        
+        // Let's also adjust retail price or let the user decide. Usually, new retail = cost + margin.
+        // We can just increase purchasePrice so the margin is updated, and wholesale price = 0.9 * retail.
+        return {
+          ...item,
+          purchasePrice: newPurchasePrice,
+        };
+      });
+    });
+
+    alert(`Successfully distributed ${storeSettings.currency} ${bulkUtilityAmount.toLocaleString()} proportionally among ${items.length} items. Higher-priced products received a larger share of the utility cost.`);
+    setBulkUtilityAmount(0);
+    posSound.playSuccessChime();
+  };
+
   // Save all modified items back to main context
   const handleSaveAll = () => {
     onApplyChanges(items);
@@ -146,7 +184,7 @@ export const BulkProductEditorModal: React.FC<BulkProductEditorModalProps> = ({
         </div>
 
         {/* Global Batch Controls Toolbar */}
-        <div className="bg-slate-50 border-b border-slate-200 p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+        <div className="bg-slate-50 border-b border-slate-200 p-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
           {/* Price Adjustment Formula */}
           <div className="bg-white p-3 border border-slate-200 space-y-2 rounded-xs shadow-xs">
             <div className="font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
@@ -334,6 +372,41 @@ export const BulkProductEditorModal: React.FC<BulkProductEditorModalProps> = ({
 
             <p className="text-[10px] text-slate-500 mt-2">
               Tip: You can also edit individual cells directly in the table below before saving!
+            </p>
+          </div>
+
+          {/* 🛠️ Proportional Utility Distribution (NEW SCENE) */}
+          <div className="bg-emerald-50 border border-emerald-200 p-3 space-y-2 rounded-xs shadow-xs">
+            <div className="font-bold text-emerald-950 flex items-center gap-1.5 border-b border-emerald-200 pb-1.5">
+              <span>🛠️ Proportional Utilities</span>
+            </div>
+
+            <div>
+              <label className="text-[10px] text-emerald-800 font-bold block mb-1">
+                Total Utility Cost ({storeSettings.currency}):
+              </label>
+              <div className="flex gap-1.5">
+                <input
+                  type="number"
+                  min="1"
+                  step="any"
+                  value={bulkUtilityAmount === 0 ? '' : bulkUtilityAmount}
+                  onChange={(e) => setBulkUtilityAmount(parseFloat(e.target.value) || 0)}
+                  placeholder="e.g. 200,000"
+                  className="flex-1 bg-white border border-emerald-300 px-2 py-1 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-600"
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyBulkUtility}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white px-2.5 py-1 text-xs font-black rounded-xs transition-colors cursor-pointer"
+                >
+                  Distribute
+                </button>
+              </div>
+            </div>
+
+            <p className="text-[9.5px] text-emerald-800 leading-tight">
+              <strong>Calculates automatically:</strong> Distributes cost proportionally among these items. Highest price items get the most, lowest price items get the least.
             </p>
           </div>
         </div>

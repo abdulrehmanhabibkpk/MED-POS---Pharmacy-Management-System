@@ -26,6 +26,8 @@ export interface Product {
   minStockAlert: number;
   batchNo?: string;
   expiryDate?: string;
+  unitOfSale?: string; // 'Item', 'Kg', 'Pound', 'Gram', 'Litre', etc.
+  weightValue?: number; // e.g. 5 for a 5-Kg pack
 }
 
 export interface CartItem {

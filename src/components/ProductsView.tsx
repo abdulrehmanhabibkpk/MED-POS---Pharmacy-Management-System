@@ -22,6 +22,7 @@ export const ProductsView: React.FC = () => {
   const [showBulkEditorModal, setShowBulkEditorModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showScannerModal, setShowScannerModal] = useState(false);
+  const [isInlineEditing, setIsInlineEditing] = useState(false);
 
   // Multi-select state for bulk operations
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -42,6 +43,13 @@ export const ProductsView: React.FC = () => {
   const [wholesalePrice, setWholesalePrice] = useState<number>(0);
   const [stock, setStock] = useState<number>(0);
   const [minStockAlert, setMinStockAlert] = useState<number>(10);
+  const [unitOfSale, setUnitOfSale] = useState<string>('Item');
+  const [weightValue, setWeightValue] = useState<number | undefined>(undefined);
+
+  // Inline Utility calculator helper states
+  const [showUtilityCalc, setShowUtilityCalc] = useState(false);
+  const [utilityBaseCost, setUtilityBaseCost] = useState<number>(0);
+  const [utilityValue, setUtilityValue] = useState<number>(0);
 
   // Toggle single item selection
   const toggleSelect = (id: string) => {
@@ -97,6 +105,8 @@ export const ProductsView: React.FC = () => {
     setWholesalePrice(0);
     setStock(10);
     setMinStockAlert(5);
+    setUnitOfSale('Item');
+    setWeightValue(undefined);
     setShowModal(true);
   };
 
@@ -113,6 +123,8 @@ export const ProductsView: React.FC = () => {
     setWholesalePrice(p.wholesalePrice);
     setStock(p.stock);
     setMinStockAlert(p.minStockAlert);
+    setUnitOfSale(p.unitOfSale || 'Item');
+    setWeightValue(p.weightValue);
     setShowModal(true);
   };
 
@@ -140,6 +152,8 @@ export const ProductsView: React.FC = () => {
         wholesalePrice,
         stock,
         minStockAlert,
+        unitOfSale,
+        weightValue,
       });
     } else {
       addProduct({
@@ -154,6 +168,8 @@ export const ProductsView: React.FC = () => {
         wholesalePrice,
         stock,
         minStockAlert,
+        unitOfSale,
+        weightValue,
       });
     }
 
@@ -536,6 +552,22 @@ export const ProductsView: React.FC = () => {
           </button>
 
           <button
+            type="button"
+            onClick={() => {
+              setIsInlineEditing(!isInlineEditing);
+              posSound.playScanBeep();
+            }}
+            className={`font-bold py-1.5 px-3 text-xs flex items-center gap-1.5 shadow border transition-all active:scale-[0.98] cursor-pointer ${
+              isInlineEditing
+                ? 'bg-amber-600 hover:bg-amber-700 text-white border-amber-500 animate-pulse'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
+            }`}
+            title="Enable/disable quick cell editing directly in list table"
+          >
+            <span>{isInlineEditing ? '⚡ Inline Edit: ON' : '✏️ Quick Edit Cells'}</span>
+          </button>
+
+          <button
             onClick={() => {
               setSearchTerm('');
               setFilterCategory('All');
@@ -708,7 +740,14 @@ export const ProductsView: React.FC = () => {
                         />
                       </td>
                       <td className="py-2.5 px-3 font-mono">{p.barcode}</td>
-                      <td className="py-2.5 px-3 font-semibold">{p.name}</td>
+                      <td className="py-2.5 px-3">
+                        <div className="font-semibold">{p.name}</div>
+                        {p.unitOfSale && p.unitOfSale !== 'Item' && (
+                          <div className={`inline-block text-[9px] font-black px-1.5 py-0.2 mt-0.5 rounded ${isSelected ? 'bg-blue-100 text-blue-900 border border-blue-200' : idx === 0 ? 'bg-white/20 text-white border border-white/30' : 'bg-amber-100 text-amber-800 border border-amber-200'}`}>
+                            ⚖️ Weight-based: {p.unitOfSale} {p.weightValue ? `(${p.weightValue}-Unit Pack)` : ''}
+                          </div>
+                        )}
+                      </td>
                       <td className="py-2.5 px-3">
                         <div className="font-semibold">{p.company}</div>
                         {p.supplierName && (
@@ -718,16 +757,61 @@ export const ProductsView: React.FC = () => {
                         )}
                       </td>
                       <td className="py-2.5 px-3 text-right">
-                        {storeSettings.currency}{' '}
-                        {p.purchasePrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        {isInlineEditing ? (
+                          <input
+                            type="number"
+                            step="any"
+                            value={p.purchasePrice === 0 ? '' : p.purchasePrice}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              updateProduct({ ...p, purchasePrice: val });
+                            }}
+                            className="w-20 bg-white border border-slate-300 text-right px-1 py-0.5 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                          />
+                        ) : (
+                          <>
+                            {storeSettings.currency}{' '}
+                            {p.purchasePrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </>
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-right font-bold">
-                        {storeSettings.currency}{' '}
-                        {p.retailPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        {isInlineEditing ? (
+                          <input
+                            type="number"
+                            step="any"
+                            value={p.retailPrice === 0 ? '' : p.retailPrice}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              updateProduct({ ...p, retailPrice: val });
+                            }}
+                            className="w-20 bg-white border border-slate-300 text-right px-1 py-0.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                          />
+                        ) : (
+                          <>
+                            {storeSettings.currency}{' '}
+                            {p.retailPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </>
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-right">
-                        {storeSettings.currency}{' '}
-                        {p.wholesalePrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        {isInlineEditing ? (
+                          <input
+                            type="number"
+                            step="any"
+                            value={p.wholesalePrice === 0 ? '' : p.wholesalePrice}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              updateProduct({ ...p, wholesalePrice: val });
+                            }}
+                            className="w-20 bg-white border border-slate-300 text-right px-1 py-0.5 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                          />
+                        ) : (
+                          <>
+                            {storeSettings.currency}{' '}
+                            {p.wholesalePrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </>
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-center">
                         <div className="inline-flex flex-col items-center justify-center">
@@ -765,17 +849,30 @@ export const ProductsView: React.FC = () => {
                         </div>
                       </td>
                       <td className="py-2.5 px-3 text-center font-bold">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded text-xs ${
-                            p.stock <= p.minStockAlert
-                              ? idx === 0 && !isSelected
-                                ? 'bg-amber-300 text-amber-900 font-black'
-                                : 'bg-red-100 text-red-700 font-black'
-                              : ''
-                          }`}
-                        >
-                          {p.stock}
-                        </span>
+                        {isInlineEditing ? (
+                          <input
+                            type="number"
+                            step="any"
+                            value={p.stock}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              updateProduct({ ...p, stock: val });
+                            }}
+                            className="w-16 bg-white border border-slate-300 text-center px-1 py-0.5 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                          />
+                        ) : (
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-xs ${
+                              p.stock <= p.minStockAlert
+                                ? idx === 0 && !isSelected
+                                  ? 'bg-amber-300 text-amber-900 font-black'
+                                  : 'bg-red-100 text-red-700 font-black'
+                                : ''
+                            }`}
+                          >
+                            {p.stock}
+                          </span>
+                        )}
                       </td>
                       <td className="py-2.5 px-3">{p.category}</td>
                       <td className="py-2.5 px-3 text-center">
@@ -952,49 +1049,160 @@ export const ProductsView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              {/* Unit of Sale & Weight Specifications */}
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 border border-slate-200">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Purchase Price ({storeSettings.currency}):
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={purchasePrice === 0 ? '' : purchasePrice}
-                    onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || 0)}
-                    className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 focus:outline-none focus:border-[#0070ba]"
-                  />
+                  <label className="block font-bold text-slate-700 mb-1 text-xs">Unit of Sale / Measurement Type:</label>
+                  <select
+                    value={unitOfSale}
+                    onChange={(e) => {
+                      setUnitOfSale(e.target.value);
+                      if (e.target.value === 'Item') {
+                        setWeightValue(undefined);
+                      } else if (!weightValue) {
+                        setWeightValue(1); // default weight value
+                      }
+                    }}
+                    className="w-full bg-white border border-slate-300 px-2 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                  >
+                    <option value="Item">By Item / Piece / Box / Tablet</option>
+                    <option value="Kg">By Weight: Kilograms (Kg)</option>
+                    <option value="Pound">By Weight: Pounds (Lb)</option>
+                    <option value="Gram">By Weight: Grams (g)</option>
+                    <option value="Litre">By Volume: Litres (L)</option>
+                  </select>
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Retail Price ({storeSettings.currency}):
+                  <label className="block font-bold text-slate-700 mb-1 text-xs">
+                    Weight/Unit Size (e.g. 5 if 5-Kg package, or leave empty if sold loose):
                   </label>
                   <input
                     type="number"
                     min="0"
                     step="any"
-                    value={retailPrice === 0 ? '' : retailPrice}
-                    onChange={(e) => setRetailPrice(parseFloat(e.target.value) || 0)}
-                    className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 focus:outline-none focus:border-[#0070ba]"
-                    required
+                    disabled={unitOfSale === 'Item'}
+                    value={weightValue === undefined ? '' : weightValue}
+                    onChange={(e) => setWeightValue(parseFloat(e.target.value) || undefined)}
+                    placeholder="e.g. 5 for 5Kg units"
+                    className="w-full bg-white border border-slate-300 px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba] disabled:bg-slate-100 disabled:text-slate-400"
                   />
+                </div>
+              </div>
+
+              {/* Pricing section with Utility button */}
+              <div className="bg-slate-50 p-3.5 border border-slate-200 space-y-3">
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block font-bold text-slate-700 text-xs">
+                        Purchase Price ({storeSettings.currency}):
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowUtilityCalc(!showUtilityCalc)}
+                        className="text-[10px] text-emerald-700 hover:text-emerald-900 font-extrabold flex items-center gap-0.5"
+                        title="Add proportional utility to cost"
+                      >
+                        <span>🛠️ Add Utility</span>
+                      </button>
+                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={purchasePrice === 0 ? '' : purchasePrice}
+                      onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 font-bold focus:outline-none focus:border-[#0070ba]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1 text-xs">
+                      Retail Price ({storeSettings.currency}) *:
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={retailPrice === 0 ? '' : retailPrice}
+                      onChange={(e) => setRetailPrice(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1 text-xs">
+                      Wholesale Price ({storeSettings.currency}):
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={wholesalePrice === 0 ? '' : wholesalePrice}
+                      onChange={(e) => setWholesalePrice(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Wholesale Price ({storeSettings.currency}):
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={wholesalePrice === 0 ? '' : wholesalePrice}
-                    onChange={(e) => setWholesalePrice(parseFloat(e.target.value) || 0)}
-                    className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 focus:outline-none focus:border-[#0070ba]"
-                  />
-                </div>
+                {/* Single Item Utility Calculator scene */}
+                {showUtilityCalc && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-sm p-3.5 space-y-2 text-slate-800 animate-in slide-in-from-top-2 duration-150">
+                    <div className="flex items-center justify-between border-b border-emerald-100 pb-1.5 mb-1.5">
+                      <span className="font-extrabold text-[11px] text-emerald-950 flex items-center gap-1">
+                        <span>🛠️ Single Item Utility Calculator</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowUtilityCalc(false)}
+                        className="text-emerald-800 hover:text-emerald-950 text-xs font-bold"
+                      >
+                        ✕ Close
+                      </button>
+                    </div>
+
+                    <p className="text-[10px] text-emerald-800 leading-relaxed">
+                      Enter the base cost of your product and the added utilities (electricity, customs, freight, etc.). This automatically calculates and updates the Purchase Cost.
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-bold text-emerald-900 mb-0.5 text-[10px]">Base cost of item:</label>
+                        <input
+                          type="number"
+                          value={utilityBaseCost === 0 ? '' : utilityBaseCost}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0;
+                            setUtilityBaseCost(val);
+                            setPurchasePrice(val + utilityValue);
+                          }}
+                          placeholder="e.g. 100"
+                          className="w-full bg-white border border-emerald-300 px-2 py-1 text-xs focus:outline-none focus:border-emerald-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-emerald-900 mb-0.5 text-[10px]">Utility cost to add:</label>
+                        <input
+                          type="number"
+                          value={utilityValue === 0 ? '' : utilityValue}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0;
+                            setUtilityValue(val);
+                            setPurchasePrice(utilityBaseCost + val);
+                          }}
+                          placeholder="e.g. 100 (Doubles price)"
+                          className="w-full bg-white border border-emerald-300 px-2 py-1 text-xs focus:outline-none focus:border-emerald-600"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-white border border-emerald-200 p-2 text-center rounded-xs text-[11px] font-bold">
+                      Calculated Price: {storeSettings.currency} {utilityBaseCost} (Cost) + {storeSettings.currency} {utilityValue} (Utility) = <span className="text-[#0070ba] text-xs font-black">{storeSettings.currency} {(utilityBaseCost + utilityValue).toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Live Profit Margin Calculator Indicator */}

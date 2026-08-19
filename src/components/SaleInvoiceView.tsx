@@ -493,13 +493,15 @@ export const SaleInvoiceView: React.FC = () => {
 
           {/* Qty */}
           <div className="md:col-span-1">
-            <label className="block text-xs font-bold text-slate-700 mb-1">Qty:</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Qty/Wt:</label>
             <input
               type="number"
-              min="1"
+              step="any"
+              min="0.001"
               value={qtyInput}
-              onChange={(e) => setQtyInput(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-full bg-white border border-slate-300 px-2 py-1.5 text-xs text-center text-slate-800 focus:outline-none focus:border-[#0070ba]"
+              onChange={(e) => setQtyInput(Math.max(0.001, parseFloat(e.target.value) || 1))}
+              className="w-full bg-white border border-slate-300 px-1 py-1.5 text-xs text-center font-bold text-slate-800 focus:outline-none focus:border-[#0070ba]"
+              placeholder="e.g. 1.5"
             />
           </div>
 
@@ -652,23 +654,41 @@ export const SaleInvoiceView: React.FC = () => {
                       <td className="py-2.5 px-3 font-mono">{item.product.barcode}</td>
                       <td className="py-2.5 px-3 font-medium text-slate-900">{item.product.name}</td>
                       <td className="py-2.5 px-3 text-center">
-                        <div className="inline-flex items-center gap-1">
+                        <div className="flex items-center justify-center gap-1">
                           <button
                             type="button"
-                            onClick={() => handleUpdateCartItemQty(idx, item.qty - 1)}
-                            className="w-5 h-5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded flex items-center justify-center text-xs"
+                            onClick={() => {
+                              const step = (item.product.unitOfSale && item.product.unitOfSale !== 'Item') ? 0.5 : 1;
+                              handleUpdateCartItemQty(idx, Math.max(0.001, item.qty - step));
+                            }}
+                            className="w-5 h-5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold rounded flex items-center justify-center text-xs"
                           >
                             -
                           </button>
-                          <span className="w-6 text-center font-semibold">{item.qty}</span>
+                          <input
+                            type="number"
+                            step="any"
+                            min="0.001"
+                            value={item.qty}
+                            onChange={(e) => handleUpdateCartItemQty(idx, Math.max(0.001, parseFloat(e.target.value) || 0.001))}
+                            className="w-16 bg-white border border-slate-300 text-center font-bold text-xs py-0.5 focus:outline-none focus:border-[#0070ba]"
+                          />
                           <button
                             type="button"
-                            onClick={() => handleUpdateCartItemQty(idx, item.qty + 1)}
-                            className="w-5 h-5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded flex items-center justify-center text-xs"
+                            onClick={() => {
+                              const step = (item.product.unitOfSale && item.product.unitOfSale !== 'Item') ? 0.5 : 1;
+                              handleUpdateCartItemQty(idx, item.qty + step);
+                            }}
+                            className="w-5 h-5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold rounded flex items-center justify-center text-xs"
                           >
                             +
                           </button>
                         </div>
+                        {item.product.unitOfSale && item.product.unitOfSale !== 'Item' && (
+                          <span className="text-[9px] font-black text-amber-700 uppercase tracking-tight block mt-0.5">
+                            {item.product.unitOfSale}
+                          </span>
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-right">
                         {item.rate.toLocaleString('en-US', { minimumFractionDigits: 2 })}
