@@ -51,7 +51,7 @@ export const LoginScreen: React.FC = () => {
             </h1>
           </div>
           <p className="text-md text-white/90 font-semibold tracking-wide">
-            {storeSettings.tagline || 'Pharmacy & General Store Management System'}
+            {storeSettings.tagline || 'Point of Sale & General Store Management System'}
           </p>
 
           {/* Contact & Support Meta Information */}
@@ -81,7 +81,7 @@ export const LoginScreen: React.FC = () => {
         <div className="mt-12 pt-6">
           <div className="inline-flex items-center gap-2 text-[#00ff88] text-xs font-bold uppercase tracking-wider">
             <ShieldCheck className="w-4 h-4" />
-            <span>PHARMACY MANAGEMENT SYSTEM</span>
+            <span>POINT OF SALE MANAGEMENT SYSTEM</span>
           </div>
         </div>
       </div>
@@ -166,7 +166,7 @@ export const LoginScreen: React.FC = () => {
             </div>
             <div className="py-4 text-xs space-y-3 leading-relaxed text-slate-600 max-h-80 overflow-y-auto">
               <p>
-                <strong>License:</strong> This software is authorized for use in retail pharmacy, wholesale medicine, and general store management.
+                <strong>License:</strong> This software is authorized for use in retail, wholesale, and general store management.
               </p>
               <p>
                 <strong>Offline-First & Security:</strong> All sales, customer ledgers, inventory counts, and financial reports are securely stored locally on this terminal with automatic recovery and cloud synchronization support.
