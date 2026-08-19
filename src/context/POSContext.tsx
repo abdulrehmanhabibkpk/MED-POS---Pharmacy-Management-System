@@ -38,6 +38,7 @@ interface POSContextType {
   setActiveTab: (tab: ActiveTab) => void;
   products: Product[];
   addProduct: (p: Omit<Product, 'id'>) => void;
+  addMultipleProducts: (newProducts: Omit<Product, 'id'>[]) => void;
   updateProduct: (p: Product) => void;
   deleteProduct: (id: string) => void;
   importProducts: (newProducts: Product[]) => void;
@@ -425,9 +426,17 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addProduct = (p: Omit<Product, 'id'>) => {
     const newProduct: Product = {
       ...p,
-      id: `p-${Date.now()}`,
+      id: `p-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
     };
     setProducts((prev) => [newProduct, ...prev]);
+  };
+
+  const addMultipleProducts = (newProds: Omit<Product, 'id'>[]) => {
+    const created: Product[] = newProds.map((p, idx) => ({
+      ...p,
+      id: `p-${Date.now()}-${idx}-${Math.floor(Math.random() * 100000)}`,
+    }));
+    setProducts((prev) => [...created, ...prev]);
   };
 
   const updateProduct = (p: Product) => {
@@ -442,14 +451,20 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProducts((prev) => {
       const updated = [...prev];
       newProducts.forEach((newP) => {
-        const idx = updated.findIndex((p) => p.barcode.trim() === newP.barcode.trim());
+        // If exact barcode AND exact retail price matches, update existing
+        const idx = updated.findIndex(
+          (p) =>
+            p.barcode.trim().toLowerCase() === newP.barcode.trim().toLowerCase() &&
+            Number(p.retailPrice) === Number(newP.retailPrice)
+        );
         if (idx !== -1) {
-          // Keep existing ID, overwrite attributes
-          updated[idx] = { ...updated[idx], ...newP };
+          // Keep existing ID, update attributes
+          updated[idx] = { ...updated[idx], ...newP, id: updated[idx].id };
         } else {
+          // Add as new batch / rate entry for this barcode
           updated.push({
             ...newP,
-            id: newP.id || `p-${Date.now()}-${Math.floor(Math.random() * 100000)}`
+            id: newP.id || `p-${Date.now()}-${Math.floor(Math.random() * 1000000)}`
           });
         }
       });
@@ -831,6 +846,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setActiveTab,
         products,
         addProduct,
+        addMultipleProducts,
         updateProduct,
         deleteProduct,
         importProducts,

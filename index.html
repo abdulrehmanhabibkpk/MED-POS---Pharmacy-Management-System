@@ -24,6 +24,29 @@
   </head>
   <body>
     <div id="root"></div>
+    <script type="module">
+      import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+      import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-analytics.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyApYNhvobdQYmNWavDnasS1xRq1zlNcKoo",
+        authDomain: "hacktes-pos-software.firebaseapp.com",
+        projectId: "hacktes-pos-software",
+        storageBucket: "hacktes-pos-software.firebasestorage.app",
+        messagingSenderId: "663959563883",
+        appId: "1:663959563883:web:0ba54bdc5e5f2e889e4b2e",
+        measurementId: "G-Y622WPRG3J"
+      };
+
+      if (!getApps().length) {
+        const app = initializeApp(firebaseConfig);
+        isSupported().then((supported) => {
+          if (supported) {
+            getAnalytics(app);
+          }
+        }).catch(() => {});
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       // Register PWA Service Worker if supported

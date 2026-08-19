@@ -9,6 +9,8 @@ export interface Product {
   wholesalePrice: number;
   stock: number;
   minStockAlert: number;
+  batchNo?: string;
+  expiryDate?: string;
 }
 
 export interface CartItem {

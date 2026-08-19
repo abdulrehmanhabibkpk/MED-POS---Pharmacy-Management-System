@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { Plus, RefreshCw, Edit2, Trash2, Search, Tag, X, Check, ScanLine, FileSpreadsheet, Download, Upload, AlertCircle } from 'lucide-react';
+import { Plus, RefreshCw, Edit2, Trash2, Search, Tag, X, Check, ScanLine, FileSpreadsheet, Download, Upload, AlertCircle, Layers, ListPlus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { usePOS } from '../context/POSContext';
 import { Product } from '../types';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
+import { BulkProductEntryModal } from './BulkProductEntryModal';
 import { useHardwareScanner } from '../hooks/useHardwareScanner';
 import { posSound } from '../utils/audio';
 
 export const ProductsView: React.FC = () => {
-  const { products, addProduct, updateProduct, deleteProduct, importProducts, storeSettings } = usePOS();
+  const { products, addProduct, addMultipleProducts, updateProduct, deleteProduct, importProducts, storeSettings } = usePOS();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showScannerModal, setShowScannerModal] = useState(false);
 
@@ -401,12 +403,23 @@ export const ProductsView: React.FC = () => {
         </div>
 
         {/* Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            id="btn-bulk-list-product"
+            onClick={() => setShowBulkModal(true)}
+            type="button"
+            className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-1.5 px-3.5 text-xs flex items-center gap-1.5 shadow transition-colors active:scale-[0.98] cursor-pointer"
+            title="Add multiple products in a spreadsheet-style table with rapid scanning"
+          >
+            <ListPlus className="w-4 h-4 text-emerald-200" />
+            <span>+ List Product (Bulk Entry)</span>
+          </button>
+
           <button
             id="btn-add-new-product"
             onClick={openAddModal}
             type="button"
-            className="bg-[#28a745] hover:bg-[#218838] text-white font-bold py-1.5 px-4 text-xs flex items-center gap-1.5 shadow transition-colors active:scale-[0.98]"
+            className="bg-[#28a745] hover:bg-[#218838] text-white font-bold py-1.5 px-4 text-xs flex items-center gap-1.5 shadow transition-colors active:scale-[0.98] cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>+ Add New Product</span>
@@ -415,7 +428,7 @@ export const ProductsView: React.FC = () => {
           <button
             onClick={() => setSearchTerm('')}
             type="button"
-            className="bg-[#0078d7] hover:bg-[#0066b8] text-white font-bold py-1.5 px-4 text-xs flex items-center gap-1.5 shadow transition-colors active:scale-[0.98]"
+            className="bg-[#0078d7] hover:bg-[#0066b8] text-white font-bold py-1.5 px-4 text-xs flex items-center gap-1.5 shadow transition-colors active:scale-[0.98] cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Refresh</span>
@@ -952,6 +965,17 @@ export const ProductsView: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+      {/* Bulk Fast Entry Modal */}
+      {showBulkModal && (
+        <BulkProductEntryModal
+          existingProducts={products}
+          storeSettings={storeSettings}
+          onSaveAll={(newProds) => {
+            addMultipleProducts(newProds);
+          }}
+          onClose={() => setShowBulkModal(false)}
+        />
       )}
     </div>
   );

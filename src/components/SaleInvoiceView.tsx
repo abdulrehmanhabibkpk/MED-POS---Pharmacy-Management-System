@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Pill, Plus, Trash2, Printer, CheckSquare, RotateCcw, Search, Edit3, Settings, Check, ScanLine, Smartphone } from 'lucide-react';
+import { Pill, Plus, Trash2, Printer, CheckSquare, RotateCcw, Search, Edit3, Settings, Check, ScanLine, Smartphone, Layers } from 'lucide-react';
 import { usePOS } from '../context/POSContext';
 import { CartItem, Product, ThermalPaperSize } from '../types';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
+import { MultiRateSelectorModal } from './MultiRateSelectorModal';
 import { useHardwareScanner } from '../hooks/useHardwareScanner';
 import { posSound } from '../utils/audio';
 
@@ -21,6 +22,7 @@ export const SaleInvoiceView: React.FC = () => {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [showScannerModal, setShowScannerModal] = useState<boolean>(false);
   const [scanNotice, setScanNotice] = useState<string | null>(null);
+  const [multiRateData, setMultiRateData] = useState<{ barcode: string; matchingProducts: Product[] } | null>(null);
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
@@ -70,24 +72,46 @@ export const SaleInvoiceView: React.FC = () => {
     const code = scannedCode.trim();
     if (!code) return;
 
-    const found = products.find(
-      (p) =>
-        p.barcode.trim().toLowerCase() === code.toLowerCase() ||
-        p.name.trim().toLowerCase() === code.toLowerCase()
+    // Look up all products matching this barcode
+    const barcodeMatches = products.filter(
+      (p) => p.barcode.trim().toLowerCase() === code.toLowerCase()
     );
 
-    if (found) {
+    if (barcodeMatches.length > 1) {
+      // MULTI-RATE SCENARIO: multiple price batches registered for same barcode
+      setMultiRateData({ barcode: code, matchingProducts: barcodeMatches });
+      return;
+    }
+
+    if (barcodeMatches.length === 1) {
+      const found = barcodeMatches[0];
       if (wholesaleMode) {
         setSaleType('Wholesale');
       }
       addItemToCart(found, 1, 0, wholesaleMode);
       setScanNotice(`Added: ${found.name} (Rs. ${wholesaleMode ? found.wholesalePrice : (saleType === 'Wholesale' ? found.wholesalePrice : found.retailPrice)})`);
       setTimeout(() => setScanNotice(null), 3000);
-    } else {
-      posSound.playErrorBeep();
-      setScanNotice(`Barcode "${code}" not found in catalog!`);
-      setTimeout(() => setScanNotice(null), 4000);
+      return;
     }
+
+    // Check by exact name match
+    const nameMatches = products.filter(
+      (p) => p.name.trim().toLowerCase() === code.toLowerCase()
+    );
+
+    if (nameMatches.length > 1) {
+      setMultiRateData({ barcode: code, matchingProducts: nameMatches });
+      return;
+    } else if (nameMatches.length === 1) {
+      addItemToCart(nameMatches[0], 1, 0, wholesaleMode);
+      setScanNotice(`Added: ${nameMatches[0].name}`);
+      setTimeout(() => setScanNotice(null), 3000);
+      return;
+    }
+
+    posSound.playErrorBeep();
+    setScanNotice(`Barcode "${code}" not found in catalog!`);
+    setTimeout(() => setScanNotice(null), 4000);
   }, [products, addItemToCart, saleType]);
 
   // 1. Hardware Barcode Scanner Auto-Detection (USB / Bluetooth Laser Gun)
@@ -156,19 +180,43 @@ export const SaleInvoiceView: React.FC = () => {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!barcodeInput.trim()) return;
+    const code = barcodeInput.trim();
+    if (!code) return;
 
-    // Search exact match by barcode or name
-    const found = products.find(
-      (p) =>
-        p.barcode.trim().toLowerCase() === barcodeInput.trim().toLowerCase() ||
-        p.name.trim().toLowerCase() === barcodeInput.trim().toLowerCase()
+    // Search matches by barcode
+    const barcodeMatches = products.filter(
+      (p) => p.barcode.trim().toLowerCase() === code.toLowerCase()
     );
 
-    if (found) {
-      addItemToCart(found, qtyInput, discountInput);
+    if (barcodeMatches.length > 1) {
+      setMultiRateData({ barcode: code, matchingProducts: barcodeMatches });
       setBarcodeInput('');
       setShowSuggestions(false);
+      return;
+    }
+
+    if (barcodeMatches.length === 1) {
+      addItemToCart(barcodeMatches[0], qtyInput, discountInput);
+      setBarcodeInput('');
+      setShowSuggestions(false);
+      return;
+    }
+
+    // Search exact matches by name
+    const nameMatches = products.filter(
+      (p) => p.name.trim().toLowerCase() === code.toLowerCase()
+    );
+
+    if (nameMatches.length > 1) {
+      setMultiRateData({ barcode: code, matchingProducts: nameMatches });
+      setBarcodeInput('');
+      setShowSuggestions(false);
+      return;
+    } else if (nameMatches.length === 1) {
+      addItemToCart(nameMatches[0], qtyInput, discountInput);
+      setBarcodeInput('');
+      setShowSuggestions(false);
+      return;
     } else if (searchSuggestions.length > 0) {
       addItemToCart(searchSuggestions[0], qtyInput, discountInput);
       setBarcodeInput('');
@@ -825,6 +873,25 @@ export const SaleInvoiceView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Multi-Rate / Batch Price Selector Modal for Same Barcode */}
+      {multiRateData && (
+        <MultiRateSelectorModal
+          barcode={multiRateData.barcode}
+          matchingProducts={multiRateData.matchingProducts}
+          storeSettings={storeSettings}
+          saleType={saleType}
+          onSelect={(selectedProduct) => {
+            addItemToCart(selectedProduct, qtyInput, discountInput);
+            setMultiRateData(null);
+            barcodeInputRef.current?.focus();
+          }}
+          onClose={() => {
+            setMultiRateData(null);
+            barcodeInputRef.current?.focus();
+          }}
+        />
+      )}
 
       {/* Barcode Camera Scanner Modal */}
       <BarcodeScannerModal
