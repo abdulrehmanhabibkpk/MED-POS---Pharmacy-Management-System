@@ -160,11 +160,11 @@
   body.printing-barcodes #barcode-sticker-print-temp {
     display: flex !important;
     flex-wrap: wrap !important;
-    gap: 16px !important;
-    justify-content: center !important;
-    align-items: center !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    align-content: flex-start !important;
     background: #ffffff !important;
-    padding: 10px !important;
+    padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
     height: auto !important;
@@ -175,13 +175,15 @@
 
   body.printing-barcodes #barcode-sticker-print-temp * {
     visibility: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
   
-  /* Maintain layout, borders, and colors on the printed sticker labels */
-  body.printing-barcodes #barcode-sticker-print-temp > div {
+  /* Maintain layout, borders, and crisp SVG paths on the printed sticker labels */
+  body.printing-barcodes #barcode-sticker-print-temp .barcode-label-sticker {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    border: 1px solid #000000 !important;
+    border: 1px solid #d1d5db !important;
     background-color: #ffffff !important;
     color: #000000 !important;
     display: flex !important;
@@ -189,6 +191,15 @@
     align-items: center !important;
     justify-content: space-between !important;
     box-shadow: none !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  body.printing-barcodes #barcode-sticker-print-temp svg {
+    max-width: 100% !important;
+    height: auto !important;
+    shape-rendering: crispEdges !important;
   }
 }
+
 

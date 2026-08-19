@@ -127,6 +127,16 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
           </button>
         )}
 
+        <a
+          href="/MEDPOS_COMPLETE_USER_MANUAL.txt"
+          download="MEDPOS_COMPLETE_USER_MANUAL.txt"
+          className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-2 py-1 rounded text-[10px] md:text-xs font-bold transition-colors cursor-pointer"
+          title="Download Complete Software User Manual & Features Guide (.TXT)"
+        >
+          <Download className="w-3 h-3 text-slate-600" />
+          <span className="hidden sm:inline">User Manual (.TXT)</span>
+        </a>
+
         <button
           type="button"
           onClick={() => {

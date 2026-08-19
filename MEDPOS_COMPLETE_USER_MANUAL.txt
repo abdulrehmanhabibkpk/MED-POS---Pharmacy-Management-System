@@ -1,0 +1,391 @@
+================================================================================
+          MEDPOS - PHARMACY & RETAIL POS MANAGEMENT SYSTEM
+                 COMPLETE USER MANUAL & FEATURES GUIDE
+               (SOFTWARE KO ISTAMAL KARNE KA MUKAMMAL TAREEQA)
+================================================================================
+Version: 3.0 Enterprise Edition
+Engine: HackTes ISO-Compliant Vector & Thermal POS Architecture
+Platform: Web, Desktop POS & Mobile Responsive Terminal
+Language: Roman Urdu / Urdu / English Guide
+
+--------------------------------------------------------------------------------
+TABLE OF CONTENTS (FEHRIST)
+--------------------------------------------------------------------------------
+1.  System Introduction & Overview (Software Ka Ta'aruf)
+2.  Main Dashboard & KPI Overview (Markazi Dashboard)
+3.  Point of Sale (POS) & Billing Terminal (Sale Invoice / Counter Sale)
+4.  Thermal Receipt Printing Guide (80mm & 58mm Receipt Slips)
+5.  Inventory & Products Management (Stock & Medicine Record)
+6.  Excel / CSV Spreadsheet Bulk Import & Export
+7.  Barcode Label Generator & Printing Studio (Vector Sticker Engine)
+8.  Purchase Stock In & Distributor Invoicing (Stock Receiving)
+9.  Customer Khata & Credit Management (Udhar Khata & Ledger)
+10. Supplier / Distributor Khata Management (Distributors Ledger)
+11. Daily Store Expenses Management (Dukaan Ke Rozana Akhrajat)
+12. Sale Returns & Refunds (Items Wapsi Aur Stock Restock)
+13. Day Closing & Cash Register Reconciliation (Rozana Hisab Kitab)
+14. Reports, Financial Statements & Live Record Editors
+15. Store Settings & Custom Branding (Dukaan Ki Settings)
+16. Keyboard Shortcut Keys (Fast Billing Shortcuts)
+17. Hardware Scanners & Printer Setup Troubleshooting
+
+================================================================================
+1. SYSTEM INTRODUCTION & OVERVIEW (SOFTWARE KA TA'ARUF)
+================================================================================
+MedPOS aik complete, fast, aur modern Medical Store, Pharmacy aur Retail Store 
+Management Software hai. Is software ko fast billing counters, barcode scanners,
+thermal printers (80mm aur 58mm), aur Excel spreadsheets ke sath 100% compatible 
+banaya gaya hai.
+
+Main Features:
+- 1-Second Barcode Scanning & Instant POS Billing.
+- 100% Genuine ISO Vector Barcode Generator & Sticker Printing Studio.
+- Dual Thermal Receipt Print Support (80mm Standard & 58mm Mini Pocket Slips).
+- Automatic Stock Calculation, Low Stock Alerts & Expiry Tracking.
+- Customer Udhar (Credit Khata) with Printable Statements & WhatsApp Billing.
+- Supplier / Distributor Ledger with Purchase Bills & Payment Logs.
+- Daily Store Expense Tracker with Category-wise Breakdown.
+- Automated Day Closing (Cash in Hand vs Drawer Reconciliation).
+- Live Editable Audit Logs across all Sales, Purchases, Expenses, and Returns.
+- Excel/CSV 1-Click Import & Export for thousands of medicine items.
+- Offline-ready high-speed architecture with instant local data persistence.
+
+================================================================================
+2. MAIN DASHBOARD & KPI OVERVIEW (MARKAZI DASHBOARD)
+================================================================================
+Software open karte hi Dashboard par aapko dukan ki live summary nazar aati hai:
+
+1. Today's Total Sales: Aaj ki kul farokht (Cash + Credit).
+2. Today's Profit: Aaj ka andaziya munafe (Gross Profit Margin).
+3. Low Stock Items Alert: Jin medicines ka stock khatam hone ke qareeb hai.
+4. Total Receivables: Customers se lene wala kul Udhar (Customer Khata Balance).
+5. Total Payables: Distributors aur Suppliers ko dene wale paise.
+6. Daily Sales Trend Chart: Pura hafta ya maheene ki sales ka visual graph.
+7. Quick Action Buttons: Direct Sale Invoice, New Product, Purchase Stock, ya 
+   Expense record karne ke liye 1-click shortcuts.
+
+================================================================================
+3. POINT OF SALE (POS) & BILLING TERMINAL (SALE INVOICE)
+================================================================================
+Yeh counter ka sab se ahem hissa hai jahan par rozana billing hoti hai:
+
+How to Create a Sale Bill (Bill Banane Ka Tareeqa):
+1. USB/Bluetooth Barcode Scanner se medicine ke dibbe par mojood barcode scan karein.
+   - Medicine foran bill list mein add ho jayegi aur beep sound aayegi.
+2. Agar barcode nahi hai:
+   - "Search Medicine" box mein medicine ka naam, generic formula, ya company 
+     type karein aur Enter dabayein ya list se select karein.
+3. Quantity Badhane Ka Tareeqa:
+   - Barcode dubara scan karein ya table mein Quantity box par click karke number 
+     change karein (+ / - buttons bhi mojood hain).
+4. Customer Selection:
+   - "Walk-in Customer" (Cash customer) ya dropdown se kisi purane Udhar (Credit) 
+     customer ko select karein ya "+ New Customer" par click karke add karein.
+5. Discount & Tax:
+   - Bill par direct amount discount ya percentage (%) discount apply karein.
+6. Payment Settlement (Raqam Wasool Karna):
+   - "Paid Amount" mein customer se wasool shuda raqam likhein (e.g. Rs. 1000).
+   - Software khud bakhud Change (Baqi wapis karne wali raqam) calculate karega.
+7. Save & Print:
+   - "SAVE & PRINT INVOICE" button dabayein ya keyboard se [F10] ya [Enter] dabayein.
+   - Bill foran save ho kar 80mm/58mm Thermal Print preview open ho jayega.
+   - Inventory stock khud bakhud kam (deduct) ho jayega.
+
+Payment Modes Supported:
+- Cash (Naqad)
+- Credit / Udhar (Customer ke Khata ledger mein balance automatically chala jata hai)
+- Bank / Card / EasyPaisa / JazzCash online payments.
+
+================================================================================
+4. THERMAL RECEIPT PRINTING GUIDE (80MM & 58MM SLIPS)
+================================================================================
+Software standard POS thermal receipt printers ke sath 100% calibrated hai:
+
+1. 80mm Standard POS Slip (3-inch wide):
+   - Dukan ka Name, Tagline, Address, aur Phone numbers.
+   - Invoice Number, Date, Time, aur Cashier name.
+   - Items table: Item Name, Quantity, Rate, aur Subtotal.
+   - Total Amount, Discount, Net Payable, Received Cash, aur Change.
+   - Customer Khata Balance (agar Udhar sale ho).
+   - Polite footer note ("Thank You! Visit Again").
+
+2. 58mm Mini Pocket Slip (2-inch wide):
+   - Compact thermal printers ke liye specially optimized tight formatting 
+     taki koi text cut na ho aur paper ki bachat ho.
+
+Printer Settings for Perfect Printing (Chrome / Edge):
+- Destination: Apna Thermal Printer select karein (e.g. Xprinter, POS-80, Black Copper).
+- Paper Size: 80mm ya 58mm Roll.
+- Margins: NONE (Bohot zaroori hai taki zero margin se slip print ho).
+- Scale: 100% (Default).
+- Headers & Footers: Uncheck (Band rakhein).
+
+================================================================================
+5. INVENTORY & PRODUCTS MANAGEMENT (MEDICINE STOCK RECORD)
+================================================================================
+Dukan ki tamam medicines aur general products ka record yahan manage hota hai:
+
+Naya Product Add Karne Ka Tareeqa:
+1. "Products" menu mein jayein aur "+ Add New Product" button dabayein.
+2. Form mein darj zail maloomat darj karein:
+   - Barcode SKU: Product ka barcode scan karein ya live camera scanner use karein.
+   - Product Name: Medicine ka naam (e.g. Panadol Extra 500mg, Surbex Z).
+   - Company / Brand: Manufacturer (e.g. GSK, Abbott, Getz Pharma).
+   - Category: Pharmacy, Baby Care, Personal Care, Grocery waghera.
+   - Purchase Price: Distributor se khareed ki qeemat (e.g. Rs. 15.50).
+   - Retail Price: Customer ko bechne ki qeemat (e.g. Rs. 25.00).
+   - Wholesale Price: Wholesale rate (Optional).
+   - Current Stock Qty: Mojooda dukan ka stock (e.g. 500 packs).
+   - Low Stock Alert Limit: Stock kis limit se kam ho to alert mile (e.g. 10).
+3. Live Margin Calculator:
+   - Software real-time mein aapko Profit Margin Percentage (%) aur Unit Profit 
+     (Rs. per pack) calculate karke batata hai.
+4. "Save Product" dabayein.
+
+Editing & Deleting:
+- List mein kisi bhi product ke samne Edit icon (pencil) par click karke qeemat, 
+  stock, ya naam foran update karein.
+- Delete icon par click karke product ko inventory se remove karein.
+
+================================================================================
+6. EXCEL / CSV SPREADSHEET BULK IMPORT & EXPORT
+================================================================================
+Agar aapke paas pehle se Excel sheet mein hazaron medicines ka data mojood hai:
+
+1. Download Sample Template:
+   - "Download Sample Template" button dabayein. Standard format ki CSV sheet 
+     download ho jayegi jis mein columns (NAME, BRAND, CATEGORY, SKU, PURCHASE, 
+     SELLING PRICE, OPENING STOCK waghera) set hain.
+2. Import Products Sheet:
+   - "Import Products Sheet" button dabayein aur apni Excel (.xlsx / .csv) file 
+     select karein.
+   - Software sheet ke tamam rows ko read karke Interactive Preview Modal mein 
+     show karega.
+   - Margin aur Stock verify karke "Confirm & Save Products" dabayein. Hazaron 
+     medicines aik second mein inventory mein load ho jayengi.
+3. Export Products:
+   - "Export Products" button dabayein. Dukan ka mukammal stock Excel format 
+     mein download ho jayega.
+
+================================================================================
+7. BARCODE LABEL GENERATOR & PRINTING STUDIO (STICKER PRINTING)
+================================================================================
+Apni dukan ke items ke liye genuine, scannable barcode stickers print karein:
+
+1. Real Vector Barcode Engine (Powered by JsBarcode):
+   - Yeh koi fake graphics nahi hain balkay 100% genuine ISO vector barcodes hain 
+     jo har laser aur camera scanner par foran read hote hain.
+   - Symbologies: CODE 128 (Universal), EAN-13, CODE 39, UPC-A, ITF-14, Pharmacode.
+
+2. Three Flexible Modes:
+   - Mode 1 (Single Item): Kisi aik medicine ko search karke uske 6, 12, 24 ya 
+     100 stickers print karein.
+   - Mode 2 (Batch Queue): Mukhtalif items ko alag alag quantities ke sath aik 
+     hi roll ya sheet par print karein (Low stock items ko 1-click mein queue 
+     mein la sakte hain).
+   - Mode 3 (Custom / Freeform): Bina inventory ke koi bhi custom barcode, naam, 
+     price, batch number, aur expiry date daal kar sticker print karein.
+
+3. Standard Label Sizes Supported:
+   - Thermal Rolls (Zebra / Xprinter / TSC / Gprinter):
+     * 50mm × 30mm (2" × 1.2" Standard Pharmacy Label)
+     * 50mm × 25mm (2" × 1" Compact Label)
+     * 40mm × 28mm & 38mm × 25mm (Small Vials / Strips)
+     * 60mm × 40mm (Syrup Bottles / Large Boxes)
+     * 38mm × 25mm 2-Across (Double Column Roll)
+   - A4 Sticker Sheets (Laser / Deskjet Printers):
+     * A4 - 24 Labels (3×8 Grid)
+     * A4 - 30 Labels (3×10 Grid)
+     * A4 - 40 Labels (4×10 Grid)
+
+4. Label Content Customization (Toggles):
+   - Store Name Header (ON/OFF)
+   - Product Title (ON/OFF)
+   - Retail Price (ON/OFF)
+   - Barcode Number (Human-readable font) (ON/OFF)
+   - Brand / Company Name (ON/OFF)
+   - Batch Number (B# 2026-A) (ON/OFF)
+   - Expiry Date (EXP: 12/2028) (ON/OFF)
+
+5. Live Scanner Verification Box:
+   - Page ke top par test box mojood hai jahan aap apna handheld scanner point 
+     karke check kar sakte hain ke sticker 100% successfully decode ho raha hai.
+
+================================================================================
+8. PURCHASE STOCK IN & DISTRIBUTOR INVOICING (STOCK RECEIVING)
+================================================================================
+Jab medicine company ya distributor se nai stock dukan par aati hai:
+
+1. "Purchase Stock" menu open karein.
+2. Medicine ka barcode scan karein ya name select karein.
+3. Received Quantity (e.g. 50 packs) aur Purchase Cost (e.g. Rs. 140 per pack) 
+   darj karein.
+4. Supplier / Distributor ka naam aur unka Bill / Invoice No. likhein.
+5. "Record Stock Purchase" dabayein:
+   - Dukan ka inventory stock khud bakhud barh (increase) ho jayega.
+   - Agar distributor ko udhar par liya hai to Supplier Khata ledger mein balance 
+     add ho jayega.
+   - History table mein se aap kisi bhi purani purchase entry ko Edit ya Delete 
+     bhi kar sakte hain.
+
+================================================================================
+9. CUSTOMER KHATA & CREDIT MANAGEMENT (UDHAR KHATA)
+================================================================================
+Dukan ke ba-aitebar customers ka Udhar hisab kitab mehfooz rakhein:
+
+1. Customer Profile:
+   - Customer ka Naam, Mobile Number, Address, aur Credit Limit set karein.
+2. Udhar Sale:
+   - Sale Invoice banate waqt Customer ko select karein aur payment mode "Credit" 
+     rakhein. Raqam foran customer ke khata mein darj ho jayegi.
+3. Udhar Wasooli (Credit Receive):
+   - Jab customer paise wapis karne aaye, "Credit Receive" ya Customer Khata mein 
+     jayein aur wasool shuda raqam (Cash / Online) darj karein.
+   - Customer ka baqi balance foran kam ho jayega.
+4. Detailed Ledger Statement:
+   - "Open Ledger" button dabayein. Date-wise tamam sales bills aur payment receipts 
+     ki mukammal printable report samne aa jayegi.
+   - WhatsApp Button: 1-click se customer ko unka baqi balance WhatsApp par send karein.
+
+================================================================================
+10. SUPPLIER / DISTRIBUTOR KHATA MANAGEMENT
+================================================================================
+Pharma distributors (e.g. Muller & Phipps, Searle, Getz, OBS) ke sath len den:
+
+1. Supplier Profile:
+   - Distributor ka naam, company, sales rep ka number, aur NTN darj karein.
+2. Purchase Bills Ledger:
+   - Har khareedari par distributor ka payable balance automatically update hota hai.
+3. Supplier Payment Voucher:
+   - Jab distributor ko cheque ya cash payment dein, "Pay Supplier" par click karke 
+     entry karein.
+   - Printable Statement nikaal kar distributor ke rep ko raseed dein.
+
+================================================================================
+11. DAILY STORE EXPENSES MANAGEMENT (DUKAAN KE AKHRAJAT)
+================================================================================
+Dukan ke rozmarra ke chotay barey kharche track karein:
+
+Categories:
+- Electricity Bill (Bijli ka bill)
+- Store Rent (Dukan ka kiraya)
+- Staff Salary / Daily Wages (Mulazmeen ki tankhwah)
+- Tea & Refreshment (Chai aur khana peena)
+- Cleaning & Maintenance (Safai suthrai)
+- Packaging Bags & Stationery (Shoppers aur thermal paper rolls)
+- Transportation / Delivery Charges (Stock transportation)
+- Software & Internet (Wifi aur internet bill)
+- Miscellaneous (Deegar ikhrajat)
+
+Har expense ka amount aur description darj karein. Yeh kharcha Day Closing aur 
+Monthly Profit & Loss report mein automatically deduct ho kar net bachat show karta hai.
+
+================================================================================
+12. SALE RETURNS & REFUNDS (ITEMS WAPSI)
+================================================================================
+Agar koi customer khareedi hui medicine wapis ya tabdeel karne aaye:
+
+1. "Sale Returns" menu mein jayein.
+2. Medicine ka barcode scan karein aur return quantity darj karein.
+3. "Process Return & Restock" dabayein:
+   - Software customer ko refund ki jane wali raqam calculate karega.
+   - Returned medicine ka stock foran inventory mein wapis add (replenish) ho jayega.
+   - Return log mein audit entry save ho jayegi.
+
+================================================================================
+13. DAY CLOSING & CASH DRAWER RECONCILIATION (ROZANA HISAB KITAB)
+================================================================================
+Dukan band karte waqt din bhar ka mukammal hisab kitab band karein:
+
+Day Closing Calculations:
+- Opening Cash in Drawer (Subah ka jama shuda cash)
+- + Total Cash Sales Wasooli (Din bhar ki naqad sales)
+- + Customer Khata Recoveries (Customer udhar wasooliyan)
+- - Daily Expenses Paid (Din bhar ke dukan ke kharche)
+- - Supplier Cash Payments (Distributor ko kiye gaye payments)
+- = EXPECTED CASH IN HAND (Dukan ke galle mein mojood hona chahiye)
+
+Closing Entry:
+- Actual Cash Counted likhein (Galle mein mojood note gin kar likhein).
+- Software Cash Difference (Shortage / Excess) calculate karega.
+- "PRINT DAY CLOSING AUDIT SLIP" dabayein. Owner ke liye thermal receipt print 
+  ho jayegi.
+
+================================================================================
+14. REPORTS, FINANCIAL STATEMENTS & LIVE RECORD EDITORS
+================================================================================
+"Reports" center mein dukan ka pura financial audit mojood hai:
+
+1. Sales & Invoices Report:
+   - Date filter laga kar tamam invoices ki list dekhein.
+   - Live Edit Invoice: Kisi bhi invoice ka customer name, discount, ya payment type 
+     edit karein.
+   - Re-Print: Purani invoice ka thermal receipt dubara print karein.
+2. Stock Purchases Report:
+   - Tamam received stock bills ki list aur in-line edit/delete modal.
+3. Store Expenses Report:
+   - Category-wise expense breakdown aur printable voucher log.
+4. Customer & Supplier Khata Balances Report:
+   - Market mein phansa hua kul udhar aur dukan ke zimme kul wajibaat.
+5. Stock Valuation & Profit Margin Report:
+   - Dukan mein mojood stock ki kul Purchase Value aur Retail Market Value.
+6. Profit & Loss (P&L) Financial Statement:
+   - Total Gross Revenue
+   - - Cost of Goods Sold (COGS)
+   - = Gross Profit
+   - - Total Operating Expenses
+   - - Total Sale Returns & Refunds
+   - = NET CLEAR STORE PROFIT (Saaf Munafe)
+   - 1-Click Printable P&L Audit Statement.
+
+================================================================================
+15. STORE SETTINGS & CUSTOM BRANDING (DUKAAN KI SETTINGS)
+================================================================================
+"Store Settings" mein dukan ki bunyadi maloomat customize karein:
+
+- Store Name: e.g. "AL-SHIFA PHARMACY & SURGICAL"
+- Tagline: e.g. "Trusted Healthcare & Medicines Since 2010"
+- Address: e.g. "Shop #4, Main Market, Lahore, Pakistan"
+- Phone / Mobile: e.g. "0300-1234567 / 042-3567890"
+- Store Logo: Thermal receipt par apna logo lagane ke liye image upload karein.
+- Currency Symbol: Rs. / PKR / $ / AED / SAR
+- Thermal Paper Default: 80mm Standard ya 58mm Mini selector.
+- Invoice Footer Message: Receipt ke aakhir mein aane wala custom message.
+
+================================================================================
+16. KEYBOARD SHORTCUT KEYS (FAST BILLING SHORTCUTS)
+================================================================================
+Counter par fast speed billing ke liye in shortcut keys ka istamal karein:
+
+- [F10] or [Ctrl + Enter]  : Save Bill & Open Thermal Receipt Print
+- [F2]                     : Quick Focus on Medicine Search Box
+- [F4]                     : Select Customer / Udhar Khata Dropdown
+- [F8]                     : Focus on Paid Amount / Cash Received Input
+- [F9]                     : Add Discount to Bill
+- [Esc]                    : Close Modals / Clear Search Box
+- [Ctrl + P]               : Trigger Instant Print Dialog
+
+================================================================================
+17. HARDWARE SCANNERS & PRINTER SETUP TROUBLESHOOTING
+================================================================================
+1. Handheld Barcode Scanner Not Beeping/Reading:
+   - Scanner ko USB port se connect karein. Standard USB scanner plug-and-play hota 
+     hai aur keyboard wedge mode mein kaam karta hai.
+   - Barcode Label Generator page par "Live Barcode Scanner Verification Tool" 
+     mein scan karke check karein ke computer code receive kar raha hai.
+
+2. Thermal Printer Margins / Text Cut Issue:
+   - Print dialog mein "More Settings" par click karein.
+   - Margins ko **NONE** par set karein.
+   - Scale ko **100%** (Custom scale nahi) par rakhein.
+   - Agar printer 58mm hai to preview mein "58mm (Mini)" button select karein.
+
+3. Backup & Security:
+   - Tamam record local secure database mein real-time persist hota hai.
+   - Har maheene "Products" menu se "Export Products" aur "Reports" se Sales 
+     report CSV download karke USB drive ya Google Drive par backup mehfooz rakhein.
+
+================================================================================
+             DEVELOPED BY THE PAK HACKTES SOFTWARE ENTERPRISE
+           For Support & Custom Features: abdulrehman654as@gmail.com
+================================================================================
