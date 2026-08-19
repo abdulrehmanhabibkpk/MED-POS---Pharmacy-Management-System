@@ -1,35 +1,99 @@
 import React, { useRef, useState } from 'react';
-import { Printer, X, ZoomIn, ZoomOut, Maximize2, LayoutGrid, FileText, Check } from 'lucide-react';
+import { Printer, X, ZoomIn, ZoomOut, Check, QrCode, Sliders } from 'lucide-react';
 import { usePOS } from '../context/POSContext';
 import { ThermalPaperSize } from '../types';
+import { createDefaultReceiptTemplate } from '../utils/receiptTemplateDefaults';
+import { BarcodeRenderer } from './BarcodeRenderer';
 
 export const ReceiptModal: React.FC = () => {
-  const { previewInvoice, setPreviewInvoice, storeSettings, thermalPaperSize, setThermalPaperSize } = usePOS();
+  const { previewInvoice, setPreviewInvoice, storeSettings, thermalPaperSize, setThermalPaperSize, setActiveTab } = usePOS();
   const receiptRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
 
   if (!previewInvoice) return null;
 
+  const tpl = storeSettings.receiptTemplate || createDefaultReceiptTemplate(storeSettings);
+
   const handlePrint = (paperSize?: ThermalPaperSize) => {
     if (paperSize) {
       setThermalPaperSize(paperSize);
     }
-    // Allow React to update class before opening print dialog
     setTimeout(() => {
       window.print();
-    }, 50);
+    }, 60);
   };
 
   const is58mm = thermalPaperSize === '58mm';
+
+  // Helper to render divider
+  const renderDivider = () => {
+    switch (tpl.dividerStyle) {
+      case 'dotted':
+        return <div className="border-t border-dotted border-black my-1" />;
+      case 'solid':
+        return <div className="border-t border-black my-1" />;
+      case 'double':
+        return <div className="border-t-2 border-b border-black h-1 my-1" />;
+      case 'stars':
+        return (
+          <div className="text-center font-mono text-[9px] tracking-widest my-0.5 overflow-hidden text-black leading-none select-none">
+            ************************************************
+          </div>
+        );
+      case 'dashed':
+      default:
+        return <div className="border-t border-dashed border-black my-1" />;
+    }
+  };
+
+  const getFontFamilyClass = () => {
+    switch (tpl.fontFamily) {
+      case 'sans-serif': return 'font-sans';
+      case 'serif': return 'font-serif';
+      case 'courier': return 'font-mono font-medium';
+      case 'monospace':
+      default: return 'font-mono';
+    }
+  };
+
+  const getBaseFontSize = () => {
+    if (is58mm) {
+      if (tpl.baseFontSize === 'compact') return 'text-[8.5px] leading-tight';
+      if (tpl.baseFontSize === 'large') return 'text-[10px] leading-tight';
+      return 'text-[9px] leading-tight';
+    } else {
+      if (tpl.baseFontSize === 'compact') return 'text-[10px] leading-snug';
+      if (tpl.baseFontSize === 'large') return 'text-[12px] leading-normal';
+      return 'text-[11px] leading-snug';
+    }
+  };
+
+  const getStoreNameSize = () => {
+    if (is58mm) {
+      switch (tpl.storeNameFontSize) {
+        case 'huge': return 'text-sm font-black';
+        case 'xlarge': return 'text-xs font-black';
+        case 'large': return 'text-[11px] font-bold';
+        default: return 'text-[10px] font-bold';
+      }
+    } else {
+      switch (tpl.storeNameFontSize) {
+        case 'huge': return 'text-lg font-black tracking-wide';
+        case 'xlarge': return 'text-base font-black tracking-wide';
+        case 'large': return 'text-sm font-bold tracking-wide';
+        default: return 'text-xs font-bold';
+      }
+    }
+  };
 
   return (
     <div
       id="receipt-modal-backdrop"
       className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
     >
-      {/* Receipt Preview Window Frame matching Image 13 */}
+      {/* Receipt Preview Window Frame */}
       <div className="bg-slate-100 border border-slate-400 shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[95vh]">
-        {/* Window Title & Action Toolbar matching Image 13 */}
+        {/* Window Title & Action Toolbar */}
         <div className="bg-slate-200 border-b border-slate-300 px-3 py-2 flex flex-wrap items-center justify-between text-xs select-none gap-2 no-print print:hidden">
           <div className="flex items-center gap-2 font-bold text-slate-800">
             <Printer className="w-4 h-4 text-[#0070ba]" />
@@ -75,7 +139,7 @@ export const ReceiptModal: React.FC = () => {
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => handlePrint()}
-              className="p-1.5 hover:bg-slate-300 rounded text-slate-700 font-semibold flex items-center gap-1 bg-slate-100 border border-slate-300"
+              className="p-1.5 hover:bg-slate-300 rounded text-slate-700 font-semibold flex items-center gap-1 bg-slate-100 border border-slate-300 cursor-pointer"
               title="Print Receipt"
             >
               <Printer className="w-3.5 h-3.5 text-[#0070ba]" />
@@ -83,14 +147,14 @@ export const ReceiptModal: React.FC = () => {
             </button>
             <button
               onClick={() => setZoomLevel((z) => Math.min(1.5, z + 0.1))}
-              className="p-1 hover:bg-slate-300 rounded text-slate-700"
+              className="p-1 hover:bg-slate-300 rounded text-slate-700 cursor-pointer"
               title="Zoom In"
             >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setZoomLevel((z) => Math.max(0.8, z - 0.1))}
-              className="p-1 hover:bg-slate-300 rounded text-slate-700"
+              className="p-1 hover:bg-slate-300 rounded text-slate-700 cursor-pointer"
               title="Zoom Out"
             >
               <ZoomOut className="w-3.5 h-3.5" />
@@ -98,7 +162,7 @@ export const ReceiptModal: React.FC = () => {
             <div className="h-4 w-px bg-slate-300 mx-1"></div>
             <button
               onClick={() => setPreviewInvoice(null)}
-              className="bg-slate-300 hover:bg-red-500 hover:text-white px-2.5 py-1 text-xs font-semibold rounded transition-colors"
+              className="bg-slate-300 hover:bg-red-500 hover:text-white px-2.5 py-1 text-xs font-semibold rounded transition-colors cursor-pointer"
             >
               <X className="w-3.5 h-3.5 inline mr-0.5" /> Close
             </button>
@@ -108,183 +172,329 @@ export const ReceiptModal: React.FC = () => {
         {/* Receipt Canvas scroll area */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex justify-center bg-slate-300/60 items-start">
           <div style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center', transition: 'transform 0.15s ease' }}>
-            {/* Thermal Paper Slip (Exact Mono styling formatted for 58mm or 80mm) */}
+            {/* Thermal Paper Slip */}
             <div
               ref={receiptRef}
               id="thermal-receipt-paper"
-              className={`bg-white text-black shadow-lg border border-slate-300 font-mono leading-tight select-text transition-all ${
+              className={`bg-white text-black shadow-lg border border-slate-300 select-text ${getFontFamilyClass()} ${getBaseFontSize()} transition-all ${
                 is58mm
-                  ? 'paper-58mm w-[265px] p-3 text-[9.5px]'
-                  : 'paper-80mm w-[360px] p-5 text-[11px]'
+                  ? 'paper-58mm w-[265px]'
+                  : 'paper-80mm w-[360px]'
+              } ${
+                tpl.paperPadding === 'compact'
+                  ? 'p-2.5'
+                  : tpl.paperPadding === 'wide'
+                  ? 'p-5'
+                  : is58mm
+                  ? 'p-3'
+                  : 'p-4'
               }`}
             >
-              {/* Store Logo / HackTes branding */}
-              <div className="flex flex-col items-center justify-center text-center mb-2.5">
-                {storeSettings.logoUrl ? (
-                  <img
-                    src={storeSettings.logoUrl}
-                    alt="Store Logo"
-                    className={`w-auto object-contain mb-1 ${is58mm ? 'h-9 max-w-[120px]' : 'h-12 max-w-[160px]'}`}
-                  />
-                ) : (
-                  <div className="text-center font-sans mb-1">
-                    <div className={`${is58mm ? 'text-xl' : 'text-2xl'} font-black text-[#0070ba] tracking-tighter`}>
-                      HT
+              {/* Header: Logo */}
+              {tpl.showHeaderLogo && (
+                <div
+                  className={`flex mb-2 ${
+                    tpl.logoAlignment === 'left'
+                      ? 'justify-start'
+                      : tpl.logoAlignment === 'right'
+                      ? 'justify-end'
+                      : 'justify-center'
+                  }`}
+                >
+                  {storeSettings.logoUrl ? (
+                    <img
+                      src={storeSettings.logoUrl}
+                      alt="Store Logo"
+                      className={`object-contain grayscale ${
+                        tpl.logoSize === 'small'
+                          ? is58mm ? 'h-7' : 'h-8'
+                          : tpl.logoSize === 'large'
+                          ? is58mm ? 'h-14' : 'h-16'
+                          : is58mm ? 'h-10' : 'h-12'
+                      }`}
+                    />
+                  ) : (
+                    <div className="text-center font-sans">
+                      <div className={`${is58mm ? 'text-lg' : 'text-xl'} font-black text-black tracking-tighter`}>
+                        HT
+                      </div>
+                      <div className="text-[9px] text-black font-bold tracking-widest leading-none">HackTes POS</div>
                     </div>
-                    <div className={`${is58mm ? 'text-[9px]' : 'text-[11px]'} text-slate-900 font-bold tracking-widest leading-none`}>
-                      HackTes
-                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Header: Store Name */}
+              <div
+                className={`mb-1 ${
+                  tpl.storeNameAlignment === 'left'
+                    ? 'text-left'
+                    : tpl.storeNameAlignment === 'right'
+                    ? 'text-right'
+                    : 'text-center'
+                }`}
+              >
+                <h1
+                  className={`${getStoreNameSize()} ${tpl.storeNameBold ? 'font-black' : 'font-semibold'} ${
+                    tpl.storeNameUppercase ? 'uppercase' : ''
+                  } leading-tight text-black`}
+                >
+                  {tpl.storeNameText || storeSettings.storeName || 'MY MEDICAL STORE'}
+                </h1>
+
+                {tpl.showTagline && (
+                  <p className={`${is58mm ? 'text-[8.5px]' : 'text-[10px]'} font-semibold text-black mt-0.5`}>
+                    {tpl.taglineText || storeSettings.tagline}
+                  </p>
+                )}
+
+                {tpl.showAddress && (
+                  <p className={`${is58mm ? 'text-[8px]' : 'text-[9.5px]'} text-black`}>
+                    {tpl.addressText || storeSettings.address}
+                  </p>
+                )}
+
+                {tpl.showPhone && (
+                  <p className={`${is58mm ? 'text-[8px]' : 'text-[9.5px]'} text-black font-semibold`}>
+                    {tpl.phoneLabel} {tpl.phoneText || storeSettings.phone}
+                  </p>
+                )}
+
+                {tpl.showTaxId && (
+                  <p className={`${is58mm ? 'text-[8px]' : 'text-[9.5px]'} text-black font-mono`}>
+                    {tpl.taxIdLabel} {tpl.taxIdText}
+                  </p>
+                )}
+              </div>
+
+              {renderDivider()}
+
+              {/* Metadata Details */}
+              <div className="space-y-0.5">
+                {tpl.showDate && (
+                  <div className="flex justify-between">
+                    <span>Date: {previewInvoice.date}</span>
                   </div>
                 )}
 
-                <h2 className={`${is58mm ? 'text-xs' : 'text-sm'} font-black tracking-wide uppercase mt-0.5`}>
-                  {storeSettings.storeName || 'MY MEDICAL STORE'}
-                </h2>
-                <p className={`${is58mm ? 'text-[8.5px]' : 'text-[10px]'} text-slate-800 font-medium`}>
-                  {storeSettings.tagline || 'Pharmacy & General Store'}
-                </p>
-                <p className={`${is58mm ? 'text-[8.5px]' : 'text-[10px]'} text-slate-700`}>
-                  {storeSettings.address || 'Main Market, Pakistan'}
-                </p>
-                <p className={`${is58mm ? 'text-[8.5px]' : 'text-[10px]'} text-slate-700`}>
-                  Ph: {storeSettings.phone || '0300-1234567'}
-                </p>
-              </div>
-
-              {/* Dashed Separator */}
-              <div className="border-t border-dashed border-black my-1"></div>
-
-              {/* Meta Details */}
-              <div className={`space-y-0.5 ${is58mm ? 'text-[8.5px]' : 'text-[10px]'}`}>
-                <div className="flex justify-between">
-                  <span>Date: {previewInvoice.date}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="truncate">Customer: {previewInvoice.customerName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Cashier: {previewInvoice.cashier || 'Admin'}</span>
-                  <span>Inv#: {previewInvoice.invoiceNo}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Type: {previewInvoice.saleType}</span>
-                  <span className="font-semibold">Paper: {thermalPaperSize}</span>
-                </div>
-              </div>
-
-              {/* Dashed Separator */}
-              <div className="border-t border-dashed border-black my-1"></div>
-
-              {/* Items Table Header */}
-              <div className={`grid grid-cols-12 font-bold ${is58mm ? 'text-[8.5px]' : 'text-[10px]'} pb-0.5`}>
-                <span className={is58mm ? 'col-span-5' : 'col-span-6'}>Item Name</span>
-                <span className={is58mm ? 'col-span-2 text-center' : 'col-span-2 text-center'}>Qty</span>
-                <span className={is58mm ? 'col-span-2 text-right' : 'col-span-2 text-right'}>Rate</span>
-                <span className={is58mm ? 'col-span-3 text-right' : 'col-span-2 text-right'}>Amt</span>
-              </div>
-              <div className="border-t border-dashed border-black mb-1"></div>
-
-              {/* Items List */}
-              <div className={`space-y-1 ${is58mm ? 'text-[8.5px]' : 'text-[10px]'}`}>
-                {previewInvoice.items.map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-12 items-start">
-                    <span className={`${is58mm ? 'col-span-5' : 'col-span-6'} truncate font-medium`}>
-                      {item.name}
+                {tpl.showInvoiceNo && (
+                  <div className="flex justify-between">
+                    <span className="font-bold">
+                      {tpl.invoiceNoLabel} #{previewInvoice.invoiceNo}
                     </span>
-                    <span className={`${is58mm ? 'col-span-2 text-center' : 'col-span-2 text-center'}`}>
-                      {item.qty}
+                    {tpl.showSaleType && (
+                      <span className="font-semibold">Type: {previewInvoice.saleType}</span>
+                    )}
+                  </div>
+                )}
+
+                {tpl.showCashier && (
+                  <div className="flex justify-between">
+                    <span>
+                      {tpl.cashierLabel} {previewInvoice.cashier || 'Admin'}
                     </span>
-                    <span className={`${is58mm ? 'col-span-2 text-right' : 'col-span-2 text-right'}`}>
-                      {item.rate.toLocaleString()}
-                    </span>
-                    <span className={`${is58mm ? 'col-span-3 text-right' : 'col-span-2 text-right'} font-semibold`}>
-                      {item.subtotal.toLocaleString()}
+                    {tpl.showPaperSizeTag && <span className="font-mono text-[8px]">[{thermalPaperSize}]</span>}
+                  </div>
+                )}
+
+                {tpl.showCustomerName && (
+                  <div className="flex justify-between font-semibold">
+                    <span className="truncate">
+                      {tpl.customerNameLabel} {previewInvoice.customerName}
                     </span>
                   </div>
-                ))}
+                )}
               </div>
 
-              {/* Dashed Separator */}
-              <div className="border-t border-dashed border-black my-1"></div>
+              {renderDivider()}
 
-              {/* Summary Totals */}
-              <div className={`space-y-0.5 ${is58mm ? 'text-[8.5px]' : 'text-[10px]'}`}>
-                <div className="flex justify-between">
-                  <span>Sub Total: {storeSettings.currency}</span>
-                  <span>{previewInvoice.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              {/* Items Section */}
+              {tpl.itemLayout === 'two_line' ? (
+                <div className="space-y-1.5">
+                  <div className="flex justify-between font-bold pb-0.5 border-b border-black">
+                    <span>{tpl.colNameLabel}</span>
+                    <span>{tpl.colAmountLabel}</span>
+                  </div>
+                  {previewInvoice.items.map((item, idx) => (
+                    <div key={idx} className="space-y-0.5">
+                      <div className="font-semibold">{item.name}</div>
+                      <div className="flex justify-between pl-2">
+                        <span>
+                          {item.qty} x {item.rate.toLocaleString()}
+                          {tpl.showItemDiscount && item.discount > 0 && ` (Disc: -${item.discount})`}
+                        </span>
+                        <span className="font-bold">{item.subtotal.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              ) : (
+                <div className="space-y-1">
+                  <div className="grid grid-cols-12 font-bold pb-0.5 border-b border-black">
+                    <span className={is58mm ? 'col-span-5' : 'col-span-6'}>{tpl.colNameLabel}</span>
+                    <span className={is58mm ? 'col-span-2 text-center' : 'col-span-2 text-center'}>
+                      {tpl.colQtyLabel}
+                    </span>
+                    <span className={is58mm ? 'col-span-2 text-right' : 'col-span-2 text-right'}>
+                      {tpl.colRateLabel}
+                    </span>
+                    <span className={is58mm ? 'col-span-3 text-right' : 'col-span-2 text-right'}>
+                      {tpl.colAmountLabel}
+                    </span>
+                  </div>
 
-                {previewInvoice.discountAmount > 0 && (
-                  <div className="flex justify-between text-red-700">
+                  {previewInvoice.items.map((item, idx) => (
+                    <div key={idx} className="grid grid-cols-12 items-start">
+                      <div className={`${is58mm ? 'col-span-5' : 'col-span-6'} truncate`}>
+                        <div className="font-medium">{item.name}</div>
+                        {tpl.showBatchNo && (
+                          <div className="text-[7.5px] text-black">Batch: B-101</div>
+                        )}
+                      </div>
+                      <span className={`${is58mm ? 'col-span-2 text-center' : 'col-span-2 text-center'}`}>
+                        {item.qty}
+                      </span>
+                      <span className={`${is58mm ? 'col-span-2 text-right' : 'col-span-2 text-right'}`}>
+                        {item.rate.toLocaleString()}
+                      </span>
+                      <span className={`${is58mm ? 'col-span-3 text-right' : 'col-span-2 text-right'} font-bold`}>
+                        {item.subtotal.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {tpl.showTotalItemsCount && (
+                <div className="flex justify-between font-semibold pt-1 text-[8.5px] border-t border-dotted border-black mt-1">
+                  <span>Total Items: {previewInvoice.items.length}</span>
+                  <span>Total Pcs: {previewInvoice.items.reduce((sum, it) => sum + it.qty, 0)}</span>
+                </div>
+              )}
+
+              {renderDivider()}
+
+              {/* Totals & Calculations */}
+              <div className="space-y-0.5">
+                {tpl.showSubtotal && (
+                  <div className="flex justify-between">
+                    <span>Sub Total: {storeSettings.currency}</span>
+                    <span>{previewInvoice.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
+
+                {tpl.showDiscountTotal && previewInvoice.discountAmount > 0 && (
+                  <div className="flex justify-between font-semibold text-black">
                     <span>Discount: {storeSettings.currency}</span>
-                    <span>{previewInvoice.discountAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    <span>-{previewInvoice.discountAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                   </div>
                 )}
 
-                <div className="border-t border-dashed border-black my-1"></div>
+                {tpl.showNetPayable && (
+                  <div
+                    className={`flex justify-between my-1 ${
+                      tpl.netPayableBoxed
+                        ? 'border-2 border-black p-1 bg-black/5 font-black text-xs'
+                        : tpl.highlightNetPayable
+                        ? 'font-black text-xs'
+                        : 'font-bold'
+                    }`}
+                  >
+                    <span>{tpl.netPayableLabel} {storeSettings.currency}</span>
+                    <span>{previewInvoice.netAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
 
-                <div className={`flex justify-between font-black ${is58mm ? 'text-[10px]' : 'text-xs'}`}>
-                  <span>NET AMOUNT: {storeSettings.currency}</span>
-                  <span>{previewInvoice.netAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                </div>
+                {tpl.showPaidAmount && (
+                  <div className="flex justify-between font-semibold">
+                    <span>{tpl.paidLabel} {storeSettings.currency}</span>
+                    <span>{previewInvoice.paidAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
 
-                <div className="flex justify-between font-semibold">
-                  <span>PAID: {storeSettings.currency}</span>
-                  <span>{previewInvoice.paidAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span>CHANGE: {storeSettings.currency}</span>
-                  <span>{previewInvoice.changeAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                </div>
+                {tpl.showChangeRefund && (
+                  <div className="flex justify-between font-bold">
+                    <span>{tpl.changeRefundLabel} {storeSettings.currency}</span>
+                    <span>{previewInvoice.changeAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
               </div>
 
-              {/* Dashed Separator */}
-              <div className="border-t border-dashed border-black my-1.5"></div>
+              {renderDivider()}
 
-              {/* Footer Slip Note */}
-              <div className={`text-center font-bold ${is58mm ? 'text-[8.5px]' : 'text-[10px]'} space-y-0.5 uppercase tracking-wide`}>
-                <div>THANK YOU! VISIT AGAIN</div>
-                <div className={`${is58mm ? 'text-[7.5px]' : 'text-[9px]'} font-normal`}>
-                  Stay Healthy - Stay Safe
+              {/* Footer Greetings & Notice */}
+              <div className="text-center space-y-1 my-1">
+                {tpl.showFooterGreeting && (
+                  <div className={`uppercase tracking-wide ${tpl.footerGreetingBold ? 'font-black' : 'font-semibold'}`}>
+                    {tpl.footerGreetingText || storeSettings.footerNote}
+                  </div>
+                )}
+
+                {tpl.showFooterSubGreeting && (
+                  <div className="text-[8px] font-medium">{tpl.footerSubGreetingText}</div>
+                )}
+
+                {tpl.showReturnPolicy && (
+                  <div className="border border-black p-1 text-[7.5px] text-left mt-1.5 leading-tight">
+                    <div className="font-bold uppercase text-center mb-0.5">{tpl.returnPolicyTitle}</div>
+                    <div className="whitespace-pre-line font-mono">{tpl.returnPolicyText}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Barcode & QR Code on receipt */}
+              <div className="flex flex-col items-center justify-center my-1.5 gap-1">
+                {tpl.showBarcode && (
+                  <div className="text-center">
+                    <BarcodeRenderer value={`INV-${previewInvoice.invoiceNo}`} width={1.2} height={28} displayValue={false} />
+                    <span className="text-[8px] font-mono font-bold tracking-wider">*INV-{previewInvoice.invoiceNo}*</span>
+                  </div>
+                )}
+
+                {tpl.showQrCode && (
+                  <div className="text-center pt-1">
+                    <div className="w-16 h-16 border border-black p-1 bg-white mx-auto flex items-center justify-center">
+                      <QrCode className="w-full h-full text-black" />
+                    </div>
+                    <span className="text-[7.5px] font-mono">Scan to Verify Bill</span>
+                  </div>
+                )}
+              </div>
+
+              {tpl.showSoftwareCredit && (
+                <div className="text-center text-[7px] text-black/70 pt-1 border-t border-dotted border-black">
+                  {tpl.softwareCreditText}
                 </div>
-              </div>
+              )}
 
-              <div className="border-t border-dashed border-black my-1"></div>
-              <div className={`text-center ${is58mm ? 'text-[7px]' : 'text-[8px]'} text-slate-500`}>
-                Software by THE PAK HACKTES
-              </div>
+              {/* Paper feed lines for tear-off */}
+              {Array.from({ length: tpl.feedCutLines || 2 }).map((_, i) => (
+                <div key={i} className="h-3.5" />
+              ))}
             </div>
           </div>
         </div>
 
         {/* Modal Bottom Toolbar */}
         <div className="bg-slate-200 border-t border-slate-300 p-2.5 flex flex-wrap items-center justify-between gap-2 no-print print:hidden">
-          {/* Quick Paper Switcher in footer */}
-          <div className="flex items-center gap-1 text-xs">
-            <span className="text-slate-600 font-semibold text-[11px]">Printer Size:</span>
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setThermalPaperSize('80mm')}
-              className={`px-2 py-1 text-xs font-bold rounded ${
-                thermalPaperSize === '80mm' ? 'bg-[#002b49] text-white' : 'bg-slate-300 text-slate-700 hover:bg-slate-400'
-              }`}
+              type="button"
+              onClick={() => {
+                setPreviewInvoice(null);
+                setActiveTab('store-settings');
+              }}
+              className="text-[#0070ba] hover:underline font-bold text-xs flex items-center gap-1 cursor-pointer"
             >
-              80mm Standard
-            </button>
-            <button
-              onClick={() => setThermalPaperSize('58mm')}
-              className={`px-2 py-1 text-xs font-bold rounded ${
-                thermalPaperSize === '58mm' ? 'bg-[#002b49] text-white' : 'bg-slate-300 text-slate-700 hover:bg-slate-400'
-              }`}
-            >
-              58mm Mini
+              <Sliders className="w-3.5 h-3.5" />
+              <span>Customize Template in Studio</span>
             </button>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPreviewInvoice(null)}
-              className="bg-slate-400 hover:bg-slate-500 text-white font-bold py-1.5 px-4 text-xs rounded"
+              className="bg-slate-400 hover:bg-slate-500 text-white font-bold py-1.5 px-4 text-xs rounded cursor-pointer"
             >
               Close
             </button>
@@ -293,7 +503,7 @@ export const ReceiptModal: React.FC = () => {
             <button
               id="btn-print-58mm-now"
               onClick={() => handlePrint('58mm')}
-              className="bg-[#17a2b8] hover:bg-[#138496] text-white font-bold py-1.5 px-3 text-xs rounded flex items-center gap-1.5 shadow active:scale-[0.98]"
+              className="bg-[#17a2b8] hover:bg-[#138496] text-white font-bold py-1.5 px-3 text-xs rounded flex items-center gap-1.5 shadow active:scale-[0.98] cursor-pointer"
               title="Print as 58mm thermal slip"
             >
               <Printer className="w-3.5 h-3.5" />
@@ -304,7 +514,7 @@ export const ReceiptModal: React.FC = () => {
             <button
               id="btn-print-80mm-now"
               onClick={() => handlePrint('80mm')}
-              className="bg-[#28a745] hover:bg-[#218838] text-white font-bold py-1.5 px-4 text-xs rounded flex items-center gap-1.5 shadow active:scale-[0.98]"
+              className="bg-[#28a745] hover:bg-[#218838] text-white font-bold py-1.5 px-4 text-xs rounded flex items-center gap-1.5 shadow active:scale-[0.98] cursor-pointer"
               title="Print as 80mm thermal slip"
             >
               <Printer className="w-3.5 h-3.5" />
@@ -316,4 +526,3 @@ export const ReceiptModal: React.FC = () => {
     </div>
   );
 };
-

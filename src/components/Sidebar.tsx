@@ -43,7 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
     { id: 'day-closing', label: 'Day Closing', icon: <CalendarCheck className="w-5 h-5" /> },
     { id: 'pay-expense', label: 'Pay Expense', icon: <Receipt className="w-5 h-5" /> },
     { id: 'reports', label: 'Reports', icon: <BarChart3 className="w-5 h-5" /> },
-    { id: 'store-settings', label: 'Store Settings', icon: <Settings className="w-5 h-5" /> },
+    { id: 'store-settings', label: 'Software Settings', icon: <Settings className="w-5 h-5" /> },
   ];
 
   if (currentUser?.email.toLowerCase() === 'alitrader@gmail.com') {

@@ -41,7 +41,17 @@ interface POSContextType {
   addMultipleProducts: (newProducts: Omit<Product, 'id'>[]) => void;
   updateProduct: (p: Product) => void;
   deleteProduct: (id: string) => void;
+  bulkUpdateProducts: (updatedProducts: Product[]) => void;
+  bulkDeleteProducts: (ids: string[]) => void;
   importProducts: (newProducts: Product[]) => void;
+  categories: string[];
+  addCategory: (name: string) => void;
+  updateCategory: (oldName: string, newName: string) => void;
+  deleteCategory: (name: string) => void;
+  brands: string[];
+  addBrand: (name: string) => void;
+  updateBrand: (oldName: string, newName: string) => void;
+  deleteBrand: (name: string) => void;
   sales: SaleInvoice[];
   addSale: (sale: Omit<SaleInvoice, 'id' | 'invoiceNo'>) => SaleInvoice;
   updateSale: (sale: SaleInvoice) => void;
@@ -51,7 +61,7 @@ interface POSContextType {
   updateReturn: (ret: SaleReturn) => void;
   deleteReturn: (id: string) => void;
   purchases: PurchaseRecord[];
-  addPurchase: (p: Omit<PurchaseRecord, 'id' | 'date'>) => void;
+  addPurchase: (p: Omit<PurchaseRecord, 'id' | 'date'>, mode?: 'update_existing' | 'create_batch') => void;
   updatePurchase: (p: PurchaseRecord) => void;
   deletePurchase: (id: string) => void;
   credits: CreditPayment[];
@@ -267,12 +277,57 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : initialSupplierTransactions;
   });
 
+  const defaultCategories = [
+    'Pharmacy',
+    'Medicines (Tablets)',
+    'Syrups & Suspensions',
+    'Injections & Drops',
+    'Surgical & Dental',
+    'General Items',
+    'Cosmetics & Skin',
+    'Baby Care',
+    'Beverages & Food',
+    'Snacks & Grocery',
+  ];
+
+  const defaultBrands = [
+    'GlaxoSmithKline (GSK)',
+    'Abbott Laboratories',
+    'Getz Pharma',
+    'Pfizer Pakistan',
+    'Reckitt Benckiser',
+    'Sami Pharmaceuticals',
+    'Searle Company',
+    'Unilever',
+    'Nestle Pakistan',
+    'General / Local',
+  ];
+
+  const [categories, setCategories] = useState<string[]>(() => {
+    const saved = localStorage.getItem('medpos_categories');
+    return saved ? JSON.parse(saved) : defaultCategories;
+  });
+
+  const [brands, setBrands] = useState<string[]>(() => {
+    const saved = localStorage.getItem('medpos_brands');
+    return saved ? JSON.parse(saved) : defaultBrands;
+  });
+
   const [previewInvoice, setPreviewInvoice] = useState<SaleInvoice | null>(null);
   const [thermalPaperSize, setThermalPaperSize] = useState<ThermalPaperSize>(() => {
     const saved = localStorage.getItem('medpos_thermal_paper_size');
     return (saved === '58mm' || saved === '80mm') ? saved : (storeSettings.defaultPaperSize || '80mm');
   });
   const [showSyncModal, setShowSyncModal] = useState<boolean>(false);
+
+  // Sync to localStorage
+  useEffect(() => {
+    localStorage.setItem('medpos_categories', JSON.stringify(categories));
+  }, [categories]);
+
+  useEffect(() => {
+    localStorage.setItem('medpos_brands', JSON.stringify(brands));
+  }, [brands]);
 
   // Sync to localStorage
   useEffect(() => {
@@ -445,6 +500,62 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteProduct = (id: string) => {
     setProducts((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const bulkUpdateProducts = (updatedProds: Product[]) => {
+    setProducts((prev) => {
+      const map = new Map(updatedProds.map((p) => [p.id, p]));
+      return prev.map((p) => map.get(p.id) || p);
+    });
+  };
+
+  const bulkDeleteProducts = (ids: string[]) => {
+    const idSet = new Set(ids);
+    setProducts((prev) => prev.filter((p) => !idSet.has(p.id)));
+  };
+
+  const addCategory = (catName: string) => {
+    const trimmed = catName.trim();
+    if (!trimmed) return;
+    setCategories((prev) => {
+      if (prev.some((c) => c.toLowerCase() === trimmed.toLowerCase())) return prev;
+      return [...prev, trimmed];
+    });
+  };
+
+  const updateCategory = (oldName: string, newName: string) => {
+    const trimmedNew = newName.trim();
+    if (!trimmedNew || oldName === trimmedNew) return;
+    setCategories((prev) => prev.map((c) => (c === oldName ? trimmedNew : c)));
+    setProducts((prev) =>
+      prev.map((p) => (p.category === oldName ? { ...p, category: trimmedNew } : p))
+    );
+  };
+
+  const deleteCategory = (catName: string) => {
+    setCategories((prev) => prev.filter((c) => c !== catName));
+  };
+
+  const addBrand = (brandName: string) => {
+    const trimmed = brandName.trim();
+    if (!trimmed) return;
+    setBrands((prev) => {
+      if (prev.some((b) => b.toLowerCase() === trimmed.toLowerCase())) return prev;
+      return [...prev, trimmed];
+    });
+  };
+
+  const updateBrand = (oldName: string, newName: string) => {
+    const trimmedNew = newName.trim();
+    if (!trimmedNew || oldName === trimmedNew) return;
+    setBrands((prev) => prev.map((b) => (b === oldName ? trimmedNew : b)));
+    setProducts((prev) =>
+      prev.map((p) => (p.company === oldName ? { ...p, company: trimmedNew } : p))
+    );
+  };
+
+  const deleteBrand = (brandName: string) => {
+    setBrands((prev) => prev.filter((b) => b !== brandName));
   };
 
   const importProducts = (newProducts: Product[]) => {
@@ -676,25 +787,99 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setReturns((prev) => prev.filter((r) => r.id !== id));
   };
 
-  const addPurchase = (pur: Omit<PurchaseRecord, 'id' | 'date'>) => {
+  const addPurchase = (pur: Omit<PurchaseRecord, 'id' | 'date'>, mode?: 'update_existing' | 'create_batch') => {
     const now = new Date();
     const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
     
+    // Find or link supplier
+    let targetSupplier = suppliers.find(
+      (s) => (pur.supplierId && s.id === pur.supplierId) || (pur.supplierName && s.name.toLowerCase() === pur.supplierName.trim().toLowerCase())
+    );
+
+    // If supplier name was typed but not yet in suppliers master, auto-create it
+    if (!targetSupplier && pur.supplierName && pur.supplierName.trim() && pur.supplierName.trim().toLowerCase() !== 'general') {
+      const newSupId = `sup-${Date.now()}`;
+      const newSup: Supplier = {
+        id: newSupId,
+        name: pur.supplierName.trim(),
+        company: pur.supplierName.trim(),
+        phone: '',
+        email: '',
+        address: '',
+        balanceOwed: pur.totalCost,
+      };
+      setSuppliers((prev) => [newSup, ...prev]);
+      targetSupplier = newSup;
+    } else if (targetSupplier) {
+      // Increase existing supplier balance owed
+      setSuppliers((prev) =>
+        prev.map((s) => (s.id === targetSupplier!.id ? { ...s, balanceOwed: s.balanceOwed + pur.totalCost } : s))
+      );
+    }
+
+    const matchedSupplierId = targetSupplier ? targetSupplier.id : pur.supplierId;
+    const matchedSupplierName = targetSupplier ? targetSupplier.name : (pur.supplierName || 'General');
+
     const newPurchase: PurchaseRecord = {
       ...pur,
+      supplierId: matchedSupplierId,
+      supplierName: matchedSupplierName,
       id: `pur-${Date.now()}`,
       date: formattedDate,
     };
 
+    // Record Supplier Ledger Bill Transaction
+    if (targetSupplier || (matchedSupplierName && matchedSupplierName !== 'General')) {
+      const supTx: SupplierTransaction = {
+        id: `stx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        supplierId: matchedSupplierId || 'sup-gen',
+        supplierName: matchedSupplierName,
+        date: formattedDate,
+        type: 'PURCHASE_BILL',
+        referenceNo: `#PUR-${Math.floor(1000 + Math.random() * 9000)}`,
+        description: `Stock Inward: ${pur.itemName}`,
+        itemsSummary: `${pur.itemName} (${pur.qtyReceived} units @ Rs. ${pur.unitCostPrice})`,
+        debit: 0,
+        credit: pur.totalCost,
+        balance: (targetSupplier ? targetSupplier.balanceOwed : 0) + pur.totalCost,
+        paymentMethod: 'Credit Bill',
+        notes: `Inwarded to Inventory (Barcode: ${pur.barcode})`,
+      };
+      setSupplierTransactions((prev) => [supTx, ...prev]);
+    }
+
     // Update product stock and prices if product exists, or create product if not
     setProducts((prev) => {
       const existing = prev.find((p) => p.barcode.trim().toLowerCase() === pur.barcode.trim().toLowerCase());
+
+      if (mode === 'create_batch') {
+        // Create as distinct batch variant
+        const batchProduct: Product = {
+          id: `p-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+          barcode: pur.barcode,
+          name: pur.itemName,
+          company: pur.supplierName || 'General',
+          category: 'Pharmacy',
+          supplierId: matchedSupplierId,
+          supplierName: matchedSupplierName,
+          purchasePrice: pur.unitCostPrice,
+          retailPrice: pur.salePriceRetail,
+          wholesalePrice: pur.wholesalePrice,
+          stock: pur.qtyReceived,
+          minStockAlert: 5,
+          batchNo: `B-${Date.now().toString().slice(-4)}`,
+        };
+        return [batchProduct, ...prev];
+      }
+
       if (existing) {
         return prev.map((p) => {
           if (p.id === existing.id) {
             return {
               ...p,
               stock: p.stock + pur.qtyReceived,
+              supplierId: matchedSupplierId || p.supplierId,
+              supplierName: matchedSupplierName || p.supplierName,
               purchasePrice: pur.unitCostPrice > 0 ? pur.unitCostPrice : p.purchasePrice,
               retailPrice: pur.salePriceRetail > 0 ? pur.salePriceRetail : p.retailPrice,
               wholesalePrice: pur.wholesalePrice > 0 ? pur.wholesalePrice : p.wholesalePrice,
@@ -709,6 +894,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           name: pur.itemName,
           company: pur.supplierName || 'General',
           category: 'General',
+          supplierId: matchedSupplierId,
+          supplierName: matchedSupplierName,
           purchasePrice: pur.unitCostPrice,
           retailPrice: pur.salePriceRetail,
           wholesalePrice: pur.wholesalePrice,
@@ -849,7 +1036,17 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addMultipleProducts,
         updateProduct,
         deleteProduct,
+        bulkUpdateProducts,
+        bulkDeleteProducts,
         importProducts,
+        categories,
+        addCategory,
+        updateCategory,
+        deleteCategory,
+        brands,
+        addBrand,
+        updateBrand,
+        deleteBrand,
         sales,
         addSale,
         updateSale,

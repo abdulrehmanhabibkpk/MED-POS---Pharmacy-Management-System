@@ -747,7 +747,7 @@ export const SaleInvoiceView: React.FC = () => {
             {/* Paid Amount */}
             <div className="pt-2">
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Paid Amount ({storeSettings.currency}):
+                Paid Amount / Received ({storeSettings.currency}):
               </label>
               <input
                 id="invoice-paid-input"
@@ -758,16 +758,62 @@ export const SaleInvoiceView: React.FC = () => {
                 placeholder="0"
                 className="w-full bg-white border border-slate-300 px-3 py-1.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-[#0070ba]"
               />
+
+              {/* Quick Cash Tender Pills */}
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                <button
+                  type="button"
+                  onClick={() => setPaidAmount(netAmount)}
+                  className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-2 py-0.5 border border-slate-300 rounded cursor-pointer"
+                >
+                  Exact ({netAmount.toFixed(0)})
+                </button>
+                {[100, 500, 1000, 2000, 5000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setPaidAmount(amt)}
+                    className="text-[10px] bg-slate-100 hover:bg-blue-50 hover:text-[#0070ba] text-slate-700 font-mono font-bold px-2 py-0.5 border border-slate-300 rounded cursor-pointer"
+                  >
+                    +{amt}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Change */}
-            <div>
-              <div className="text-xs font-bold text-slate-600">
-                Change:{' '}
-                <span className={changeAmount >= 0 ? 'text-[#1e7e34] font-bold' : 'text-red-500 font-bold'}>
-                  {storeSettings.currency} {changeAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
+            {/* Change Refund / Wapas Box */}
+            <div className="pt-1">
+              {paidAmount > netAmount ? (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-300 rounded text-xs space-y-1">
+                  <div className="flex justify-between items-center font-bold text-emerald-900">
+                    <span className="flex items-center gap-1">
+                      <span>💰 Change Refund / Wapas:</span>
+                    </span>
+                    <span className="font-mono text-base font-black text-emerald-700">
+                      {storeSettings.currency} {changeAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-emerald-700">
+                    Customer owes {storeSettings.currency} {netAmount.toFixed(0)}, paid {storeSettings.currency} {paidAmount.toFixed(0)}. Return {storeSettings.currency} {changeAmount.toFixed(0)} to customer.
+                  </p>
+                </div>
+              ) : paidAmount > 0 && paidAmount < netAmount ? (
+                <div className="p-2 bg-amber-50 border border-amber-300 rounded text-xs">
+                  <div className="flex justify-between items-center font-bold text-amber-900">
+                    <span>⚠️ Khata / Balance Due:</span>
+                    <span className="font-mono font-bold text-amber-800">
+                      {storeSettings.currency} {(netAmount - paidAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs font-bold text-slate-600 flex justify-between">
+                  <span>Change Return:</span>
+                  <span className="text-[#1e7e34] font-bold font-mono">
+                    {storeSettings.currency} 0.00
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

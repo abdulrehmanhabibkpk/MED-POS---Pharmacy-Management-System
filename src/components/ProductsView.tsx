@@ -1,21 +1,30 @@
 import React, { useState } from 'react';
-import { Plus, RefreshCw, Edit2, Trash2, Search, Tag, X, Check, ScanLine, FileSpreadsheet, Download, Upload, AlertCircle, Layers, ListPlus } from 'lucide-react';
+import { Plus, RefreshCw, Edit2, Trash2, Search, Tag, X, Check, ScanLine, FileSpreadsheet, Download, Upload, AlertCircle, Layers, ListPlus, CheckSquare, Square, Filter, SlidersHorizontal } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { usePOS } from '../context/POSContext';
 import { Product } from '../types';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 import { BulkProductEntryModal } from './BulkProductEntryModal';
+import { BulkProductEditorModal } from './BulkProductEditorModal';
 import { useHardwareScanner } from '../hooks/useHardwareScanner';
 import { posSound } from '../utils/audio';
 
 export const ProductsView: React.FC = () => {
-  const { products, addProduct, addMultipleProducts, updateProduct, deleteProduct, importProducts, storeSettings } = usePOS();
+  const { products, addProduct, addMultipleProducts, updateProduct, deleteProduct, bulkUpdateProducts, bulkDeleteProducts, importProducts, storeSettings, categories, brands, suppliers } = usePOS();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState('All');
+  const [filterBrand, setFilterBrand] = useState('All');
+  const [filterSupplier, setFilterSupplier] = useState('All');
+
   const [showModal, setShowModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showBulkEditorModal, setShowBulkEditorModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showScannerModal, setShowScannerModal] = useState(false);
+
+  // Multi-select state for bulk operations
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Excel CSV State
   const [importPreviewList, setImportPreviewList] = useState<Product[] | null>(null);
@@ -26,11 +35,41 @@ export const ProductsView: React.FC = () => {
   const [name, setName] = useState('');
   const [company, setCompany] = useState('');
   const [category, setCategory] = useState('Pharmacy');
+  const [supplierId, setSupplierId] = useState('');
+  const [supplierName, setSupplierName] = useState('');
   const [purchasePrice, setPurchasePrice] = useState<number>(0);
   const [retailPrice, setRetailPrice] = useState<number>(0);
   const [wholesalePrice, setWholesalePrice] = useState<number>(0);
   const [stock, setStock] = useState<number>(0);
   const [minStockAlert, setMinStockAlert] = useState<number>(10);
+
+  // Toggle single item selection
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // Toggle select all visible filtered products
+  const handleSelectAllVisible = () => {
+    if (selectedIds.size === filteredProducts.length && filteredProducts.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredProducts.map((p) => p.id)));
+    }
+  };
+
+  const handleBulkDeleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    if (window.confirm(`Are you sure you want to permanently delete ${selectedIds.size} selected products from inventory?`)) {
+      bulkDeleteProducts(Array.from(selectedIds));
+      setSelectedIds(new Set());
+      posSound.playSuccessChime();
+    }
+  };
 
   // Hardware Scanner for Product View (if modal open, set barcode)
   useHardwareScanner({
@@ -51,6 +90,8 @@ export const ProductsView: React.FC = () => {
     setName('');
     setCompany('');
     setCategory('Pharmacy');
+    setSupplierId('');
+    setSupplierName('');
     setPurchasePrice(0);
     setRetailPrice(0);
     setWholesalePrice(0);
@@ -65,6 +106,8 @@ export const ProductsView: React.FC = () => {
     setName(p.name);
     setCompany(p.company);
     setCategory(p.category);
+    setSupplierId(p.supplierId || '');
+    setSupplierName(p.supplierName || '');
     setPurchasePrice(p.purchasePrice);
     setRetailPrice(p.retailPrice);
     setWholesalePrice(p.wholesalePrice);
@@ -80,13 +123,18 @@ export const ProductsView: React.FC = () => {
       return;
     }
 
+    const matchedSup = suppliers.find((s) => s.id === supplierId);
+    const finalSupplierName = matchedSup ? matchedSup.name : supplierName.trim();
+
     if (editingProduct) {
       updateProduct({
         ...editingProduct,
         barcode: barcode.trim(),
         name: name.trim(),
-        company: company.trim() || 'General',
+        company: company.trim() || finalSupplierName || 'General',
         category: category.trim() || 'General',
+        supplierId: supplierId || undefined,
+        supplierName: finalSupplierName || undefined,
         purchasePrice,
         retailPrice,
         wholesalePrice,
@@ -97,8 +145,10 @@ export const ProductsView: React.FC = () => {
       addProduct({
         barcode: barcode.trim(),
         name: name.trim(),
-        company: company.trim() || 'General',
+        company: company.trim() || finalSupplierName || 'General',
         category: category.trim() || 'General',
+        supplierId: supplierId || undefined,
+        supplierName: finalSupplierName || undefined,
         purchasePrice,
         retailPrice,
         wholesalePrice,
@@ -377,29 +427,89 @@ export const ProductsView: React.FC = () => {
 
   const filteredProducts = products.filter((p) => {
     const q = searchTerm.toLowerCase().trim();
-    return (
+    const matchSearch =
+      !q ||
       p.barcode.toLowerCase().includes(q) ||
       p.name.toLowerCase().includes(q) ||
       p.company.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q)
-    );
+      p.category.toLowerCase().includes(q) ||
+      (p.supplierName && p.supplierName.toLowerCase().includes(q));
+
+    const matchCategory = filterCategory === 'All' || p.category === filterCategory;
+    const matchBrand = filterBrand === 'All' || p.company === filterBrand;
+    const matchSupplier = filterSupplier === 'All' || p.supplierId === filterSupplier || p.supplierName === filterSupplier;
+
+    return matchSearch && matchCategory && matchBrand && matchSupplier;
   });
+
+  const selectedProductsList = products.filter((p) => selectedIds.has(p.id));
 
   return (
     <div id="products-management-container" className="p-6 bg-[#f4f7fa] min-h-full space-y-4">
       {/* Top Filter & Action Bar matching Image 8 */}
       <div className="bg-white border border-slate-200 p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
         {/* Search */}
-        <div className="flex items-center gap-2 flex-1 min-w-[280px]">
+        <div className="flex items-center gap-2 flex-1 min-w-[240px]">
           <label className="text-xs font-bold text-slate-700 shrink-0">Search:</label>
           <input
             id="product-search-input"
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by name, barcode, company..."
-            className="w-full max-w-md bg-white border border-slate-300 px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+            placeholder="Search by name, barcode, supplier, company..."
+            className="w-full bg-white border border-slate-300 px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
           />
+        </div>
+
+        {/* Quick Filter: Category */}
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs font-bold text-slate-700 shrink-0">Category:</label>
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="bg-white border border-slate-300 py-1.5 px-2 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+          >
+            <option value="All">All Categories ({categories.length})</option>
+            {categories.map((c, idx) => (
+              <option key={idx} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Quick Filter: Brand */}
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs font-bold text-slate-700 shrink-0">Brand:</label>
+          <select
+            value={filterBrand}
+            onChange={(e) => setFilterBrand(e.target.value)}
+            className="bg-white border border-slate-300 py-1.5 px-2 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+          >
+            <option value="All">All Brands ({brands.length})</option>
+            {brands.map((b, idx) => (
+              <option key={idx} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Quick Filter: Supplier */}
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs font-bold text-slate-700 shrink-0">Supplier:</label>
+          <select
+            value={filterSupplier}
+            onChange={(e) => setFilterSupplier(e.target.value)}
+            className="bg-white border border-slate-300 py-1.5 px-2 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+          >
+            <option value="All">All Suppliers ({suppliers.length})</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Buttons */}
@@ -408,33 +518,80 @@ export const ProductsView: React.FC = () => {
             id="btn-bulk-list-product"
             onClick={() => setShowBulkModal(true)}
             type="button"
-            className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-1.5 px-3.5 text-xs flex items-center gap-1.5 shadow transition-colors active:scale-[0.98] cursor-pointer"
+            className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-1.5 px-3 text-xs flex items-center gap-1.5 shadow transition-colors active:scale-[0.98] cursor-pointer"
             title="Add multiple products in a spreadsheet-style table with rapid scanning"
           >
             <ListPlus className="w-4 h-4 text-emerald-200" />
-            <span>+ List Product (Bulk Entry)</span>
+            <span>+ List Product</span>
           </button>
 
           <button
             id="btn-add-new-product"
             onClick={openAddModal}
             type="button"
-            className="bg-[#28a745] hover:bg-[#218838] text-white font-bold py-1.5 px-4 text-xs flex items-center gap-1.5 shadow transition-colors active:scale-[0.98] cursor-pointer"
+            className="bg-[#28a745] hover:bg-[#218838] text-white font-bold py-1.5 px-3.5 text-xs flex items-center gap-1.5 shadow transition-colors active:scale-[0.98] cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Add New Product</span>
+            <span>+ Add Product</span>
           </button>
 
           <button
-            onClick={() => setSearchTerm('')}
+            onClick={() => {
+              setSearchTerm('');
+              setFilterCategory('All');
+              setFilterBrand('All');
+              setFilterSupplier('All');
+            }}
             type="button"
-            className="bg-[#0078d7] hover:bg-[#0066b8] text-white font-bold py-1.5 px-4 text-xs flex items-center gap-1.5 shadow transition-colors active:scale-[0.98] cursor-pointer"
+            className="bg-[#0078d7] hover:bg-[#0066b8] text-white font-bold py-1.5 px-3 text-xs flex items-center gap-1.5 shadow transition-colors active:scale-[0.98] cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Refresh</span>
+            <span>Reset</span>
           </button>
         </div>
       </div>
+
+      {/* Floating Sticky Bulk Operations Toolbar when items are selected */}
+      {selectedIds.size > 0 && (
+        <div className="bg-[#002b49] text-white p-3 shadow-lg border border-blue-900 flex flex-wrap items-center justify-between gap-3 animate-in slide-in-from-top-2 duration-150">
+          <div className="flex items-center gap-3">
+            <span className="bg-emerald-500 text-slate-950 font-black px-2.5 py-0.5 rounded text-xs">
+              {selectedIds.size} Selected
+            </span>
+            <span className="text-xs font-semibold text-blue-100">
+              Bulk actions for {selectedIds.size} selected inventory items
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setShowBulkEditorModal(true)}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 px-4 text-xs flex items-center gap-1.5 shadow cursor-pointer transition-colors"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-200" />
+              <span>⚡ Bulk Price & Detail Editor</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleBulkDeleteSelected}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold py-1.5 px-3 text-xs flex items-center gap-1.5 shadow cursor-pointer transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Bulk Delete ({selectedIds.size})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              className="bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold py-1.5 px-3 text-xs cursor-pointer"
+            >
+              Deselect All
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Excel/CSV Utilities Row */}
       <div className="bg-white border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-4 shadow-xs">
@@ -495,6 +652,15 @@ export const ProductsView: React.FC = () => {
           <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-[#002b49] text-white">
               <tr>
+                <th className="py-2.5 px-3 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === filteredProducts.length && filteredProducts.length > 0}
+                    onChange={handleSelectAllVisible}
+                    className="w-4 h-4 rounded text-[#0070ba] cursor-pointer"
+                    title="Select / Deselect all visible products"
+                  />
+                </th>
                 <th className="py-2.5 px-3 font-semibold">Barcode</th>
                 <th className="py-2.5 px-3 font-semibold">Name</th>
                 <th className="py-2.5 px-3 font-semibold">Company</th>
@@ -510,12 +676,13 @@ export const ProductsView: React.FC = () => {
             <tbody className="divide-y divide-slate-100">
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-10 text-center text-slate-400">
+                  <td colSpan={11} className="py-10 text-center text-slate-400">
                     No products found matching your search.
                   </td>
                 </tr>
               ) : (
                 filteredProducts.map((p, idx) => {
+                  const isSelected = selectedIds.has(p.id);
                   const profit = p.retailPrice - p.purchasePrice;
                   const marginPercent = p.purchasePrice > 0
                     ? ((profit / p.purchasePrice) * 100)
@@ -525,19 +692,36 @@ export const ProductsView: React.FC = () => {
                     <tr
                       key={p.id}
                       className={`transition-colors ${
-                        idx === 0
+                        isSelected
+                          ? 'bg-blue-50 font-medium text-slate-900'
+                          : idx === 0
                           ? 'bg-[#0078d7] text-white font-medium hover:bg-[#006bbd]'
                           : 'hover:bg-slate-50 text-slate-700'
                       }`}
                     >
+                      <td className="py-2.5 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(p.id)}
+                          className="w-4 h-4 rounded text-[#0070ba] cursor-pointer"
+                        />
+                      </td>
                       <td className="py-2.5 px-3 font-mono">{p.barcode}</td>
                       <td className="py-2.5 px-3 font-semibold">{p.name}</td>
-                      <td className="py-2.5 px-3">{p.company}</td>
+                      <td className="py-2.5 px-3">
+                        <div className="font-semibold">{p.company}</div>
+                        {p.supplierName && (
+                          <div className={`text-[9px] uppercase font-bold tracking-wider mt-0.5 ${isSelected ? 'text-blue-900 font-extrabold' : idx === 0 ? 'text-white/80' : 'text-emerald-700'}`}>
+                            Dist: {p.supplierName}
+                          </div>
+                        )}
+                      </td>
                       <td className="py-2.5 px-3 text-right">
                         {storeSettings.currency}{' '}
                         {p.purchasePrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
-                      <td className="py-2.5 px-3 text-right">
+                      <td className="py-2.5 px-3 text-right font-bold">
                         {storeSettings.currency}{' '}
                         {p.retailPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
@@ -549,7 +733,9 @@ export const ProductsView: React.FC = () => {
                         <div className="inline-flex flex-col items-center justify-center">
                           <span
                             className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
-                              idx === 0
+                              isSelected
+                                ? 'bg-blue-100 text-blue-900 border border-blue-200'
+                                : idx === 0
                                 ? profit >= 0
                                   ? 'bg-emerald-300 text-emerald-950 font-black'
                                   : 'bg-rose-300 text-rose-950 font-black'
@@ -565,7 +751,9 @@ export const ProductsView: React.FC = () => {
                           </span>
                           <span
                             className={`text-[9px] font-semibold mt-0.5 ${
-                              idx === 0
+                              isSelected
+                                ? 'text-blue-700'
+                                : idx === 0
                                 ? 'text-white/80'
                                 : profit >= 0
                                 ? 'text-emerald-600'
@@ -580,7 +768,7 @@ export const ProductsView: React.FC = () => {
                         <span
                           className={`inline-block px-2 py-0.5 rounded text-xs ${
                             p.stock <= p.minStockAlert
-                              ? idx === 0
+                              ? idx === 0 && !isSelected
                                 ? 'bg-amber-300 text-amber-900 font-black'
                                 : 'bg-red-100 text-red-700 font-black'
                               : ''
@@ -596,7 +784,7 @@ export const ProductsView: React.FC = () => {
                             type="button"
                             onClick={() => openEditModal(p)}
                             className={`p-1 hover:scale-110 transition-transform ${
-                              idx === 0 ? 'text-white' : 'text-[#0070ba]'
+                              idx === 0 && !isSelected ? 'text-white' : 'text-[#0070ba]'
                             }`}
                             title="Edit Product"
                           >
@@ -606,7 +794,7 @@ export const ProductsView: React.FC = () => {
                             type="button"
                             onClick={() => handleDeleteProduct(p.id, p.name)}
                             className={`p-1 hover:scale-110 transition-transform ${
-                              idx === 0 ? 'text-rose-200' : 'text-red-500'
+                              idx === 0 && !isSelected ? 'text-rose-200' : 'text-red-500'
                             }`}
                             title="Delete Product"
                           >
@@ -717,6 +905,50 @@ export const ProductsView: React.FC = () => {
                     <option value="Baby Care">Baby Care</option>
                     <option value="General">General</option>
                   </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 p-2 border border-slate-200">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1 text-xs">Associate Supplier / Distributor:</label>
+                  <select
+                    value={supplierId}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      setSupplierId(selectedId);
+                      const s = suppliers.find((sup) => sup.id === selectedId);
+                      if (s) {
+                        setSupplierName(s.name);
+                        if (!company) setCompany(s.company || s.name);
+                      } else if (!selectedId) {
+                        setSupplierName('');
+                      }
+                    }}
+                    className="w-full bg-white border border-slate-300 px-2 py-1 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                  >
+                    <option value="">-- Select Registered Supplier --</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} {s.company ? `(${s.company})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1 text-xs">Or custom/new supplier name:</label>
+                  <input
+                    type="text"
+                    value={supplierName}
+                    onChange={(e) => {
+                      setSupplierName(e.target.value);
+                      const matched = suppliers.find(s => s.name.toLowerCase() === e.target.value.toLowerCase());
+                      if (matched) setSupplierId(matched.id);
+                      else setSupplierId('');
+                    }}
+                    placeholder="Type name if not registered..."
+                    className="w-full bg-white border border-slate-300 px-3 py-1 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                  />
                 </div>
               </div>
 
@@ -975,6 +1207,19 @@ export const ProductsView: React.FC = () => {
             addMultipleProducts(newProds);
           }}
           onClose={() => setShowBulkModal(false)}
+        />
+      )}
+
+      {/* Bulk Product & Price Editor Modal */}
+      {showBulkEditorModal && (
+        <BulkProductEditorModal
+          isOpen={showBulkEditorModal}
+          onClose={() => setShowBulkEditorModal(false)}
+          selectedProducts={selectedProductsList}
+          onApplyChanges={(updated) => {
+            bulkUpdateProducts(updated);
+            setSelectedIds(new Set());
+          }}
         />
       )}
     </div>

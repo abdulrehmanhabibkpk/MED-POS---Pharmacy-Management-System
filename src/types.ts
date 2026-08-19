@@ -1,9 +1,24 @@
+export interface StoreCategory {
+  id: string;
+  name: string;
+  itemCount?: number;
+}
+
+export interface StoreBrand {
+  id: string;
+  name: string;
+  company?: string;
+  itemCount?: number;
+}
+
 export interface Product {
   id: string;
   barcode: string;
   name: string;
   company: string;
   category: string;
+  supplierId?: string;
+  supplierName?: string;
   purchasePrice: number;
   retailPrice: number;
   wholesalePrice: number;
@@ -66,6 +81,7 @@ export interface CreditPayment {
 export interface PurchaseRecord {
   id: string;
   date: string;
+  supplierId?: string;
   supplierName: string;
   barcode: string;
   itemName: string;
@@ -87,6 +103,99 @@ export interface ExpenseRecord {
 
 export type ThermalPaperSize = '58mm' | '80mm';
 
+export type ThermalFontFamily = 'monospace' | 'sans-serif' | 'serif' | 'courier';
+export type ThermalDividerStyle = 'dashed' | 'dotted' | 'solid' | 'double' | 'stars';
+export type ThermalTextAlignment = 'left' | 'center' | 'right';
+export type ThermalHeaderFontSize = 'normal' | 'large' | 'xlarge' | 'huge';
+export type ThermalBaseFontSize = 'compact' | 'standard' | 'large';
+export type ThermalItemLayout = 'standard_table' | 'two_line';
+
+export interface ReceiptTemplate {
+  // Header Settings
+  showHeaderLogo: boolean;
+  logoSize: 'small' | 'medium' | 'large';
+  logoAlignment: ThermalTextAlignment;
+  storeNameText: string;
+  storeNameFontSize: ThermalHeaderFontSize;
+  storeNameBold: boolean;
+  storeNameUppercase: boolean;
+  storeNameAlignment: ThermalTextAlignment;
+  showTagline: boolean;
+  taglineText: string;
+  taglineAlignment: ThermalTextAlignment;
+  showAddress: boolean;
+  addressText: string;
+  addressAlignment: ThermalTextAlignment;
+  showPhone: boolean;
+  phoneLabel: string;
+  phoneText: string;
+  showTaxId: boolean;
+  taxIdLabel: string;
+  taxIdText: string;
+
+  // General Styling & Typography
+  fontFamily: ThermalFontFamily;
+  baseFontSize: ThermalBaseFontSize;
+  dividerStyle: ThermalDividerStyle;
+  paperPadding: 'compact' | 'normal' | 'wide';
+
+  // Invoice Metadata Block
+  showInvoiceNo: boolean;
+  invoiceNoLabel: string;
+  showDate: boolean;
+  dateFormat: 'YYYY-MM-DD HH:mm:ss' | 'DD/MM/YYYY hh:mm A' | 'DD-MMM-YYYY HH:mm';
+  showCashier: boolean;
+  cashierLabel: string;
+  showCustomerName: boolean;
+  customerNameLabel: string;
+  showCustomerPhone: boolean;
+  showCustomerAddress: boolean;
+  showCustomerPreviousBalance: boolean;
+  showSaleType: boolean;
+  showPaperSizeTag: boolean;
+
+  // Items Section
+  itemLayout: ThermalItemLayout;
+  colNameLabel: string;
+  colQtyLabel: string;
+  colRateLabel: string;
+  colDiscountLabel: string;
+  colAmountLabel: string;
+  showItemDiscount: boolean;
+  showBatchNo: boolean;
+  showExpiryDate: boolean;
+  showTotalItemsCount: boolean;
+  showTotalUnitsCount: boolean;
+
+  // Totals & Financials Block
+  showSubtotal: boolean;
+  showDiscountTotal: boolean;
+  showNetPayable: boolean;
+  netPayableLabel: string;
+  highlightNetPayable: boolean;
+  netPayableBoxed: boolean;
+  showPaidAmount: boolean;
+  paidLabel: string;
+  showChangeRefund: boolean;
+  changeRefundLabel: string;
+  showPaymentMethod: boolean;
+
+  // Footer & Policy Notes (Rich Text / Word Style)
+  showFooterGreeting: boolean;
+  footerGreetingText: string;
+  footerGreetingBold: boolean;
+  showFooterSubGreeting: boolean;
+  footerSubGreetingText: string;
+  showReturnPolicy: boolean;
+  returnPolicyTitle: string;
+  returnPolicyText: string;
+  showBarcode: boolean;
+  showQrCode: boolean;
+  showSoftwareCredit: boolean;
+  softwareCreditText: string;
+  feedCutLines: number; // 0 to 5
+}
+
 export interface StoreSettings {
   storeName: string;
   tagline: string;
@@ -96,6 +205,7 @@ export interface StoreSettings {
   currency: string;
   footerNote: string;
   defaultPaperSize?: ThermalPaperSize;
+  receiptTemplate?: ReceiptTemplate;
 }
 
 export interface Supplier {

@@ -40,7 +40,32 @@ export const SupplierLedgerModal: React.FC<SupplierLedgerModalProps> = ({
     updateSupplierTransaction,
     deleteSupplierTransaction,
     storeSettings,
+    products,
+    purchases,
+    updateSupplier,
   } = usePOS();
+
+  const [activeTab, setActiveTab] = useState<'transactions' | 'products' | 'purchases' | 'profile'>('transactions');
+
+  // Supplier Profile Editing States
+  const [supName, setSupName] = useState(supplier.name);
+  const [supCompany, setSupCompany] = useState(supplier.company || '');
+  const [supPhone, setSupPhone] = useState(supplier.phone || '');
+  const [supEmail, setSupEmail] = useState(supplier.email || '');
+  const [supAddress, setSupAddress] = useState(supplier.address || '');
+  const [supBalanceOwed, setSupBalanceOwed] = useState(supplier.balanceOwed);
+  const [supNotes, setSupNotes] = useState(supplier.notes || '');
+
+  // Synchronize profile state when supplier prop changes
+  React.useEffect(() => {
+    setSupName(supplier.name);
+    setSupCompany(supplier.company || '');
+    setSupPhone(supplier.phone || '');
+    setSupEmail(supplier.email || '');
+    setSupAddress(supplier.address || '');
+    setSupBalanceOwed(supplier.balanceOwed);
+    setSupNotes(supplier.notes || '');
+  }, [supplier]);
 
   // Filters
   const [fromDate, setFromDate] = useState('');
@@ -472,250 +497,630 @@ export const SupplierLedgerModal: React.FC<SupplierLedgerModalProps> = ({
           </div>
         </div>
 
-        {/* Filter and Action Controls Bar */}
-        <div className="bg-white border-b border-slate-200 p-3 flex flex-wrap items-center justify-between gap-3 shrink-0 text-xs">
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* From Date */}
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-slate-600">From:</span>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="bg-white border border-slate-300 px-2 py-1 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
-              />
-            </div>
+        {/* Navigation Tabs */}
+        <div className="bg-slate-100 border-b border-slate-200 flex flex-wrap text-xs shrink-0 select-none">
+          <button
+            type="button"
+            onClick={() => setActiveTab('transactions')}
+            className={`px-5 py-3 font-bold border-r border-slate-200 transition-colors flex items-center gap-2 ${activeTab === 'transactions' ? 'bg-white text-[#0070ba] border-b-2 border-b-[#0070ba]' : 'text-slate-600 hover:bg-slate-50'}`}
+          >
+            <FileText className="w-4 h-4 text-[#0070ba]" />
+            <span>📜 Ledger Statement & Manual Entries</span>
+          </button>
 
-            {/* To Date */}
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-slate-600">To:</span>
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="bg-white border border-slate-300 px-2 py-1 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
-              />
-            </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('products')}
+            className={`px-5 py-3 font-bold border-r border-slate-200 transition-colors flex items-center gap-2 ${activeTab === 'products' ? 'bg-white text-[#0070ba] border-b-2 border-b-[#0070ba]' : 'text-slate-600 hover:bg-slate-50'}`}
+          >
+            <Building2 className="w-4 h-4 text-emerald-600" />
+            <span>📦 Supplied Products ({products.filter(p => p.supplierId === supplier.id || (p.supplierName && p.supplierName.toLowerCase() === supplier.name.toLowerCase())).length})</span>
+          </button>
 
-            {/* Quick Filter Buttons */}
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => { setFromDate(''); setToDate(''); }}
-                className={`px-2.5 py-1 text-[11px] font-bold border transition-colors ${!fromDate && !toDate ? 'bg-[#002b49] text-white border-[#002b49]' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
-              >
-                All Time
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const today = new Date().toISOString().slice(0, 10);
-                  setFromDate(today);
-                  setToDate(today);
-                }}
-                className="px-2.5 py-1 text-[11px] font-bold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 transition-colors"
-              >
-                Today
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const d = new Date();
-                  const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
-                  const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
-                  setFromDate(startOfMonth);
-                  setToDate(endOfMonth);
-                }}
-                className="px-2.5 py-1 text-[11px] font-bold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 transition-colors"
-              >
-                This Month
-              </button>
-            </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('purchases')}
+            className={`px-5 py-3 font-bold border-r border-slate-200 transition-colors flex items-center gap-2 ${activeTab === 'purchases' ? 'bg-white text-[#0070ba] border-b-2 border-b-[#0070ba]' : 'text-slate-600 hover:bg-slate-50'}`}
+          >
+            <Receipt className="w-4 h-4 text-amber-600" />
+            <span>🧾 Purchase Inward History ({purchases.filter(p => p.supplierId === supplier.id || (p.supplierName && p.supplierName.toLowerCase() === supplier.name.toLowerCase())).length})</span>
+          </button>
 
-            {/* Search Input */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search bill#, medicine..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-white border border-slate-300 pl-7 pr-3 py-1 text-xs text-slate-800 w-48 focus:outline-none focus:border-[#0070ba]"
-              />
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2" />
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleOpenAddEntry('PAYMENT_PAID')}
-              className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-1.5 px-3 text-xs flex items-center gap-1.5 rounded-xs shadow-xs transition-colors cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Record Payment to Supplier</span>
-            </button>
-            <button
-              onClick={() => handleOpenAddEntry('PURCHASE_BILL')}
-              className="bg-[#0078d7] hover:bg-[#0066b8] text-white font-bold py-1.5 px-3 text-xs flex items-center gap-1.5 rounded-xs shadow-xs transition-colors cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Purchase Bill / Stock</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('profile')}
+            className={`px-5 py-3 font-bold border-r border-slate-200 transition-colors flex items-center gap-2 ${activeTab === 'profile' ? 'bg-white text-[#0070ba] border-b-2 border-b-[#0070ba]' : 'text-slate-600 hover:bg-slate-50'}`}
+          >
+            <Edit2 className="w-4 h-4 text-purple-600" />
+            <span>👤 Edit Distributor Profile & Payables</span>
+          </button>
         </div>
 
-        {/* Ledger Table Container */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f8fafc]">
-          <div className="bg-white border border-slate-200 shadow-xs rounded-sm overflow-hidden">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-[#002b49] text-white">
-                <tr>
-                  <th className="py-2.5 px-3 font-bold">Date & Time</th>
-                  <th className="py-2.5 px-3 font-bold">Bill / Ref #</th>
-                  <th className="py-2.5 px-3 font-bold">Purchase Description & Medicines Breakdown</th>
-                  <th className="py-2.5 px-3 font-bold text-right">Purchase Bill (+Credit)</th>
-                  <th className="py-2.5 px-3 font-bold text-right">Payment Paid (-Debit)</th>
-                  <th className="py-2.5 px-3 font-bold text-right">Balance Owed</th>
-                  <th className="py-2.5 px-3 font-bold text-center">Manage</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredTx.length > 0 ? (
-                  filteredTx.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
-                      {/* Date */}
-                      <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600 whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-slate-400" />
-                          <span>{tx.date}</span>
-                        </div>
-                      </td>
+        {/* Tab Content 1: Transactions Ledger */}
+        {activeTab === 'transactions' && (
+          <>
+            {/* Filter and Action Controls Bar */}
+            <div className="bg-white border-b border-slate-200 p-3 flex flex-wrap items-center justify-between gap-3 shrink-0 text-xs">
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* From Date */}
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-600">From:</span>
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    className="bg-white border border-slate-300 px-2 py-1 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                  />
+                </div>
 
-                      {/* Reference No */}
-                      <td className="py-2.5 px-3 font-bold text-slate-800 font-mono text-[11px]">
-                        <span className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded border border-slate-200">
-                          {tx.referenceNo}
-                        </span>
-                      </td>
+                {/* To Date */}
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-600">To:</span>
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="bg-white border border-slate-300 px-2 py-1 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                  />
+                </div>
 
-                      {/* Description & Items */}
-                      <td className="py-2.5 px-3">
-                        <div className="font-bold text-slate-800 text-xs">
-                          {tx.description}
-                        </div>
-                        {tx.itemsSummary && (
-                          <div className="text-[11px] text-emerald-900 bg-emerald-50/70 border border-emerald-100 px-2 py-1 rounded-xs mt-1 leading-relaxed">
-                            <span className="font-bold text-emerald-950">📦 Stock Received:</span> {tx.itemsSummary}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-3 text-[10px] text-slate-400 mt-0.5">
-                          {tx.paymentMethod && (
-                            <span>Mode: <strong className="text-slate-600">{tx.paymentMethod}</strong></span>
-                          )}
-                          {tx.notes && (
-                            <span className="italic">Note: {tx.notes}</span>
-                          )}
-                        </div>
-                      </td>
+                {/* Quick Filter Buttons */}
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => { setFromDate(''); setToDate(''); }}
+                    className={`px-2.5 py-1 text-[11px] font-bold border transition-colors ${!fromDate && !toDate ? 'bg-[#002b49] text-white border-[#002b49]' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
+                  >
+                    All Time
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const today = new Date().toISOString().slice(0, 10);
+                      setFromDate(today);
+                      setToDate(today);
+                    }}
+                    className="px-2.5 py-1 text-[11px] font-bold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 transition-colors"
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const d = new Date();
+                      const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+                      const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
+                      setFromDate(startOfMonth);
+                      setToDate(endOfMonth);
+                    }}
+                    className="px-2.5 py-1 text-[11px] font-bold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 transition-colors"
+                  >
+                    This Month
+                  </button>
+                </div>
 
-                      {/* Purchase Bill (Credit) */}
-                      <td className="py-2.5 px-3 text-right font-mono">
-                        {tx.credit > 0 ? (
-                          <span className="font-black text-red-600">
-                            +{storeSettings.currency} {tx.credit.toLocaleString()}
-                          </span>
-                        ) : (
-                          <span className="text-slate-300">-</span>
-                        )}
-                      </td>
+                {/* Search Input */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search bill#, medicine..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="bg-white border border-slate-300 pl-7 pr-3 py-1 text-xs text-slate-800 w-48 focus:outline-none focus:border-[#0070ba]"
+                  />
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2" />
+                </div>
+              </div>
 
-                      {/* Payment Paid (Debit) */}
-                      <td className="py-2.5 px-3 text-right font-mono">
-                        {tx.debit > 0 ? (
-                          <span className="font-black text-emerald-700">
-                            -{storeSettings.currency} {tx.debit.toLocaleString()}
-                          </span>
-                        ) : (
-                          <span className="text-slate-300">-</span>
-                        )}
-                      </td>
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenAddEntry('PAYMENT_PAID')}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-1.5 px-3 text-xs flex items-center gap-1.5 rounded-xs shadow-xs transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Record Payment to Supplier</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenAddEntry('PURCHASE_BILL')}
+                  className="bg-[#0078d7] hover:bg-[#0066b8] text-white font-bold py-1.5 px-3 text-xs flex items-center gap-1.5 rounded-xs shadow-xs transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Purchase Bill / Stock</span>
+                </button>
+              </div>
+            </div>
 
-                      {/* Running Balance */}
-                      <td className="py-2.5 px-3 text-right font-mono">
-                        <span className={`font-black text-xs ${tx.balance > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
-                          {storeSettings.currency} {tx.balance.toLocaleString()}
-                        </span>
-                      </td>
+            {/* Ledger Table Container */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f8fafc]">
+              <div className="bg-white border border-slate-200 shadow-xs rounded-sm overflow-hidden">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-[#002b49] text-white">
+                    <tr>
+                      <th className="py-2.5 px-3 font-bold">Date & Time</th>
+                      <th className="py-2.5 px-3 font-bold">Bill / Ref #</th>
+                      <th className="py-2.5 px-3 font-bold">Purchase Description & Medicines Breakdown</th>
+                      <th className="py-2.5 px-3 font-bold text-right">Purchase Bill (+Credit)</th>
+                      <th className="py-2.5 px-3 font-bold text-right">Payment Paid (-Debit)</th>
+                      <th className="py-2.5 px-3 font-bold text-right">Balance Owed</th>
+                      <th className="py-2.5 px-3 font-bold text-center">Manage</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredTx.length > 0 ? (
+                      filteredTx.map((tx) => (
+                        <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
+                          {/* Date */}
+                          <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600 whitespace-nowrap">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-slate-400" />
+                              <span>{tx.date}</span>
+                            </div>
+                          </td>
 
-                      {/* Actions */}
-                      <td className="py-2.5 px-3 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            onClick={() => handleOpenEditEntry(tx)}
-                            className="p-1 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            title="Edit entry"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteEntry(tx)}
-                            className="p-1 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                            title="Delete entry"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                          {/* Reference No */}
+                          <td className="py-2.5 px-3 font-bold text-slate-800 font-mono text-[11px]">
+                            <span className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded border border-slate-200">
+                              {tx.referenceNo}
+                            </span>
+                          </td>
+
+                          {/* Description & Items */}
+                          <td className="py-2.5 px-3">
+                            <div className="font-bold text-slate-800 text-xs">
+                              {tx.description}
+                            </div>
+                            {tx.itemsSummary && (
+                              <div className="text-[11px] text-emerald-900 bg-emerald-50/70 border border-emerald-100 px-2 py-1 rounded-xs mt-1 leading-relaxed">
+                                <span className="font-bold text-emerald-950">📦 Stock Received:</span> {tx.itemsSummary}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-3 text-[10px] text-slate-400 mt-0.5">
+                              {tx.paymentMethod && (
+                                <span>Mode: <strong className="text-slate-600">{tx.paymentMethod}</strong></span>
+                              )}
+                              {tx.notes && (
+                                <span className="italic">Note: {tx.notes}</span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Purchase Bill (Credit) */}
+                          <td className="py-2.5 px-3 text-right font-mono">
+                            {tx.credit > 0 ? (
+                              <span className="font-black text-red-600">
+                                +{storeSettings.currency} {tx.credit.toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-slate-300">-</span>
+                            )}
+                          </td>
+
+                          {/* Payment Paid (Debit) */}
+                          <td className="py-2.5 px-3 text-right font-mono">
+                            {tx.debit > 0 ? (
+                              <span className="font-black text-emerald-700">
+                                -{storeSettings.currency} {tx.debit.toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-slate-300">-</span>
+                            )}
+                          </td>
+
+                          {/* Running Balance */}
+                          <td className="py-2.5 px-3 text-right font-mono">
+                            <span className={`font-black text-xs ${tx.balance > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                              {storeSettings.currency} {tx.balance.toLocaleString()}
+                            </span>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="py-2.5 px-3 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditEntry(tx)}
+                                className="p-1 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Edit entry"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteEntry(tx)}
+                                className="p-1 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Delete entry"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={7} className="text-center py-12 text-slate-400">
+                          <Receipt className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                          <p className="font-bold text-slate-600">No supplier transactions found</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            Add a new purchase bill or payment using the buttons above.
+                          </p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Footer Summary Row */}
+            <div className="bg-slate-100 border-t border-slate-200 p-3 flex flex-wrap items-center justify-between gap-3 shrink-0 text-xs">
+              <div className="flex items-center gap-6">
+                <div>
+                  <span className="text-[10px] text-slate-500 uppercase font-bold block">Total Purchases In Period</span>
+                  <span className="font-black text-red-600 text-sm font-mono">
+                    {storeSettings.currency} {totalPurchasesBill.toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 uppercase font-bold block">Total Payments Paid In Period</span>
+                  <span className="font-black text-emerald-700 text-sm font-mono">
+                    {storeSettings.currency} {totalPaymentsPaid.toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 uppercase font-bold block">Net Balance Owed</span>
+                  <span className={`font-black text-sm font-mono ${supplier.balanceOwed > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                    {storeSettings.currency} {supplier.balanceOwed.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-4 py-1.5 rounded-xs transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Tab Content 2: Supplied Products */}
+        {activeTab === 'products' && (
+          <div className="flex-1 overflow-y-auto p-4 flex flex-col space-y-4 bg-[#f8fafc]">
+            {/* Search and Quick Header */}
+            <div className="bg-white border border-slate-200 p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+              <div>
+                <h3 className="font-extrabold text-sm text-slate-800">
+                  Products Supplied by {supplier.name}
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Items associated with this distributor or brand. Filter, search and review current inventory status.
+                </p>
+              </div>
+
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-white border border-slate-300 pl-7 pr-3 py-1 text-xs text-slate-800 w-52 focus:outline-none focus:border-[#0070ba]"
+                />
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2" />
+              </div>
+            </div>
+
+            {/* Products Grid / Table */}
+            <div className="bg-white border border-slate-200 shadow-xs overflow-hidden flex-1">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#002b49] text-white">
+                  <tr>
+                    <th className="py-2.5 px-3 font-bold">Barcode</th>
+                    <th className="py-2.5 px-3 font-bold">Product Name</th>
+                    <th className="py-2.5 px-3 font-bold">Brand / Company</th>
+                    <th className="py-2.5 px-3 font-bold">Category</th>
+                    <th className="py-2.5 px-3 font-bold text-right">Purchase Cost</th>
+                    <th className="py-2.5 px-3 font-bold text-right">Retail Rate</th>
+                    <th className="py-2.5 px-3 font-bold text-center">Profit Margin</th>
+                    <th className="py-2.5 px-3 font-bold text-center">Stock Level</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {products
+                    .filter((p) => {
+                      const belongsToSupplier =
+                        p.supplierId === supplier.id ||
+                        (p.supplierName && p.supplierName.toLowerCase() === supplier.name.toLowerCase()) ||
+                        (p.company && p.company.toLowerCase() === supplier.name.toLowerCase());
+                      if (!belongsToSupplier) return false;
+
+                      if (searchQuery.trim()) {
+                        const q = searchQuery.toLowerCase().trim();
+                        return (
+                          p.name.toLowerCase().includes(q) ||
+                          p.barcode.toLowerCase().includes(q) ||
+                          p.category.toLowerCase().includes(q)
+                        );
+                      }
+                      return true;
+                    })
+                    .map((p) => {
+                      const profit = p.retailPrice - p.purchasePrice;
+                      const marginPercent = p.purchasePrice > 0 ? (profit / p.purchasePrice) * 100 : 100;
+                      return (
+                        <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-2.5 px-3 font-mono font-bold text-slate-700">{p.barcode}</td>
+                          <td className="py-2.5 px-3 font-bold text-slate-900">{p.name}</td>
+                          <td className="py-2.5 px-3 text-slate-600">{p.company}</td>
+                          <td className="py-2.5 px-3">
+                            <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-[10px] border border-slate-200">
+                              {p.category}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-semibold font-mono text-slate-700">
+                            {storeSettings.currency} {p.purchasePrice.toFixed(2)}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-black font-mono text-[#0070ba]">
+                            {storeSettings.currency} {p.retailPrice.toFixed(2)}
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span className="bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded border border-emerald-100 text-[10px]">
+                              {profit > 0 ? `+${marginPercent.toFixed(0)}%` : '0%'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-bold">
+                            <span className={`inline-block px-2.5 py-0.5 rounded text-[11px] font-black ${p.stock <= p.minStockAlert ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-slate-100 text-slate-800'}`}>
+                              {p.stock} Qty
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  {products.filter((p) => p.supplierId === supplier.id || (p.supplierName && p.supplierName.toLowerCase() === supplier.name.toLowerCase())).length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="text-center py-12 text-slate-400">
+                        <Building2 className="w-8 h-8 mx-auto text-slate-300 mb-1" />
+                        <p className="font-bold text-slate-600">No Associated Products Found</p>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          You can link products to this supplier in the inventory list, or by recording new stock purchases!
+                        </p>
                       </td>
                     </tr>
-                  ))
-                ) : (
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Tab Content 3: Purchases Raw History */}
+        {activeTab === 'purchases' && (
+          <div className="flex-1 overflow-y-auto p-4 flex flex-col space-y-4 bg-[#f8fafc]">
+            <div className="bg-white border border-slate-200 p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+              <div>
+                <h3 className="font-extrabold text-sm text-slate-800">
+                  Detailed Stock Inward & Purchases Log
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Chronological history of all stock received from {supplier.name} containing quantity and cost rate per unit.
+                </p>
+              </div>
+
+              <div className="text-right">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">Total Purchases Inward</span>
+                <span className="font-black text-slate-800 text-sm font-mono">
+                  {storeSettings.currency} {purchases.filter(p => p.supplierId === supplier.id || (p.supplierName && p.supplierName.toLowerCase() === supplier.name.toLowerCase())).reduce((sum, p) => sum + (p.purchaseCost * p.qtyReceived), 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 shadow-xs overflow-hidden flex-1">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#002b49] text-white">
                   <tr>
-                    <td colSpan={7} className="text-center py-12 text-slate-400">
-                      <Receipt className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-                      <p className="font-bold text-slate-600">No supplier transactions found</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        Add a new purchase bill or payment using the buttons above.
-                      </p>
-                    </td>
+                    <th className="py-2.5 px-3 font-bold">Date Received</th>
+                    <th className="py-2.5 px-3 font-bold">Barcode</th>
+                    <th className="py-2.5 px-3 font-bold">Medicine / Item Name</th>
+                    <th className="py-2.5 px-3 font-bold">Batch Number</th>
+                    <th className="py-2.5 px-3 font-bold text-right">Cost Price / Unit</th>
+                    <th className="py-2.5 px-3 font-bold text-center">Qty Received</th>
+                    <th className="py-2.5 px-3 font-bold text-right">Total Cost Bill</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-mono">
+                  {purchases
+                    .filter((p) => p.supplierId === supplier.id || (p.supplierName && p.supplierName.toLowerCase() === supplier.name.toLowerCase()))
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .map((pur, idx) => {
+                      const rowTotal = pur.purchaseCost * pur.qtyReceived;
+                      return (
+                        <tr key={pur.id || idx} className="hover:bg-slate-50 transition-colors text-slate-700">
+                          <td className="py-2.5 px-3 text-slate-600 font-sans">{pur.date}</td>
+                          <td className="py-2.5 px-3 font-bold">{pur.barcode}</td>
+                          <td className="py-2.5 px-3 font-sans font-bold text-slate-950">{pur.productName}</td>
+                          <td className="py-2.5 px-3 font-bold">
+                            <span className="bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded text-[10px]">
+                              {pur.batchNo || 'No Batch'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right">
+                            {storeSettings.currency} {pur.purchaseCost.toFixed(2)}
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-bold text-slate-900">
+                            +{pur.qtyReceived}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-black text-red-600">
+                            {storeSettings.currency} {rowTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  {purchases.filter((p) => p.supplierId === supplier.id || (p.supplierName && p.supplierName.toLowerCase() === supplier.name.toLowerCase())).length === 0 && (
+                    <tr className="font-sans">
+                      <td colSpan={7} className="text-center py-12 text-slate-400">
+                        <Receipt className="w-8 h-8 mx-auto text-slate-300 mb-1" />
+                        <p className="font-bold text-slate-600">No stock inward records found</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Inward stock via the "Receive New Stock" feature in the sidebar to populate this log.
+                        </p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Footer Summary Row */}
-        <div className="bg-slate-100 border-t border-slate-200 p-3 flex flex-wrap items-center justify-between gap-3 shrink-0 text-xs">
-          <div className="flex items-center gap-6">
-            <div>
-              <span className="text-[10px] text-slate-500 uppercase font-bold block">Total Purchases In Period</span>
-              <span className="font-black text-red-600 text-sm font-mono">
-                {storeSettings.currency} {totalPurchasesBill.toLocaleString()}
-              </span>
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-500 uppercase font-bold block">Total Payments Paid In Period</span>
-              <span className="font-black text-emerald-700 text-sm font-mono">
-                {storeSettings.currency} {totalPaymentsPaid.toLocaleString()}
-              </span>
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-500 uppercase font-bold block">Net Balance Owed</span>
-              <span className={`font-black text-sm font-mono ${supplier.balanceOwed > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
-                {storeSettings.currency} {supplier.balanceOwed.toLocaleString()}
-              </span>
-            </div>
-          </div>
+        {/* Tab Content 4: Supplier Profile */}
+        {activeTab === 'profile' && (
+          <div className="flex-1 overflow-y-auto p-6 bg-[#f8fafc]">
+            <div className="bg-white border border-slate-200 shadow-md max-w-2xl mx-auto rounded-sm overflow-hidden">
+              <div className="bg-gradient-to-r from-[#002b49] to-blue-900 text-white px-5 py-4 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm">Distributor Profile Settings</h3>
+                  <p className="text-[10px] text-slate-200">Modify supplier company details, phone number, physical address, and current outstanding liability.</p>
+                </div>
+                <Building2 className="w-8 h-8 text-blue-200/50" />
+              </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-4 py-1.5 rounded-xs transition-colors"
-            >
-              Close
-            </button>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!supName.trim()) {
+                    alert('Supplier name is required.');
+                    return;
+                  }
+                  updateSupplier({
+                    ...supplier,
+                    name: supName.trim(),
+                    company: supCompany.trim(),
+                    phone: supPhone.trim(),
+                    email: supEmail.trim(),
+                    address: supAddress.trim(),
+                    balanceOwed: supBalanceOwed,
+                    notes: supNotes.trim(),
+                  });
+                  alert('Supplier profile details saved successfully!');
+                  setActiveTab('transactions');
+                }}
+                className="p-5 space-y-4 text-xs"
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Supplier Name *:</label>
+                    <input
+                      type="text"
+                      required
+                      value={supName}
+                      onChange={(e) => setSupName(e.target.value)}
+                      className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 font-semibold focus:outline-none focus:border-[#0070ba]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Company / Distribution House:</label>
+                    <input
+                      type="text"
+                      value={supCompany}
+                      onChange={(e) => setSupCompany(e.target.value)}
+                      className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Phone Number:</label>
+                    <input
+                      type="text"
+                      value={supPhone}
+                      onChange={(e) => setSupPhone(e.target.value)}
+                      className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 font-mono focus:outline-none focus:border-[#0070ba]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Email Address:</label>
+                    <input
+                      type="email"
+                      value={supEmail}
+                      onChange={(e) => setSupEmail(e.target.value)}
+                      className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Physical Address:</label>
+                  <input
+                    type="text"
+                    value={supAddress}
+                    onChange={(e) => setSupAddress(e.target.value)}
+                    placeholder="e.g. Warehouse 4B, Medicine Market, Lahore"
+                    className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 bg-amber-50/70 p-3 border border-amber-200">
+                  <div>
+                    <label className="block font-bold text-amber-900 mb-1">Outstanding Balance Owed ({storeSettings.currency}):</label>
+                    <input
+                      type="number"
+                      value={supBalanceOwed}
+                      onChange={(e) => setSupBalanceOwed(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-white border border-amber-300 px-3 py-1.5 text-slate-800 font-extrabold focus:outline-none focus:border-amber-600"
+                    />
+                    <p className="text-[10px] text-amber-700 mt-1">This represents the net payable amount remaining to pay this distributor.</p>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-amber-900 mb-1">Supplier Type & Details:</label>
+                    <div className="text-slate-700 py-1 font-semibold space-y-0.5">
+                      <div>Registered ID: <span className="font-bold font-mono">{supplier.id}</span></div>
+                      <div>Auto Created: <span className="font-bold">{supplier.createdAt ? supplier.createdAt.slice(0, 10) : 'General'}</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Distribution Notes / Brand Agent Info:</label>
+                  <textarea
+                    rows={2}
+                    value={supNotes}
+                    onChange={(e) => setSupNotes(e.target.value)}
+                    placeholder="e.g. Agent name is Junaid, visits every Tuesday for order collection."
+                    className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('transactions')}
+                    className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-1.5"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-1.5 flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Save Profile Changes</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Add / Edit Ledger Entry Modal */}
