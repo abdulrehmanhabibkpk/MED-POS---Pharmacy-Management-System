@@ -17,7 +17,7 @@ export const LoginScreen: React.FC = () => {
     }
     const success = login(username, password);
     if (!success) {
-      setError('Invalid login credentials. Hint: alitrader@gmail.com / alitrader');
+      setError('Invalid login credentials.');
     }
   };
 
@@ -133,12 +133,6 @@ export const LoginScreen: React.FC = () => {
                 className="w-full px-3 py-2 border border-slate-300 rounded-none focus:outline-none focus:border-[#0070ba] text-sm text-slate-800"
                 placeholder="••••••••"
               />
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 p-2.5 rounded text-[11px] text-blue-800">
-              <strong>Master Admin Creds:</strong><br />
-              Email: <span className="font-mono font-bold">alitrader@gmail.com</span><br />
-              Password: <span className="font-mono font-bold">alitrader</span>
             </div>
 
             <button
