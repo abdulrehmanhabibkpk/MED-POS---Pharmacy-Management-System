@@ -140,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
               </div>
               <div>
                 <h1 className="text-base font-black tracking-wide leading-none text-white flex items-center gap-1">
-                  HACKTES POS
+                  LimoPOS
                 </h1>
                 <p className="text-xs text-[#7ec8e3] mt-1 font-medium">POS System</p>
               </div>

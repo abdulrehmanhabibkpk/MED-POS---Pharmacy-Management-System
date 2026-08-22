@@ -22,6 +22,7 @@ export const initialProducts: Product[] = [
     wholesalePrice: 2350,
     stock: 50,
     minStockAlert: 10,
+    unitOfSale: 'Count',
   },
   {
     id: 'p-1004',
@@ -34,6 +35,7 @@ export const initialProducts: Product[] = [
     wholesalePrice: 490,
     stock: 119,
     minStockAlert: 15,
+    unitOfSale: 'Count',
   },
   {
     id: 'p-1003',
@@ -46,6 +48,7 @@ export const initialProducts: Product[] = [
     wholesalePrice: 1520,
     stock: 23,
     minStockAlert: 5,
+    unitOfSale: 'Count',
   },
   {
     id: 'p-1002',
@@ -58,6 +61,7 @@ export const initialProducts: Product[] = [
     wholesalePrice: 1200,
     stock: 79,
     minStockAlert: 12,
+    unitOfSale: 'Count',
   },
   {
     id: 'p-6576',
@@ -70,6 +74,7 @@ export const initialProducts: Product[] = [
     wholesalePrice: 210,
     stock: 85,
     minStockAlert: 20,
+    unitOfSale: 'Strip',
   },
   {
     id: 'p-2001',
@@ -82,6 +87,7 @@ export const initialProducts: Product[] = [
     wholesalePrice: 360,
     stock: 45,
     minStockAlert: 10,
+    unitOfSale: 'Box',
   },
   {
     id: 'p-2002',
@@ -94,6 +100,7 @@ export const initialProducts: Product[] = [
     wholesalePrice: 115,
     stock: 120,
     minStockAlert: 25,
+    unitOfSale: 'Strip',
   },
   {
     id: 'p-2003',
@@ -106,6 +113,7 @@ export const initialProducts: Product[] = [
     wholesalePrice: 165,
     stock: 90,
     minStockAlert: 15,
+    unitOfSale: 'Strip',
   },
   {
     id: 'p-2004',
@@ -118,6 +126,7 @@ export const initialProducts: Product[] = [
     wholesalePrice: 135,
     stock: 40,
     minStockAlert: 8,
+    unitOfSale: 'Count',
   }
 ];
 

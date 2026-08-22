@@ -403,76 +403,74 @@ export const BarcodeLabelView: React.FC = () => {
   };
 
   return (
-    <div id="barcode-studio-container" className="p-4 md:p-6 bg-[#f4f7fa] min-h-full space-y-5 max-w-7xl mx-auto pb-12">
-      {/* Top Banner */}
-      <div className="bg-[#002b49] text-white px-4 py-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="p-1.5 bg-[#0070ba] rounded-xs text-white">
-            <BarcodeIcon className="w-5 h-5" />
+    <div id="barcode-studio-container" className="p-4 md:p-6 bg-[#F9FAFB] min-h-full space-y-6 max-w-7xl mx-auto pb-12">
+      {/* TOP HEADER BANNER (With scannable vector engine badge) */}
+      <div className="bg-[#002b49] text-white p-6 rounded-xl shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="bg-white/10 p-3 rounded-lg shrink-0">
+            <BarcodeIcon className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-sm md:text-base tracking-wide flex items-center gap-2">
-              <span>BARCODE LABEL GENERATOR & PRINTING STUDIO</span>
-            </h1>
-            <p className="text-[11px] text-cyan-200">
-              Genuine ISO/IEC Standard Vector Barcodes for Thermal Rolls & A4 Sticker Sheets
-            </p>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h2 className="text-lg font-black tracking-wider uppercase">Barcode Label Generator & Printing Studio</h2>
+              <span className="inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span>
+                100% Scannable Vector Engine
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 font-semibold mt-1">Genuine ISO/IEC Standard Vector Barcodes for Thermal Rolls & A4 Sticker Sheets</p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] bg-emerald-700/80 border border-emerald-500/50 text-emerald-100 px-2.5 py-1 rounded font-semibold flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
-            <span>100% Scannable Vector Engine</span>
-          </span>
         </div>
       </div>
 
-      {/* Hardware Barcode Scanner Verification Bar */}
-      <div className="bg-white border border-slate-200 p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
-        <form onSubmit={handleTestScanSubmit} className="flex items-center gap-2 flex-1 min-w-[300px]">
-          <div className="p-1.5 bg-blue-50 text-[#0070ba] rounded">
-            <ScanLine className="w-4 h-4" />
+      {/* LIVE BARCODE SCANNER VERIFICATION TOOL */}
+      <div className="bg-white p-4 border border-gray-200 rounded-xl shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3 mb-3">
+          <div className="flex items-center gap-2">
+            <ScanLine className="w-4 h-4 text-blue-600 animate-pulse" />
+            <span className="text-xs font-black text-gray-800 uppercase tracking-wide">Live Barcode Scanner Verification Tool:</span>
           </div>
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <label className="text-[11px] font-bold text-slate-700">
-                Live Barcode Scanner Verification Tool:
-              </label>
-              <span className="text-[10px] text-slate-400">Point handheld scanner or type here</span>
-            </div>
-            <div className="relative mt-0.5">
-              <input
-                type="text"
-                value={testScanInput}
-                onChange={(e) => setTestScanInput(e.target.value)}
-                placeholder="Scan any printed barcode here with your USB/Bluetooth laser scanner to test..."
-                className="w-full bg-slate-50 border border-slate-300 px-3 py-1.5 text-xs font-mono text-slate-800 focus:bg-white focus:outline-none focus:border-[#0070ba]"
-              />
-            </div>
+          <span className="text-[10px] font-bold text-gray-400 uppercase">Point handheld scanner or type here</span>
+        </div>
+        
+        <form onSubmit={handleTestScanSubmit} className="flex gap-3">
+          <div className="relative flex-1">
+            <ScanLine className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+            <input
+              type="text"
+              value={testScanInput}
+              onChange={(e) => setTestScanInput(e.target.value)}
+              placeholder="Scan any printed barcode here with your USB/Bluetooth laser scanner to test..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-800 focus:outline-none focus:border-blue-500 font-bold font-mono"
+            />
           </div>
           <button
             type="submit"
-            className="bg-[#0070ba] hover:bg-[#005a96] text-white font-bold py-1.5 px-3 text-xs rounded transition-colors self-end"
+            className="bg-[#002b49] hover:bg-[#001c30] text-white font-extrabold px-6 py-2 rounded-lg text-xs uppercase transition-all tracking-wider cursor-pointer shadow-xs"
           >
             Verify
           </button>
         </form>
 
+        {/* Dynamic Verification Alert Box */}
         {lastScannedResult && (
-          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded text-xs text-emerald-900">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <div className={`mt-3 p-3 rounded-lg border text-xs font-bold transition-all flex items-center gap-2 ${
+            lastScannedResult.matchedProduct
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-amber-50 border-amber-200 text-amber-800'
+          }`}>
+            <Check className="w-4 h-4 shrink-0" />
             <div>
               <span className="font-bold">Scanned: </span>
-              <span className="font-mono font-bold bg-white px-1.5 py-0.5 border border-emerald-300 rounded text-[11px]">
+              <span className="font-mono bg-white px-1.5 py-0.5 border rounded">
                 {lastScannedResult.code}
               </span>
               {lastScannedResult.matchedProduct ? (
-                <span className="ml-2 font-semibold text-emerald-800">
-                  ✓ Matches "{lastScannedResult.matchedProduct.name}" (Rs.{lastScannedResult.matchedProduct.retailPrice})
+                <span className="ml-2 font-semibold">
+                  ✓ Matches "{lastScannedResult.matchedProduct.name}" ({storeSettings.currency} {lastScannedResult.matchedProduct.retailPrice.toLocaleString()})
                 </span>
               ) : (
-                <span className="ml-2 text-slate-600">✓ Valid Code Decoded</span>
+                <span className="ml-2 font-semibold">✓ Valid Code Decoded</span>
               )}
             </div>
           </div>

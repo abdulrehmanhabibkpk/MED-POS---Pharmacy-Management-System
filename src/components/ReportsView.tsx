@@ -352,42 +352,42 @@ export const ReportsView: React.FC = () => {
   };
 
   return (
-    <div id="reports-view-container" className="p-4 sm:p-6 bg-[#f4f7fa] min-h-full space-y-4 max-w-7xl mx-auto pb-12">
-      {/* Top Header Card */}
-      <div className="bg-white border border-slate-200 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
+    <div id="reports-view-container" className="p-6 bg-[#F9FAFB] min-h-full space-y-6 max-w-7xl mx-auto pb-12">
+      {/* TOP HEADER BAR */}
+      <div className="bg-white border border-gray-200 p-5 rounded-xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-slate-50 text-slate-700 rounded-xl border border-gray-200">
+            <BarChart3 className="w-6 h-6 text-[#002b49]" />
+          </div>
+          <div>
             <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
               Reports & Audit Management Center
             </h1>
-            <span className="bg-[#002b49] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-              Complete Data Editor
-            </span>
+            <p className="text-xs text-slate-500 mt-1">
+              Full date-filtered reporting, detailed ledger analysis, live data editing, voucher printing, and CSV exports.
+            </p>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Full date-filtered reporting, detailed ledger analysis, live data editing, voucher printing, and CSV exports.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={handleExportCSV}
-            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-3.5 py-1.5 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer animate-in fade-in"
           >
-            <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>Export CSV</span>
+            <Download className="w-4 h-4 text-slate-500" />
+            <span>Export CSV Sheet</span>
           </button>
         </div>
       </div>
 
-      {/* Navigation Sub-Tabs */}
-      <div className="bg-white border border-slate-200 p-1.5 shadow-xs flex flex-wrap items-center gap-1">
+      {/* MAIN SETTINGS NAVIGATION TABS */}
+      <div className="bg-white border border-gray-200 p-2 rounded-xl shadow-xs flex flex-wrap items-center gap-1.5 no-print">
         <button
           onClick={() => setActiveReportTab('sales')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             activeReportTab === 'sales'
               ? 'bg-[#002b49] text-white shadow-xs'
-              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-gray-150'
           }`}
         >
           <BarChart3 className="w-3.5 h-3.5 text-blue-400" />

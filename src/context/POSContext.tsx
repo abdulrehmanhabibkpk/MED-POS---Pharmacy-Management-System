@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import {
   Product,
   SaleInvoice,
@@ -186,6 +186,8 @@ const defaultAccounts: UserAccount[] = [
 ];
 
 export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const isSyncingFromServer = useRef(false);
+
   const [userAccounts, setUserAccounts] = useState<UserAccount[]>(() => {
     const saved = localStorage.getItem('medpos_user_accounts');
     return saved ? JSON.parse(saved) : defaultAccounts;
@@ -215,7 +217,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('medpos_products');
-    return saved ? JSON.parse(saved) : initialProducts;
+    const raw: Product[] = saved ? JSON.parse(saved) : initialProducts;
+    return raw.map((p) => ({
+      ...p,
+      unitOfSale: p.unitOfSale || 'Item',
+    }));
   });
 
   const [sales, setSales] = useState<SaleInvoice[]>(() => {
@@ -392,6 +398,137 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem('medpos_current_user');
     }
   }, [currentUser]);
+
+  // SQLite database initial server-load hook
+  useEffect(() => {
+    const fetchPOSDataFromServer = async () => {
+      try {
+        isSyncingFromServer.current = true;
+        const res = await fetch('/api/pos-data');
+        if (res.ok) {
+          const serverData = await res.json();
+          console.log('Successfully synchronized state from SQLite server:', serverData);
+          if (serverData.userAccounts?.length > 0) setUserAccounts(serverData.userAccounts);
+          if (serverData.products?.length > 0) setProducts(serverData.products);
+          if (serverData.sales) setSales(serverData.sales);
+          if (serverData.returns) setReturns(serverData.returns);
+          if (serverData.purchases) setPurchases(serverData.purchases);
+          if (serverData.credits) setCredits(serverData.credits);
+          if (serverData.expenses) setExpenses(serverData.expenses);
+          if (serverData.suppliers?.length > 0) setSuppliers(serverData.suppliers);
+          if (serverData.customers?.length > 0) setCustomers(serverData.customers);
+          if (serverData.customerTransactions) setCustomerTransactions(serverData.customerTransactions);
+          if (serverData.supplierTransactions) setSupplierTransactions(serverData.supplierTransactions);
+          if (serverData.storeSettings) setStoreSettings(serverData.storeSettings);
+        }
+      } catch (err) {
+        console.warn('SQLite server is offline or unreachable, falling back to offline LocalStorage state:', err);
+      } finally {
+        setTimeout(() => {
+          isSyncingFromServer.current = false;
+        }, 150);
+      }
+    };
+    fetchPOSDataFromServer();
+  }, []);
+
+  // Automatic SQLite auto-save synchronization hook (debounced 1s)
+  useEffect(() => {
+    if (isSyncingFromServer.current) return;
+
+    const syncTimer = setTimeout(async () => {
+      try {
+        const payload = {
+          products,
+          sales,
+          returns,
+          purchases,
+          credits,
+          expenses,
+          suppliers,
+          customers,
+          customerTransactions,
+          supplierTransactions,
+          storeSettings,
+          userAccounts,
+        };
+        await fetch('/api/save-all', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+        console.log('POS state auto-synchronized to SQLite server.');
+      } catch (err) {
+        console.error('Auto-sync to SQLite database failed:', err);
+      }
+    }, 1000);
+
+    return () => clearTimeout(syncTimer);
+  }, [
+    products,
+    sales,
+    returns,
+    purchases,
+    credits,
+    expenses,
+    suppliers,
+    customers,
+    customerTransactions,
+    supplierTransactions,
+    storeSettings,
+    userAccounts,
+  ]);
+
+  // Real-time automatic SQLite background polling to sync changes from other tabs/devices
+  useEffect(() => {
+    const pollTimer = setInterval(async () => {
+      if (isSyncingFromServer.current) return;
+
+      try {
+        const res = await fetch('/api/pos-data');
+        if (res.ok) {
+          const serverData = await res.json();
+          isSyncingFromServer.current = true;
+
+          if (serverData.userAccounts?.length > 0) setUserAccounts(serverData.userAccounts);
+          if (serverData.products?.length > 0) setProducts(serverData.products);
+          if (serverData.sales) setSales(serverData.sales);
+          if (serverData.returns) setReturns(serverData.returns);
+          if (serverData.purchases) setPurchases(serverData.purchases);
+          if (serverData.credits) setCredits(serverData.credits);
+          if (serverData.expenses) setExpenses(serverData.expenses);
+          if (serverData.suppliers?.length > 0) setSuppliers(serverData.suppliers);
+          if (serverData.customers?.length > 0) setCustomers(serverData.customers);
+          if (serverData.customerTransactions) setCustomerTransactions(serverData.customerTransactions);
+          if (serverData.supplierTransactions) setSupplierTransactions(serverData.supplierTransactions);
+          if (serverData.storeSettings) setStoreSettings(serverData.storeSettings);
+        }
+      } catch (err) {
+        console.warn('Real-time polling sync skipped (server unreachable):', err);
+      } finally {
+        setTimeout(() => {
+          isSyncingFromServer.current = false;
+        }, 150);
+      }
+    }, 4000); // Poll every 4 seconds
+
+    return () => clearInterval(pollTimer);
+  }, [
+    products,
+    sales,
+    returns,
+    purchases,
+    credits,
+    expenses,
+    suppliers,
+    customers,
+    customerTransactions,
+    supplierTransactions,
+    storeSettings,
+    userAccounts,
+  ]);
 
   const login = (u: string, p: string) => {
     const emailLower = u.trim().toLowerCase();
@@ -737,7 +874,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           (item) => item.barcode.trim().toLowerCase() === prod.barcode.trim().toLowerCase()
         );
         if (soldItem) {
-          const updatedStock = Math.max(0, prod.stock - soldItem.qty);
+          // Use 3 decimal precision for float/decimal-based stock values
+          const updatedStock = parseFloat(Math.max(0, prod.stock - soldItem.qty).toFixed(3));
           return { ...prod, stock: updatedStock };
         }
         return prod;
@@ -753,6 +891,22 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteSale = (id: string) => {
+    const targetSale = sales.find((s) => s.id === id);
+    if (targetSale) {
+      // Restore stock for each item in the deleted sale with float-safe 3 decimal precision
+      setProducts((prev) =>
+        prev.map((prod) => {
+          const soldItem = targetSale.items.find(
+            (item) => item.barcode.trim().toLowerCase() === prod.barcode.trim().toLowerCase()
+          );
+          if (soldItem) {
+            const updatedStock = parseFloat((prod.stock + soldItem.qty).toFixed(3));
+            return { ...prod, stock: updatedStock };
+          }
+          return prod;
+        })
+      );
+    }
     setSales((prev) => prev.filter((s) => s.id !== id));
   };
 
@@ -868,6 +1022,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           stock: pur.qtyReceived,
           minStockAlert: 5,
           batchNo: `B-${Date.now().toString().slice(-4)}`,
+          unitOfSale: 'Count',
         };
         return [batchProduct, ...prev];
       }
@@ -901,6 +1056,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           wholesalePrice: pur.wholesalePrice,
           stock: pur.qtyReceived,
           minStockAlert: 10,
+          unitOfSale: 'Count',
         };
         return [created, ...prev];
       }

@@ -8,7 +8,7 @@ import { useHardwareScanner } from '../hooks/useHardwareScanner';
 import { posSound } from '../utils/audio';
 
 export const SaleInvoiceView: React.FC = () => {
-  const { products, addSale, setPreviewInvoice, storeSettings, thermalPaperSize, setThermalPaperSize } = usePOS();
+  const { products, addSale, setPreviewInvoice, storeSettings, thermalPaperSize, setThermalPaperSize, currentUser } = usePOS();
 
   const [barcodeInput, setBarcodeInput] = useState('');
   const [qtyInput, setQtyInput] = useState<number>(1);
@@ -296,7 +296,7 @@ export const SaleInvoiceView: React.FC = () => {
       netAmount,
       paidAmount: effectivePaid,
       changeAmount: Math.max(0, effectivePaid - netAmount),
-      cashier: 'Admin',
+      cashier: currentUser ? currentUser.name : 'Admin',
     });
 
     // Open Thermal receipt print preview
@@ -336,7 +336,7 @@ export const SaleInvoiceView: React.FC = () => {
       netAmount,
       paidAmount: paidAmount > 0 ? paidAmount : netAmount,
       changeAmount: Math.max(0, (paidAmount > 0 ? paidAmount : netAmount) - netAmount),
-      cashier: 'Admin',
+      cashier: currentUser ? currentUser.name : 'Admin',
     };
     setPreviewInvoice(draftInvoice);
   };

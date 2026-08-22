@@ -26,7 +26,7 @@ export interface Product {
   minStockAlert: number;
   batchNo?: string;
   expiryDate?: string;
-  unitOfSale?: string; // 'Item', 'Kg', 'Pound', 'Gram', 'Litre', etc.
+  unitOfSale: string; // 'Item', 'Kg', 'Pound', 'Gram', 'Litre', etc.
   weightValue?: number; // e.g. 5 for a 5-Kg pack
 }
 
@@ -66,7 +66,7 @@ export interface SaleReturn {
   id: string;
   date: string;
   barcode: string;
-  productName: string;
+  itemName: string;
   qty: number;
   refundAmount: number;
   reason?: string;

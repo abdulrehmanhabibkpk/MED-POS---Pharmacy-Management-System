@@ -272,223 +272,263 @@ export const StoreSettingsView: React.FC = () => {
   };
 
   return (
-    <div id="store-settings-container" className="p-6 bg-[#f4f7fa] min-h-full space-y-4">
-      {/* Banner */}
-      <div className="bg-[#002b49] text-white px-4 py-3 flex items-center justify-between shadow-xs">
-        <div className="flex items-center gap-2 font-bold text-sm uppercase tracking-wide">
-          <Settings className="w-4 h-4 text-emerald-400" />
-          <span>SOFTWARE & STORE MASTER SETTINGS</span>
-        </div>
-      </div>
-
+    <div id="store-settings-container" className="p-6 bg-[#F9FAFB] min-h-full space-y-6">
+      
+      {/* Alert notifications */}
       {savedMsg && (
-        <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs flex items-center gap-2 shadow-xs animate-in fade-in duration-150">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span className="font-semibold">{savedMsg}</span>
+        <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs font-bold rounded shadow-xs flex items-center justify-between no-print animate-in fade-in duration-150">
+          <span>🎉 {savedMsg}</span>
+          <button onClick={() => setSavedMsg('')} className="text-emerald-500 hover:text-emerald-800 font-bold">&times;</button>
         </div>
       )}
 
-      {/* Sub Tab Navigation Bar */}
-      <div className="flex flex-wrap gap-1 bg-white p-1.5 border border-slate-200 shadow-xs">
+      {/* TOP HEADER BAR */}
+      <div className="bg-white border border-gray-200 p-5 rounded-xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-slate-50 text-slate-700 rounded-xl border border-gray-200">
+            <Settings className="w-6 h-6 text-[#002b49]" />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
+              Software & Store Master Settings
+            </h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Manage store business profile details, customize printed thermal bills, configure categories/brands, and manage cloud/offline backups.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* MAIN SETTINGS NAVIGATION TABS */}
+      <div className="bg-white border border-gray-200 p-2 rounded-xl shadow-xs flex flex-wrap items-center gap-1.5 no-print">
+        {/* Profile Tab */}
         <button
           type="button"
           onClick={() => setActiveSubTab('profile')}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold transition-colors cursor-pointer ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             activeSubTab === 'profile'
-              ? 'bg-[#002b49] text-white'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-[#002b49] text-white shadow-xs'
+              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-gray-150'
           }`}
         >
-          <Building2 className="w-4 h-4" />
-          <span>Store Business Profile</span>
+          <Building2 className="w-3.5 h-3.5 text-blue-400" />
+          <span>Business Profile</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('designer')}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold transition-colors cursor-pointer ${
-            activeSubTab === 'designer'
-              ? 'bg-[#0070ba] text-white shadow-xs'
-              : 'text-[#0070ba] bg-blue-50/80 hover:bg-blue-100 border border-blue-200'
-          }`}
-        >
-          <Sparkles className="w-4 h-4 text-amber-500" />
-          <span>🖨️ Thermal Receipt Designer (Studio)</span>
-        </button>
-
+        {/* Categories Tab */}
         <button
           type="button"
           onClick={() => setActiveSubTab('categories')}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold transition-colors cursor-pointer ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             activeSubTab === 'categories'
-              ? 'bg-[#002b49] text-white'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-[#002b49] text-white shadow-xs'
+              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-gray-150'
           }`}
         >
-          <Tag className="w-4 h-4 text-emerald-500" />
+          <Tag className="w-3.5 h-3.5 text-emerald-400" />
           <span>Category Master ({categories.length})</span>
         </button>
 
+        {/* Brands Tab */}
         <button
           type="button"
           onClick={() => setActiveSubTab('brands')}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold transition-colors cursor-pointer ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             activeSubTab === 'brands'
-              ? 'bg-[#002b49] text-white'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-[#002b49] text-white shadow-xs'
+              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-gray-150'
           }`}
         >
-          <Layers className="w-4 h-4 text-blue-500" />
-          <span>Brand / Company Master ({brands.length})</span>
+          <Layers className="w-3.5 h-3.5 text-orange-400" />
+          <span>Brand Master ({brands.length})</span>
         </button>
 
+        {/* Suppliers Tab */}
         <button
           type="button"
           onClick={() => setActiveSubTab('suppliers')}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold transition-colors cursor-pointer ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             activeSubTab === 'suppliers'
-              ? 'bg-[#002b49] text-white'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-[#002b49] text-white shadow-xs'
+              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-gray-150'
           }`}
         >
-          <Truck className="w-4 h-4 text-amber-500" />
+          <Truck className="w-3.5 h-3.5 text-amber-400" />
           <span>Supplier Master ({suppliers.length})</span>
         </button>
 
+        {/* Thermal Receipt Designer Tab */}
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('designer')}
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            activeSubTab === 'designer'
+              ? 'bg-[#002b49] text-white shadow-xs'
+              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-gray-150'
+          }`}
+        >
+          <Printer className="w-3.5 h-3.5 text-purple-400" />
+          <span>Thermal Receipt Designer</span>
+        </button>
+
+        {/* Hardware & Beep Feedback Tab */}
         <button
           type="button"
           onClick={() => setActiveSubTab('printer')}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold transition-colors cursor-pointer ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             activeSubTab === 'printer'
-              ? 'bg-[#002b49] text-white'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-[#002b49] text-white shadow-xs'
+              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-gray-150'
           }`}
         >
-          <Printer className="w-4 h-4 text-purple-500" />
-          <span>Thermal Printer & Hardware</span>
+          <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Hardware & Beep Feedback</span>
         </button>
 
+        {/* Database Backup Tab */}
         <button
           type="button"
           onClick={() => setActiveSubTab('backup')}
-          className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold transition-colors cursor-pointer ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             activeSubTab === 'backup'
-              ? 'bg-[#002b49] text-white'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-[#002b49] text-white shadow-xs'
+              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-gray-150'
           }`}
         >
-          <Database className="w-4 h-4 text-rose-500" />
-          <span>Database & Backup</span>
+          <Database className="w-3.5 h-3.5 text-rose-400" />
+          <span>Database Backup & Restore</span>
         </button>
       </div>
 
-      {/* 1. STORE BUSINESS PROFILE */}
+      {/* SUB-TABS INTERACTIVE SECTIONS */}
+
+      {/* ========================================== */}
+      {/* 1. BUSINESS PROFILE SETTINGS TAB */}
+      {/* ========================================== */}
       {activeSubTab === 'profile' && (
-        <div className="bg-white border border-slate-200 p-6 shadow-xs max-w-5xl">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden p-6 max-w-5xl">
           <form onSubmit={handleSaveProfile} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-              {/* Left Inputs (7 cols) */}
-              <div className="md:col-span-7 space-y-4 text-xs">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Text fields form inputs */}
+              <div className="lg:col-span-7 space-y-4 text-xs font-semibold">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Store / Business Name *
+                  <label className="block text-[10px] font-black text-slate-700 uppercase mb-1.5">
+                    Store / Pharmacy Name *
                   </label>
                   <input
                     id="settings-store-name"
                     type="text"
+                    required
                     value={storeName}
                     onChange={(e) => setStoreName(e.target.value)}
-                    className="w-full bg-white border border-slate-300 px-3 py-2 text-slate-800 text-xs font-semibold focus:outline-none focus:border-[#0070ba]"
-                    placeholder="MY MEDICAL STORE"
-                    required
+                    placeholder="e.g. HACKTES MEDICAL STORE"
+                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 font-bold focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Tagline / Subtitle</label>
+                  <label className="block text-[10px] font-black text-slate-700 uppercase mb-1.5">
+                    Slogan / Tagline / Brand Subtitle
+                  </label>
                   <input
                     id="settings-tagline"
                     type="text"
                     value={tagline}
                     onChange={(e) => setTagline(e.target.value)}
-                    className="w-full bg-white border border-slate-300 px-3 py-2 text-slate-800 text-xs focus:outline-none focus:border-[#0070ba]"
-                    placeholder="Pharmacy & General Store"
+                    placeholder="e.g. Modern Point of Sale & Medicine Tracker"
+                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 font-bold focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-700 uppercase mb-1.5">
+                      Helpline Contacts / Phone No
+                    </label>
+                    <input
+                      id="settings-phone"
+                      type="text"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="e.g. 0319-5702823"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 font-bold font-mono focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-700 uppercase mb-1.5">
+                      Default Sales Currency Symbol
+                    </label>
+                    <input
+                      type="text"
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
+                      placeholder="e.g. Rs."
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 font-black focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Store Address</label>
+                  <label className="block text-[10px] font-black text-slate-700 uppercase mb-1.5">
+                    Outlet Business Location Address
+                  </label>
                   <input
                     id="settings-address"
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="w-full bg-white border border-slate-300 px-3 py-2 text-slate-800 text-xs focus:outline-none focus:border-[#0070ba]"
-                    placeholder="Main Market, Pakistan"
+                    placeholder="e.g. Main Market, Pakistan"
+                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 font-bold focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Phone / Contact Number
-                  </label>
-                  <input
-                    id="settings-phone"
-                    type="text"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full bg-white border border-slate-300 px-3 py-2 text-slate-800 text-xs focus:outline-none focus:border-[#0070ba]"
-                    placeholder="0300-1234567"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Currency Symbol</label>
-                    <input
-                      type="text"
-                      value={currency}
-                      onChange={(e) => setCurrency(e.target.value)}
-                      className="w-full bg-white border border-slate-300 px-3 py-2 text-slate-800 text-xs font-bold focus:outline-none focus:border-[#0070ba]"
-                      placeholder="Rs."
-                    />
+                    <label className="block text-[10px] font-black text-slate-700 uppercase mb-1.5">
+                      Standard Bill Roll width
+                    </label>
+                    <select
+                      value={defaultPaperSize}
+                      onChange={(e) => setDefaultPaperSize(e.target.value as ThermalPaperSize)}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 font-bold focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="80mm">80mm Thermal Receipt (Standard Desktop Printer)</option>
+                      <option value="58mm">58mm Thermal Receipt (Mobile / Handheld Bluetooth)</option>
+                    </select>
                   </div>
-
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Footer Slip Note</label>
+                    <label className="block text-[10px] font-black text-slate-700 uppercase mb-1.5">
+                      Receipt Bottom Memo Footer Note
+                    </label>
                     <input
                       type="text"
                       value={footerNote}
                       onChange={(e) => setFooterNote(e.target.value)}
-                      className="w-full bg-white border border-slate-300 px-3 py-2 text-slate-800 text-xs focus:outline-none focus:border-[#0070ba]"
-                      placeholder="THANK YOU! VISIT AGAIN"
+                      placeholder="e.g. THANK YOU! PLEASE VISIT AGAIN"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 font-bold focus:outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Right Logo Upload (5 cols) */}
-              <div className="md:col-span-5 flex flex-col justify-start items-center p-4 bg-slate-50 border border-slate-200">
-                <h4 className="text-xs font-bold text-slate-700 mb-3 uppercase tracking-wide">
-                  Store Logo (Printed on Bill)
+              {/* Store logo image base64 management */}
+              <div className="lg:col-span-5 bg-gray-50 border border-gray-200 p-5 rounded-xl flex flex-col justify-start items-center">
+                <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-wider mb-4">
+                  Printed Store Logo Header
                 </h4>
 
-                <div className="w-44 h-32 border-2 border-dashed border-slate-300 flex items-center justify-center bg-white mb-4 overflow-hidden relative group">
+                <div className="w-48 h-36 border-2 border-dashed border-gray-300 rounded-xl bg-white flex items-center justify-center overflow-hidden relative group shadow-inner">
                   {logoUrl ? (
-                    <img
-                      src={logoUrl}
-                      alt="Store Logo"
-                      className="w-full h-full object-contain p-2"
-                    />
+                    <img src={logoUrl} alt="Store Logo Preview" className="w-full h-full object-contain p-2" />
                   ) : (
-                    <div className="text-center p-4 text-slate-400">
-                      <ImageIcon className="w-8 h-8 mx-auto mb-1 opacity-50" />
-                      <span className="text-[11px]">No Logo Selected</span>
+                    <div className="text-center p-4 text-gray-400">
+                      <ImageIcon className="w-8 h-8 mx-auto mb-1 text-gray-300" />
+                      <span className="text-[10px] font-bold block">No Logo Selected</span>
                     </div>
                   )}
                 </div>
 
-                <div className="flex flex-col gap-2 w-full max-w-[200px]">
+                <div className="mt-4 flex flex-col gap-2 w-full max-w-[200px]">
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -500,34 +540,33 @@ export const StoreSettingsView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full bg-[#0078d7] hover:bg-[#0066b8] text-white text-xs font-bold py-2 px-3 flex items-center justify-center gap-1.5 shadow transition-colors cursor-pointer"
+                    className="bg-[#002b49] hover:bg-slate-900 text-white font-extrabold px-4 py-2.5 rounded-lg text-xs tracking-wider uppercase transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <Upload className="w-3.5 h-3.5" />
-                    <span>Upload Logo</span>
+                    <span>Upload Logo Image</span>
                   </button>
 
                   {logoUrl && (
                     <button
                       type="button"
                       onClick={handleRemoveLogo}
-                      className="w-full bg-slate-200 hover:bg-red-100 hover:text-red-700 text-slate-700 text-xs font-semibold py-1.5 px-3 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      className="bg-gray-200 hover:bg-rose-100 text-slate-700 hover:text-rose-700 font-extrabold px-4 py-2 rounded-lg text-xs tracking-wider uppercase transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>Remove Logo</span>
+                      <span>Remove Image</span>
                     </button>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Save Buttons */}
-            <div className="pt-4 border-t border-slate-200 flex justify-end">
+            <div className="pt-6 border-t border-gray-150 flex justify-end">
               <button
                 type="submit"
-                className="bg-[#28a745] hover:bg-[#218838] text-white font-bold py-2 px-6 text-xs flex items-center gap-2 shadow cursor-pointer transition-colors"
+                className="bg-[#002b49] hover:bg-slate-900 text-white font-extrabold px-6 py-3 rounded-xl text-xs tracking-widest uppercase transition-colors flex items-center gap-1.5 shadow-md"
               >
-                <Save className="w-4 h-4" />
-                <span>Save Profile Settings</span>
+                <Save className="w-4.5 h-4.5" />
+                <span>Save Configuration Parameters</span>
               </button>
             </div>
           </form>

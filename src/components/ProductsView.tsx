@@ -398,6 +398,9 @@ export const ProductsView: React.FC = () => {
           const retailPriceVal = sellingIdx !== -1 && row[sellingIdx] ? parseFloat(row[sellingIdx]) || 0 : 0;
           const stockVal = stockIdx !== -1 && row[stockIdx] ? parseInt(row[stockIdx]) || 0 : 0;
           
+          const unitOfSaleIdx = headerRow.findIndex(h => h.includes('UNIT') || h.includes('MEASURE'));
+          const unitVal = unitOfSaleIdx !== -1 && row[unitOfSaleIdx] ? row[unitOfSaleIdx].trim() : 'Count';
+
           tempProducts.push({
             id: `p-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
             barcode: productBarcode,
@@ -408,7 +411,8 @@ export const ProductsView: React.FC = () => {
             retailPrice: retailPriceVal,
             wholesalePrice: retailPriceVal * 0.9, // Wholesale defaults to 90%
             stock: stockVal,
-            minStockAlert: alertQty
+            minStockAlert: alertQty,
+            unitOfSale: unitVal
           });
         }
         

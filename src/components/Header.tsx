@@ -62,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
       setDeferredPrompt(null);
     } else {
       // Direct user fallback instructions
-      alert('HACKTES POS install karne ke liye:\n\n1. Browser ke top-right 3-dots (⋮) par click karein.\n2. "Install App" ya "Add to Home Screen" par click karein.');
+      alert('LimoPOS install karne ke liye:\n\n1. Browser ke top-right 3-dots (⋮) par click karein.\n2. "Install App" ya "Add to Home Screen" par click karein.');
     }
   };
 
