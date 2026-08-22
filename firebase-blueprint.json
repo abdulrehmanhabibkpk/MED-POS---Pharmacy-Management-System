@@ -1,11 +1,29 @@
 {
   "entities": {
-    "Product": {
-      "title": "Product",
-      "description": "User-isolated inventory product item in LimoPOS",
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile in root users collection",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "storeId": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "storeName": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "email"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Product item in user inventory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "storeId": { "type": "string" },
         "barcode": { "type": "string" },
         "name": { "type": "string" },
         "company": { "type": "string" },
@@ -21,14 +39,16 @@
         "shelfRack": { "type": "string" },
         "batchNo": { "type": "string" }
       },
-      "required": ["id", "barcode", "name", "retailPrice", "stock"]
+      "required": ["id", "userId", "barcode", "name", "retailPrice", "stock"]
     },
     "SaleInvoice": {
       "title": "SaleInvoice",
-      "description": "User-isolated point of sale invoice",
+      "description": "Point of sale invoice record",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "storeId": { "type": "string" },
         "invoiceNo": { "type": "number" },
         "date": { "type": "string" },
         "customerName": { "type": "string" },
@@ -41,14 +61,16 @@
         "changeAmount": { "type": "number" },
         "cashier": { "type": "string" }
       },
-      "required": ["id", "invoiceNo", "date", "netAmount", "cashier"]
+      "required": ["id", "userId", "invoiceNo", "date", "netAmount", "cashier"]
     },
     "SaleReturn": {
       "title": "SaleReturn",
-      "description": "User-isolated returned items record",
+      "description": "Returned sales item record",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "storeId": { "type": "string" },
         "invoiceId": { "type": "string" },
         "date": { "type": "string" },
         "barcode": { "type": "string" },
@@ -58,14 +80,16 @@
         "reason": { "type": "string" },
         "cashier": { "type": "string" }
       },
-      "required": ["id", "date", "qty", "refundAmount"]
+      "required": ["id", "userId", "date", "qty", "refundAmount"]
     },
     "PurchaseRecord": {
       "title": "PurchaseRecord",
-      "description": "User-isolated stock purchase inward record",
+      "description": "Stock purchase inward record",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "storeId": { "type": "string" },
         "date": { "type": "string" },
         "supplierName": { "type": "string" },
         "supplierId": { "type": "string" },
@@ -77,41 +101,47 @@
         "wholesalePrice": { "type": "number" },
         "totalCost": { "type": "number" }
       },
-      "required": ["id", "date", "barcode", "itemName", "qtyReceived", "totalCost"]
+      "required": ["id", "userId", "date", "barcode", "itemName", "qtyReceived", "totalCost"]
     },
     "CreditPayment": {
       "title": "CreditPayment",
-      "description": "User-isolated credit payment record",
+      "description": "Credit payment recovery record",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "storeId": { "type": "string" },
         "date": { "type": "string" },
         "customerName": { "type": "string" },
         "amountReceived": { "type": "number" },
         "notes": { "type": "string" }
       },
-      "required": ["id", "date", "customerName", "amountReceived"]
+      "required": ["id", "userId", "date", "customerName", "amountReceived"]
     },
     "ExpenseRecord": {
       "title": "ExpenseRecord",
-      "description": "User-isolated operational expense record",
+      "description": "Store operational expense entry",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "storeId": { "type": "string" },
         "date": { "type": "string" },
         "category": { "type": "string" },
         "amount": { "type": "number" },
         "description": { "type": "string" },
         "recordedBy": { "type": "string" }
       },
-      "required": ["id", "date", "category", "amount"]
+      "required": ["id", "userId", "date", "category", "amount"]
     },
     "Supplier": {
       "title": "Supplier",
-      "description": "User-isolated supplier vendor record",
+      "description": "Supplier vendor profile",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "storeId": { "type": "string" },
         "name": { "type": "string" },
         "company": { "type": "string" },
         "phone": { "type": "string" },
@@ -119,28 +149,32 @@
         "address": { "type": "string" },
         "balanceOwed": { "type": "number" }
       },
-      "required": ["id", "name"]
+      "required": ["id", "userId", "name"]
     },
     "Customer": {
       "title": "Customer",
-      "description": "User-isolated customer profile",
+      "description": "Customer ledger profile",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "storeId": { "type": "string" },
         "name": { "type": "string" },
         "phone": { "type": "string" },
         "email": { "type": "string" },
         "address": { "type": "string" },
         "balanceReceivable": { "type": "number" }
       },
-      "required": ["id", "name"]
+      "required": ["id", "userId", "name"]
     },
     "CustomerTransaction": {
       "title": "CustomerTransaction",
-      "description": "User-isolated customer ledger entry",
+      "description": "Customer ledger transaction entry",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "storeId": { "type": "string" },
         "customerId": { "type": "string" },
         "customerName": { "type": "string" },
         "date": { "type": "string" },
@@ -151,14 +185,16 @@
         "credit": { "type": "number" },
         "balance": { "type": "number" }
       },
-      "required": ["id", "customerId", "customerName", "date", "type"]
+      "required": ["id", "userId", "customerId", "customerName", "date", "type"]
     },
     "SupplierTransaction": {
       "title": "SupplierTransaction",
-      "description": "User-isolated supplier ledger entry",
+      "description": "Supplier ledger transaction entry",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "storeId": { "type": "string" },
         "supplierId": { "type": "string" },
         "supplierName": { "type": "string" },
         "date": { "type": "string" },
@@ -169,13 +205,15 @@
         "credit": { "type": "number" },
         "balance": { "type": "number" }
       },
-      "required": ["id", "supplierId", "supplierName", "date", "type"]
+      "required": ["id", "userId", "supplierId", "supplierName", "date", "type"]
     },
     "StoreSettings": {
       "title": "StoreSettings",
-      "description": "User-isolated store configuration",
+      "description": "Store configuration and preferences",
       "type": "object",
       "properties": {
+        "userId": { "type": "string" },
+        "storeId": { "type": "string" },
         "storeName": { "type": "string" },
         "tagline": { "type": "string" },
         "address": { "type": "string" },
@@ -185,14 +223,15 @@
         "footerNote": { "type": "string" },
         "defaultPaperSize": { "type": "string" }
       },
-      "required": ["storeName", "currency"]
+      "required": ["userId", "storeName", "currency"]
     },
     "UserAccount": {
       "title": "UserAccount",
-      "description": "POS authorized user account",
+      "description": "Authorized user account",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "storeId": { "type": "string" },
         "name": { "type": "string" },
         "email": { "type": "string" },
         "role": { "type": "string" }
@@ -201,53 +240,57 @@
     }
   },
   "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document containing all subcollections scoped with storeId"
+    },
     "/users/{userId}/products/{productId}": {
       "schema": "Product",
-      "description": "Isolated product catalog and stock inventory for each user"
+      "description": "All inventory products for this user store"
     },
     "/users/{userId}/sales/{saleId}": {
       "schema": "SaleInvoice",
-      "description": "Isolated completed customer sales for each user"
+      "description": "All sales invoices for this user store"
     },
     "/users/{userId}/returns/{returnId}": {
       "schema": "SaleReturn",
-      "description": "Isolated customer returned invoices for each user"
+      "description": "All returns for this user store"
     },
     "/users/{userId}/purchases/{purchaseId}": {
       "schema": "PurchaseRecord",
-      "description": "Isolated supplier purchase inward receipts for each user"
+      "description": "All purchases for this user store"
     },
     "/users/{userId}/credits/{creditId}": {
       "schema": "CreditPayment",
-      "description": "Isolated credit recovery payments for each user"
+      "description": "All credit recovery payments for this user store"
     },
     "/users/{userId}/expenses/{expenseId}": {
       "schema": "ExpenseRecord",
-      "description": "Isolated store expenses log for each user"
+      "description": "All store expenses for this user store"
     },
     "/users/{userId}/suppliers/{supplierId}": {
       "schema": "Supplier",
-      "description": "Isolated suppliers list for each user"
+      "description": "All suppliers for this user store"
     },
     "/users/{userId}/customers/{customerId}": {
       "schema": "Customer",
-      "description": "Isolated customers list and ledgers for each user"
+      "description": "All customers for this user store"
     },
     "/users/{userId}/customerTransactions/{txId}": {
       "schema": "CustomerTransaction",
-      "description": "Isolated customer ledger history for each user"
+      "description": "All customer ledger entries for this user store"
     },
     "/users/{userId}/supplierTransactions/{txId}": {
       "schema": "SupplierTransaction",
-      "description": "Isolated supplier transaction history for each user"
+      "description": "All supplier ledger entries for this user store"
     },
-    "/users/{userId}/settings/{settingDoc}": {
+    "/users/{userId}/settings/{settingId}": {
       "schema": "StoreSettings",
-      "description": "Isolated store settings for each user"
+      "description": "Store settings for this user store"
     },
     "/userAccounts/{userId}": {
       "schema": "UserAccount",
-      "description": "User profiles and role access"
+      "description": "All authorized user accounts"
     }
   }
 }

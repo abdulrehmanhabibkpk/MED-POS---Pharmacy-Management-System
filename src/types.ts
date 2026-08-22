@@ -13,6 +13,8 @@ export interface StoreBrand {
 
 export interface Product {
   id: string;
+  storeId?: string;
+  userId?: string;
   barcode: string;
   name: string;
   company: string;
@@ -49,6 +51,8 @@ export interface SaleInvoiceItem {
 
 export interface SaleInvoice {
   id: string;
+  storeId?: string;
+  userId?: string;
   invoiceNo: number;
   date: string; // ISO string or formatted YYYY-MM-DD HH:mm:ss
   customerName: string;
@@ -64,6 +68,8 @@ export interface SaleInvoice {
 
 export interface SaleReturn {
   id: string;
+  storeId?: string;
+  userId?: string;
   date: string;
   barcode: string;
   itemName: string;
@@ -74,6 +80,8 @@ export interface SaleReturn {
 
 export interface CreditPayment {
   id: string;
+  storeId?: string;
+  userId?: string;
   date: string;
   customerName: string;
   amountReceived: number;
@@ -82,6 +90,8 @@ export interface CreditPayment {
 
 export interface PurchaseRecord {
   id: string;
+  storeId?: string;
+  userId?: string;
   date: string;
   supplierId?: string;
   supplierName: string;
@@ -96,6 +106,8 @@ export interface PurchaseRecord {
 
 export interface ExpenseRecord {
   id: string;
+  storeId?: string;
+  userId?: string;
   date: string;
   category: string;
   amount: number;
@@ -199,6 +211,8 @@ export interface ReceiptTemplate {
 }
 
 export interface StoreSettings {
+  storeId?: string;
+  userId?: string;
   storeName: string;
   tagline: string;
   address: string;
@@ -212,6 +226,8 @@ export interface StoreSettings {
 
 export interface Supplier {
   id: string;
+  storeId?: string;
+  userId?: string;
   name: string;
   company: string;
   phone: string;
@@ -222,6 +238,8 @@ export interface Supplier {
 
 export interface Customer {
   id: string;
+  storeId?: string;
+  userId?: string;
   name: string;
   phone: string;
   email: string;
@@ -231,6 +249,8 @@ export interface Customer {
 
 export interface CustomerTransaction {
   id: string;
+  storeId?: string;
+  userId?: string;
   customerId: string;
   customerName: string;
   date: string; // YYYY-MM-DD HH:mm:ss
@@ -247,6 +267,8 @@ export interface CustomerTransaction {
 
 export interface SupplierTransaction {
   id: string;
+  storeId?: string;
+  userId?: string;
   supplierId: string;
   supplierName: string;
   date: string; // YYYY-MM-DD HH:mm:ss
@@ -281,6 +303,7 @@ export interface UserPermissions {
 
 export interface UserAccount {
   id: string;
+  storeId?: string;
   name: string;
   email: string;
   password?: string;
