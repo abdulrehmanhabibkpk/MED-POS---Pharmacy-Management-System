@@ -30,12 +30,10 @@ import {
 
 interface POSContextType {
   isAuthenticated: boolean;
-  login: (u: string, p: string) => Promise<{ success: boolean; error?: string }>;
+  login: (u: string, p: string) => boolean;
   logout: () => void;
   userRole: UserRole;
   setUserRole: (role: UserRole) => void;
-  tenantId: string;
-  tenantName: string;
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   products: Product[];
@@ -189,14 +187,6 @@ const defaultAccounts: UserAccount[] = [
 
 export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isSyncingFromServer = useRef(false);
-
-  const [tenantId, setTenantIdState] = useState<string>(() => {
-    return localStorage.getItem('medpos_tenant_id') || 'tenant-default';
-  });
-
-  const [tenantName, setTenantName] = useState<string>(() => {
-    return localStorage.getItem('medpos_tenant_name') || 'Ali Pharmacy & General Store';
-  });
 
   const [userAccounts, setUserAccounts] = useState<UserAccount[]>(() => {
     const saved = localStorage.getItem('medpos_user_accounts');
@@ -409,49 +399,42 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [currentUser]);
 
-  const fetchPOSDataFromServer = async (tIdToFetch?: string) => {
-    const tId = tIdToFetch || tenantId;
-    if (!tId || tId === 'system') return;
-
-    try {
-      isSyncingFromServer.current = true;
-      const res = await fetch(`/api/pos-data?tenantId=${tId}`);
-      if (res.ok) {
-        const serverData = await res.json();
-        console.log(`Successfully synchronized state from server for tenant ${tId}:`, serverData);
-        if (serverData.userAccounts?.length > 0) setUserAccounts(serverData.userAccounts);
-        if (serverData.products?.length > 0) setProducts(serverData.products);
-        if (serverData.sales) setSales(serverData.sales);
-        if (serverData.returns) setReturns(serverData.returns);
-        if (serverData.purchases) setPurchases(serverData.purchases);
-        if (serverData.credits) setCredits(serverData.credits);
-        if (serverData.expenses) setExpenses(serverData.expenses);
-        if (serverData.suppliers?.length > 0) setSuppliers(serverData.suppliers);
-        if (serverData.customers?.length > 0) setCustomers(serverData.customers);
-        if (serverData.customerTransactions) setCustomerTransactions(serverData.customerTransactions);
-        if (serverData.supplierTransactions) setSupplierTransactions(serverData.supplierTransactions);
-        if (serverData.storeSettings) setStoreSettings(serverData.storeSettings);
-      }
-    } catch (err) {
-      console.warn('PostgreSQL server is offline or unreachable, falling back to offline LocalStorage state:', err);
-    } finally {
-      setTimeout(() => {
-        isSyncingFromServer.current = false;
-      }, 150);
-    }
-  };
-
-  // PostgreSQL database initial server-load hook per tenant
+  // SQLite database initial server-load hook
   useEffect(() => {
-    if (tenantId && tenantId !== 'system') {
-      fetchPOSDataFromServer(tenantId);
-    }
-  }, [tenantId]);
+    const fetchPOSDataFromServer = async () => {
+      try {
+        isSyncingFromServer.current = true;
+        const res = await fetch('/api/pos-data');
+        if (res.ok) {
+          const serverData = await res.json();
+          console.log('Successfully synchronized state from SQLite server:', serverData);
+          if (serverData.userAccounts?.length > 0) setUserAccounts(serverData.userAccounts);
+          if (serverData.products?.length > 0) setProducts(serverData.products);
+          if (serverData.sales) setSales(serverData.sales);
+          if (serverData.returns) setReturns(serverData.returns);
+          if (serverData.purchases) setPurchases(serverData.purchases);
+          if (serverData.credits) setCredits(serverData.credits);
+          if (serverData.expenses) setExpenses(serverData.expenses);
+          if (serverData.suppliers?.length > 0) setSuppliers(serverData.suppliers);
+          if (serverData.customers?.length > 0) setCustomers(serverData.customers);
+          if (serverData.customerTransactions) setCustomerTransactions(serverData.customerTransactions);
+          if (serverData.supplierTransactions) setSupplierTransactions(serverData.supplierTransactions);
+          if (serverData.storeSettings) setStoreSettings(serverData.storeSettings);
+        }
+      } catch (err) {
+        console.warn('SQLite server is offline or unreachable, falling back to offline LocalStorage state:', err);
+      } finally {
+        setTimeout(() => {
+          isSyncingFromServer.current = false;
+        }, 150);
+      }
+    };
+    fetchPOSDataFromServer();
+  }, []);
 
-  // Automatic multi-tenant auto-save synchronization hook (debounced 1s)
+  // Automatic SQLite auto-save synchronization hook (debounced 1s)
   useEffect(() => {
     if (isSyncingFromServer.current) return;
-    if (!tenantId || tenantId === 'system') return;
 
     const syncTimer = setTimeout(async () => {
       try {
@@ -469,16 +452,16 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           storeSettings,
           userAccounts,
         };
-        await fetch(`/api/save-all?tenantId=${tenantId}`, {
+        await fetch('/api/save-all', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
         });
-        console.log(`POS state auto-synchronized to server for tenant ${tenantId}.`);
+        console.log('POS state auto-synchronized to SQLite server.');
       } catch (err) {
-        console.error('Auto-sync to PostgreSQL database failed:', err);
+        console.error('Auto-sync to SQLite database failed:', err);
       }
     }, 1000);
 
@@ -496,18 +479,15 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     supplierTransactions,
     storeSettings,
     userAccounts,
-    tenantId,
   ]);
 
-  // Real-time background polling to sync changes from other tabs/devices
+  // Real-time automatic SQLite background polling to sync changes from other tabs/devices
   useEffect(() => {
-    if (!tenantId || tenantId === 'system') return;
-
     const pollTimer = setInterval(async () => {
       if (isSyncingFromServer.current) return;
 
       try {
-        const res = await fetch(`/api/pos-data?tenantId=${tenantId}`);
+        const res = await fetch('/api/pos-data');
         if (res.ok) {
           const serverData = await res.json();
           isSyncingFromServer.current = true;
@@ -548,60 +528,68 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     supplierTransactions,
     storeSettings,
     userAccounts,
-    tenantId,
   ]);
 
-  const login = async (u: string, p: string): Promise<{ success: boolean; error?: string }> => {
+  const login = (u: string, p: string) => {
     const emailLower = u.trim().toLowerCase();
     const passwordLower = p.trim();
 
-    try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailLower, password: passwordLower })
-      });
+    // Look up in our custom accounts
+    const found = userAccounts.find(
+      (acc) => acc.email.trim().toLowerCase() === emailLower && acc.password === passwordLower
+    );
 
-      if (!res.ok) {
-        const errData = await res.json();
-        return { success: false, error: errData.error || 'Invalid login credentials.' };
+    if (found) {
+      setIsAuthenticated(true);
+      setCurrentUser(found);
+      setUserRole(found.role);
+      if (emailLower === 'alitrader@gmail.com') {
+        setActiveTab('master-admin');
+      } else {
+        setActiveTab('dashboard');
       }
-
-      const data = await res.json();
-      if (data.success) {
-        setIsAuthenticated(true);
-        setCurrentUser(data.user);
-        setUserRole(data.user.role);
-        
-        const tId = data.tenant.id;
-        setTenantIdState(tId);
-        setTenantName(data.tenant.name);
-        localStorage.setItem('medpos_tenant_id', tId);
-        localStorage.setItem('medpos_tenant_name', data.tenant.name);
-        
-        if (emailLower === 'alitrader@gmail.com' || tId === 'system') {
-          setActiveTab('master-admin');
-        } else {
-          setActiveTab('dashboard');
-        }
-
-        await fetchPOSDataFromServer(tId);
-        return { success: true };
-      }
-      return { success: false, error: 'Login validation failed.' };
-    } catch (err: any) {
-      console.error('Login error:', err);
-      return { success: false, error: 'PostgreSQL Server offline or unreachable. Please try again.' };
+      return true;
     }
+
+    // Fallback default system accounts for testing/safety
+    if (emailLower === 'admin' && passwordLower === 'admin') {
+      const fallbackAdmin: UserAccount = {
+        id: 'acc-fallback-admin',
+        name: 'Default Admin',
+        email: 'admin',
+        password: 'admin',
+        role: 'Admin',
+        permissions: {
+          canDashboard: true,
+          canSale: true,
+          canReturn: true,
+          canBillHistory: true,
+          canCreditReceive: true,
+          canPurchaseStock: true,
+          canProducts: true,
+          canSuppliers: true,
+          canCustomers: true,
+          canBarcodeLabel: true,
+          canDayClosing: true,
+          canExpenses: true,
+          canReports: true,
+          canSettings: true,
+          canPlanPRD: true,
+        }
+      };
+      setIsAuthenticated(true);
+      setCurrentUser(fallbackAdmin);
+      setUserRole('Admin');
+      setActiveTab('dashboard');
+      return true;
+    }
+
+    return false;
   };
 
   const logout = () => {
     setIsAuthenticated(false);
     setCurrentUser(null);
-    setTenantIdState('tenant-default');
-    setTenantName('Ali Pharmacy & General Store');
-    localStorage.removeItem('medpos_tenant_id');
-    localStorage.removeItem('medpos_tenant_name');
   };
 
   const addUserAccount = (acc: Omit<UserAccount, 'id'>) => {
@@ -1197,8 +1185,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         logout,
         userRole,
         setUserRole,
-        tenantId,
-        tenantName,
         activeTab,
         setActiveTab,
         products,

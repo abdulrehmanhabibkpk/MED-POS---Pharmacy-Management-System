@@ -1,19 +1,7 @@
 import { pgTable, text, doublePrecision, integer } from 'drizzle-orm/pg-core';
 
-export const tenants = pgTable('tenants', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  status: text('status').notNull(), // 'Active' | 'Suspended' | 'Expired'
-  monthlyFee: doublePrecision('monthly_fee').notNull(),
-  expiryDate: text('expiry_date').notNull(), // YYYY-MM-DD
-  createdAt: text('created_at').notNull(),
-  ownerName: text('owner_name').notNull(),
-  ownerEmail: text('owner_email').notNull(),
-});
-
 export const userAccounts = pgTable('user_accounts', {
   id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull().default('tenant-default'),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
   password: text('password').notNull(),
@@ -23,7 +11,6 @@ export const userAccounts = pgTable('user_accounts', {
 
 export const products = pgTable('products', {
   id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull().default('tenant-default'),
   barcode: text('barcode').notNull(),
   name: text('name').notNull(),
   company: text('company').notNull(),
@@ -43,7 +30,6 @@ export const products = pgTable('products', {
 
 export const sales = pgTable('sales', {
   id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull().default('tenant-default'),
   invoiceNo: integer('invoice_no').notNull(),
   date: text('date').notNull(),
   customerName: text('customer_name').notNull(),
@@ -59,7 +45,6 @@ export const sales = pgTable('sales', {
 
 export const returns = pgTable('returns', {
   id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull().default('tenant-default'),
   date: text('date').notNull(),
   barcode: text('barcode').notNull(),
   itemName: text('item_name').notNull(),
@@ -70,7 +55,6 @@ export const returns = pgTable('returns', {
 
 export const credits = pgTable('credits', {
   id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull().default('tenant-default'),
   date: text('date').notNull(),
   customerName: text('customer_name').notNull(),
   amountReceived: doublePrecision('amount_received').notNull(),
@@ -79,7 +63,6 @@ export const credits = pgTable('credits', {
 
 export const purchases = pgTable('purchases', {
   id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull().default('tenant-default'),
   date: text('date').notNull(),
   supplierId: text('supplier_id'),
   supplierName: text('supplier_name').notNull(),
@@ -94,7 +77,6 @@ export const purchases = pgTable('purchases', {
 
 export const expenses = pgTable('expenses', {
   id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull().default('tenant-default'),
   date: text('date').notNull(),
   category: text('category').notNull(),
   amount: doublePrecision('amount').notNull(),
@@ -104,7 +86,6 @@ export const expenses = pgTable('expenses', {
 
 export const suppliers = pgTable('suppliers', {
   id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull().default('tenant-default'),
   name: text('name').notNull(),
   company: text('company').notNull(),
   phone: text('phone'),
@@ -115,7 +96,6 @@ export const suppliers = pgTable('suppliers', {
 
 export const customers = pgTable('customers', {
   id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull().default('tenant-default'),
   name: text('name').notNull(),
   phone: text('phone'),
   email: text('email'),
@@ -125,7 +105,6 @@ export const customers = pgTable('customers', {
 
 export const customerTransactions = pgTable('customer_transactions', {
   id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull().default('tenant-default'),
   customerId: text('customer_id').notNull(),
   customerName: text('customer_name').notNull(),
   date: text('date').notNull(),
@@ -142,7 +121,6 @@ export const customerTransactions = pgTable('customer_transactions', {
 
 export const supplierTransactions = pgTable('supplier_transactions', {
   id: text('id').primaryKey(),
-  tenantId: text('tenant_id').notNull().default('tenant-default'),
   supplierId: text('supplier_id').notNull(),
   supplierName: text('supplier_name').notNull(),
   date: text('date').notNull(),
@@ -158,6 +136,6 @@ export const supplierTransactions = pgTable('supplier_transactions', {
 });
 
 export const storeSettings = pgTable('store_settings', {
-  tenantId: text('tenant_id').primaryKey(),
+  key: text('key').primaryKey(),
   value: text('value').notNull(),
 });

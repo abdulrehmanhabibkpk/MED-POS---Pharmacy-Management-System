@@ -1,783 +1,1025 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Building2, Users, CreditCard, Calendar, CheckCircle, AlertTriangle, 
-  Plus, Edit2, Download, Trash2, Mail, Lock, User, RefreshCw, ChevronDown, ChevronUp, DollarSign, Ban
+import React, { useState } from 'react';
+import {
+  Users,
+  ShieldAlert,
+  UserPlus,
+  Trash2,
+  Edit,
+  Lock,
+  Mail,
+  UserCheck,
+  Check,
+  X,
+  User,
+  Settings,
+  DollarSign,
+  Briefcase,
+  Layers,
+  Key,
 } from 'lucide-react';
 import { usePOS } from '../context/POSContext';
-
-interface DetailedTenant {
-  id: string;
-  name: string;
-  status: string; // 'Active' | 'Suspended' | 'Expired'
-  monthlyFee: number;
-  expiryDate: string;
-  createdAt: string;
-  ownerName: string;
-  ownerEmail: string;
-  subAccountsCount: number;
-  salesCount: number;
-  productsCount: number;
-  totalSalesValue: number;
-}
+import { UserAccount, UserRole } from '../types';
 
 export const MasterAdminView: React.FC = () => {
-  const { currentUser, logout } = usePOS();
+  const { userAccounts, addUserAccount, updateUserAccount, deleteUserAccount, currentUser, storeSettings } = usePOS();
+
+  // New Account state
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState<UserRole>('Cashier');
   
-  // Tenants and metrics state
-  const [tenants, setTenants] = useState<DetailedTenant[]>([]);
-  const [totalSubAccounts, setTotalSubAccounts] = useState(0);
-  const [mrr, setMrr] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isActionLoading, setIsActionLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  // New Account Permissions state
+  const [canDashboard, setCanDashboard] = useState(true);
+  const [canSale, setCanSale] = useState(true);
+  const [canReturn, setCanReturn] = useState(true);
+  const [canBillHistory, setCanBillHistory] = useState(true);
+  const [canCreditReceive, setCanCreditReceive] = useState(false);
+  const [canPurchaseStock, setCanPurchaseStock] = useState(false);
+  const [canProducts, setCanProducts] = useState(false);
+  const [canSuppliers, setCanSuppliers] = useState(false);
+  const [canCustomers, setCanCustomers] = useState(false);
+  const [canBarcodeLabel, setCanBarcodeLabel] = useState(true);
+  const [canDayClosing, setCanDayClosing] = useState(false);
+  const [canExpenses, setCanExpenses] = useState(false);
+  const [canReports, setCanReports] = useState(false);
+  const [canSettings, setCanSettings] = useState(false);
+  const [canPlanPRD, setCanPlanPRD] = useState(true);
 
-  // Expandable tenant rows state
-  const [expandedTenantId, setExpandedTenantId] = useState<string | null>(null);
-
-  // New Tenant Modal state
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newCompanyName, setNewCompanyName] = useState('');
-  const [newOwnerName, setNewOwnerName] = useState('');
-  const [newOwnerEmail, setNewOwnerEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [newMonthlyFee, setNewMonthlyFee] = useState(3500);
-  const [newExpiryDate, setNewExpiryDate] = useState(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + 1); // default 1 month from now
-    return d.toISOString().split('T')[0];
-  });
-
-  // Edit Tenant Modal state
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingTenant, setEditingTenant] = useState<DetailedTenant | null>(null);
+  // Edit Account state
+  const [editingAccount, setEditingAccount] = useState<UserAccount | null>(null);
   const [editName, setEditName] = useState('');
-  const [editStatus, setEditStatus] = useState('Active');
-  const [editMonthlyFee, setEditMonthlyFee] = useState(3500);
-  const [editExpiryDate, setEditExpiryDate] = useState('');
-  const [editOwnerName, setEditOwnerName] = useState('');
-  const [editOwnerEmail, setEditOwnerEmail] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editRole, setEditRole] = useState<UserRole>('Cashier');
+  
+  // Edit Permissions state
+  const [editCanDashboard, setEditCanDashboard] = useState(true);
+  const [editCanSale, setEditCanSale] = useState(true);
+  const [editCanReturn, setEditCanReturn] = useState(true);
+  const [editCanBillHistory, setEditCanBillHistory] = useState(true);
+  const [editCanCreditReceive, setEditCanCreditReceive] = useState(false);
+  const [editCanPurchaseStock, setEditCanPurchaseStock] = useState(false);
+  const [editCanProducts, setEditCanProducts] = useState(false);
+  const [editCanSuppliers, setEditCanSuppliers] = useState(false);
+  const [editCanCustomers, setEditCanCustomers] = useState(false);
+  const [editCanBarcodeLabel, setEditCanBarcodeLabel] = useState(true);
+  const [editCanDayClosing, setEditCanDayClosing] = useState(false);
+  const [editCanExpenses, setEditCanExpenses] = useState(false);
+  const [editCanReports, setEditCanReports] = useState(false);
+  const [editCanSettings, setEditCanSettings] = useState(false);
+  const [editCanPlanPRD, setEditCanPlanPRD] = useState(true);
 
-  // Load SaaS dashboard data
-  const loadSaaSData = async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/super-admin/data');
-      if (!res.ok) {
-        throw new Error('Failed to retrieve SaaS systems data.');
-      }
-      const data = await res.json();
-      setTenants(data.tenants || []);
-      setTotalSubAccounts(data.totalRegisteredUsers || 0);
-      setMrr(data.revenueMonthlyProjection || 0);
-    } catch (err: any) {
-      setError(err.message || 'Error communicating with PostgreSQL server.');
-    } finally {
-      setIsLoading(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handleRoleChange = (selectedRole: UserRole) => {
+    setRole(selectedRole);
+    if (selectedRole === 'Admin') {
+      setCanDashboard(true);
+      setCanSale(true);
+      setCanReturn(true);
+      setCanBillHistory(true);
+      setCanCreditReceive(true);
+      setCanPurchaseStock(true);
+      setCanProducts(true);
+      setCanSuppliers(true);
+      setCanCustomers(true);
+      setCanBarcodeLabel(true);
+      setCanDayClosing(true);
+      setCanExpenses(true);
+      setCanReports(true);
+      setCanSettings(true);
+      setCanPlanPRD(true);
+    } else if (selectedRole === 'Manager') {
+      setCanDashboard(true);
+      setCanSale(true);
+      setCanReturn(true);
+      setCanBillHistory(true);
+      setCanCreditReceive(true);
+      setCanPurchaseStock(true);
+      setCanProducts(true);
+      setCanSuppliers(true);
+      setCanCustomers(true);
+      setCanBarcodeLabel(true);
+      setCanDayClosing(true);
+      setCanExpenses(true);
+      setCanReports(true);
+      setCanSettings(false);
+      setCanPlanPRD(false);
+    } else {
+      setCanDashboard(true);
+      setCanSale(true);
+      setCanReturn(true);
+      setCanBillHistory(true);
+      setCanCreditReceive(false);
+      setCanPurchaseStock(false);
+      setCanProducts(false);
+      setCanSuppliers(false);
+      setCanCustomers(false);
+      setCanBarcodeLabel(true);
+      setCanDayClosing(false);
+      setCanExpenses(false);
+      setCanReports(false);
+      setCanSettings(false);
+      setCanPlanPRD(true);
     }
   };
 
-  useEffect(() => {
-    loadSaaSData();
-  }, []);
+  const handleEditRoleChange = (selectedRole: UserRole) => {
+    setEditRole(selectedRole);
+    if (selectedRole === 'Admin') {
+      setEditCanDashboard(true);
+      setEditCanSale(true);
+      setEditCanReturn(true);
+      setEditCanBillHistory(true);
+      setEditCanCreditReceive(true);
+      setEditCanPurchaseStock(true);
+      setEditCanProducts(true);
+      setEditCanSuppliers(true);
+      setEditCanCustomers(true);
+      setEditCanBarcodeLabel(true);
+      setEditCanDayClosing(true);
+      setEditCanExpenses(true);
+      setEditCanReports(true);
+      setEditCanSettings(true);
+      setEditCanPlanPRD(true);
+    } else if (selectedRole === 'Manager') {
+      setEditCanDashboard(true);
+      setEditCanSale(true);
+      setEditCanReturn(true);
+      setEditCanBillHistory(true);
+      setEditCanCreditReceive(true);
+      setEditCanPurchaseStock(true);
+      setEditCanProducts(true);
+      setEditCanSuppliers(true);
+      setEditCanCustomers(true);
+      setEditCanBarcodeLabel(true);
+      setEditCanDayClosing(true);
+      setEditCanExpenses(true);
+      setEditCanReports(true);
+      setEditCanSettings(false);
+      setEditCanPlanPRD(false);
+    } else {
+      setEditCanDashboard(true);
+      setEditCanSale(true);
+      setEditCanReturn(true);
+      setEditCanBillHistory(true);
+      setEditCanCreditReceive(false);
+      setEditCanPurchaseStock(false);
+      setEditCanProducts(false);
+      setEditCanSuppliers(false);
+      setEditCanCustomers(false);
+      setEditCanBarcodeLabel(true);
+      setEditCanDayClosing(false);
+      setEditCanExpenses(false);
+      setEditCanReports(false);
+      setEditCanSettings(false);
+      setEditCanPlanPRD(true);
+    }
+  };
 
-  // Create new tenant
-  const handleCreateTenant = async (e: React.FormEvent) => {
+  const handleCreateAccount = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCompanyName.trim() || !newOwnerName.trim() || !newOwnerEmail.trim() || !newPassword.trim()) {
-      setError('Please provide all parameters to create a new workspace.');
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      setNotification({ type: 'error', message: 'All fields are required!' });
       return;
     }
 
-    setIsActionLoading(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      const res = await fetch('/api/super-admin/create-tenant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newCompanyName.trim(),
-          ownerName: newOwnerName.trim(),
-          ownerEmail: newOwnerEmail.trim(),
-          password: newPassword,
-          monthlyFee: newMonthlyFee,
-          expiryDate: newExpiryDate
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to create workspace.');
-      }
-
-      setSuccess(data.message || 'Company Workspace created successfully!');
-      setShowCreateModal(false);
-      
-      // Reset inputs
-      setNewCompanyName('');
-      setNewOwnerName('');
-      setNewOwnerEmail('');
-      setNewPassword('');
-      setNewMonthlyFee(3500);
-      
-      // Reload
-      await loadSaaSData();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsActionLoading(false);
-    }
-  };
-
-  // Open Edit Modal
-  const openEditModal = (t: DetailedTenant) => {
-    setEditingTenant(t);
-    setEditName(t.name);
-    setEditStatus(t.status);
-    setEditMonthlyFee(t.monthlyFee);
-    setEditExpiryDate(t.expiryDate);
-    setEditOwnerName(t.ownerName);
-    setEditOwnerEmail(t.ownerEmail);
-    setShowEditModal(true);
-  };
-
-  // Save Tenant edits
-  const handleUpdateTenant = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingTenant) return;
-
-    setIsActionLoading(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      const res = await fetch('/api/super-admin/update-tenant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: editingTenant.id,
-          name: editName.trim(),
-          status: editStatus,
-          monthlyFee: editMonthlyFee,
-          expiryDate: editExpiryDate,
-          ownerName: editOwnerName.trim(),
-          ownerEmail: editOwnerEmail.trim()
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to update workspace properties.');
-      }
-
-      setSuccess(data.message || 'Workspace configuration updated successfully.');
-      setShowEditModal(false);
-      setEditingTenant(null);
-      await loadSaaSData();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsActionLoading(false);
-    }
-  };
-
-  // Delete Tenant
-  const handleDeleteTenant = async (id: string, name: string) => {
-    if (!confirm(`CRITICAL WARNING:\nAre you absolutely sure you want to permanently delete "${name}" workspace?\nAll isolated sales, khata ledgers, customers, and employees will be deleted. This action is irreversible.`)) {
+    const emailLower = email.trim().toLowerCase();
+    const emailExists = userAccounts.some((acc) => acc.email.toLowerCase() === emailLower);
+    if (emailExists) {
+      setNotification({ type: 'error', message: 'This email is already in use by another account.' });
       return;
     }
 
-    setIsActionLoading(true);
-    setError('');
-    setSuccess('');
+    addUserAccount({
+      name: name.trim(),
+      email: emailLower,
+      password: password,
+      role: role,
+      permissions: {
+        canDashboard,
+        canSale,
+        canReturn,
+        canBillHistory,
+        canCreditReceive,
+        canPurchaseStock,
+        canProducts,
+        canSuppliers,
+        canCustomers,
+        canBarcodeLabel,
+        canDayClosing,
+        canExpenses,
+        canReports,
+        canSettings,
+        canPlanPRD,
+      },
+    });
 
-    try {
-      const res = await fetch(`/api/super-admin/delete-tenant/${id}`, {
-        method: 'DELETE'
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to delete workspace.');
-      }
-
-      setSuccess(data.message || 'Workspace fully purged from primary servers.');
-      await loadSaaSData();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsActionLoading(false);
-    }
+    setNotification({ type: 'success', message: `Account "${name}" created successfully as ${role}.` });
+    
+    // Reset fields
+    setName('');
+    setEmail('');
+    setPassword('');
+    setRole('Cashier');
+    setCanDashboard(true);
+    setCanSale(true);
+    setCanReturn(true);
+    setCanBillHistory(true);
+    setCanCreditReceive(false);
+    setCanPurchaseStock(false);
+    setCanProducts(false);
+    setCanSuppliers(false);
+    setCanCustomers(false);
+    setCanBarcodeLabel(true);
+    setCanDayClosing(false);
+    setCanExpenses(false);
+    setCanReports(false);
+    setCanSettings(false);
+    setCanPlanPRD(true);
   };
 
-  // Download Backup of Workspace
-  const downloadTenantBackup = async (id: string, name: string) => {
-    setError('');
-    setSuccess('');
-    try {
-      const res = await fetch(`/api/super-admin/backup-tenant/${id}`);
-      if (!res.ok) {
-        throw new Error('Failed to retrieve backup stream from database server.');
-      }
+  const handleStartEdit = (acc: UserAccount) => {
+    setEditingAccount(acc);
+    setEditName(acc.name);
+    setEditEmail(acc.email);
+    setEditPassword(acc.password || '');
+    setEditRole(acc.role);
+    setEditCanDashboard(acc.permissions.canDashboard ?? true);
+    setEditCanSale(acc.permissions.canSale);
+    setEditCanReturn(acc.permissions.canReturn);
+    setEditCanBillHistory(acc.permissions.canBillHistory ?? true);
+    setEditCanCreditReceive(acc.permissions.canCreditReceive ?? true);
+    setEditCanPurchaseStock(acc.permissions.canPurchaseStock ?? true);
+    setEditCanProducts(acc.permissions.canProducts ?? true);
+    setEditCanSuppliers(acc.permissions.canSuppliers ?? true);
+    setEditCanCustomers(acc.permissions.canCustomers ?? true);
+    setEditCanBarcodeLabel(acc.permissions.canBarcodeLabel ?? true);
+    setEditCanDayClosing(acc.permissions.canDayClosing ?? true);
+    setEditCanExpenses(acc.permissions.canExpenses);
+    setEditCanReports(acc.permissions.canReports);
+    setEditCanSettings(acc.permissions.canSettings);
+    setEditCanPlanPRD(acc.permissions.canPlanPRD ?? true);
+  };
 
-      const backupData = await res.json();
-      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `SaaS_Backup_${name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setSuccess(`Isolated database backup of "${name}" successfully extracted.`);
-    } catch (err: any) {
-      setError(err.message || 'Failed to download company data backup.');
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAccount) return;
+
+    if (!editName.trim() || !editEmail.trim() || !editPassword.trim()) {
+      setNotification({ type: 'error', message: 'All fields are required to update account!' });
+      return;
+    }
+
+    const emailLower = editEmail.trim().toLowerCase();
+    const emailExists = userAccounts.some(
+      (acc) => acc.id !== editingAccount.id && acc.email.toLowerCase() === emailLower
+    );
+    if (emailExists) {
+      setNotification({ type: 'error', message: 'This email is already taken!' });
+      return;
+    }
+
+    updateUserAccount({
+      id: editingAccount.id,
+      name: editName.trim(),
+      email: emailLower,
+      password: editPassword,
+      role: editRole,
+      permissions: {
+        canDashboard: editCanDashboard,
+        canSale: editCanSale,
+        canReturn: editCanReturn,
+        canBillHistory: editCanBillHistory,
+        canCreditReceive: editCanCreditReceive,
+        canPurchaseStock: editCanPurchaseStock,
+        canProducts: editCanProducts,
+        canSuppliers: editCanSuppliers,
+        canCustomers: editCanCustomers,
+        canBarcodeLabel: editCanBarcodeLabel,
+        canDayClosing: editCanDayClosing,
+        canExpenses: editCanExpenses,
+        canReports: editCanReports,
+        canSettings: editCanSettings,
+        canPlanPRD: editCanPlanPRD,
+      },
+    });
+
+    setNotification({ type: 'success', message: 'Account updated successfully!' });
+    setEditingAccount(null);
+  };
+
+  const handleDeleteAccount = (acc: UserAccount) => {
+    if (acc.id === 'acc-master') {
+      alert('Security Alert: Master Admin Account cannot be deleted.');
+      return;
+    }
+    if (confirm(`Are you sure you want to delete ${acc.name}'s account (${acc.role})?`)) {
+      deleteUserAccount(acc.id);
+      setNotification({ type: 'success', message: 'Account deleted successfully!' });
     }
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-[#F9FAFB] min-h-screen space-y-8 select-none font-sans">
-      
-      {/* Top row heading and actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight">
-            SaaS Platform Master Dashboard
-          </h1>
-          <p className="text-sm text-[#6B7280] font-medium mt-1">
-            Centrally manage tenant company stores, recurring subscription plans, and secure system database records.
-          </p>
-        </div>
-        
+    <div className="p-3 md:p-6 bg-[#f4f7fa] min-h-full space-y-6 pb-24 md:pb-8">
+      {/* Upper Brand Area */}
+      <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <button
-            onClick={loadSaaSData}
-            className="p-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-all flex items-center gap-1.5 text-xs font-bold shadow-sm"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>Sync Live</span>
-          </button>
-          
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2.5 rounded-xl bg-[#3F83F8] hover:bg-[#2563EB] text-white transition-all flex items-center gap-2 text-xs font-bold shadow-md shadow-blue-100"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create New Workspace</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Global Toast Notifications */}
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-xs font-semibold flex items-center justify-between gap-3 animate-fade-in">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4.5 h-4.5 text-red-600 shrink-0" />
-            <span>{error}</span>
-          </div>
-          <button onClick={() => setError('')} className="text-red-900 uppercase font-bold hover:underline">Dismiss</button>
-        </div>
-      )}
-
-      {success && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-2xl text-green-800 text-xs font-semibold flex items-center justify-between gap-3 animate-fade-in">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="w-4.5 h-4.5 text-green-600 shrink-0" />
-            <span>{success}</span>
-          </div>
-          <button onClick={() => setSuccess('')} className="text-green-900 uppercase font-bold hover:underline">Dismiss</button>
-        </div>
-      )}
-
-      {/* KPI Overview Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        
-        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-            <Building2 className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-              Total Company Stores
-            </div>
-            <div className="text-2xl font-black text-gray-900 mt-1">
-              {tenants.length}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
-            <DollarSign className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-              Monthly Recurring Revenue (MRR)
-            </div>
-            <div className="text-2xl font-black text-gray-900 mt-1 font-mono">
-              Rs. {mrr.toLocaleString()}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+          <div className="bg-blue-100 p-2 rounded-lg text-blue-700">
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-              System Sub-Accounts
-            </div>
-            <div className="text-2xl font-black text-gray-900 mt-1">
-              {totalSubAccounts}
-            </div>
+            <h1 className="text-lg font-black text-slate-900 uppercase">Master Admin Panel</h1>
+            <p className="text-xs text-slate-500">Manage admin credentials, employee accounts, and customize access permissions.</p>
           </div>
         </div>
-
-        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-              Flagged Workspace Alerts
-            </div>
-            <div className="text-2xl font-black text-gray-900 mt-1">
-              {tenants.filter(t => t.status !== 'Active').length}
-            </div>
-          </div>
+        <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 p-2 px-3 rounded-lg text-blue-800 text-xs">
+          <UserCheck className="w-4 h-4" />
+          <span>Active Session: <strong>{currentUser?.name || 'Administrator'}</strong> ({currentUser?.role})</span>
         </div>
-
       </div>
 
-      {/* Main SaaS Workspace Manager Table container */}
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-          <h2 className="text-xs sm:text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-gray-500" />
-            <span>SaaS Workspaces & Active Licenses ({tenants.length})</span>
-          </h2>
-          <span className="text-[10px] bg-blue-100 text-[#1E429F] font-bold px-2.5 py-1 rounded-full border border-blue-200 uppercase tracking-wide">
-            Live Cloud SQL Postgres
-          </span>
-        </div>
-
-        {isLoading ? (
-          <div className="py-24 flex flex-col items-center justify-center gap-3">
-            <span className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs font-semibold text-gray-500">Retrieving secure workspace matrices...</span>
+      {notification && (
+        <div
+          className={`p-3 rounded-lg border text-xs flex items-center justify-between ${
+            notification.type === 'success'
+              ? 'bg-green-50 border-green-200 text-green-800'
+              : 'bg-red-50 border-red-200 text-red-800'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {notification.type === 'success' ? <Check className="w-4 h-4 text-green-600" /> : <X className="w-4 h-4 text-red-600" />}
+            <span>{notification.message}</span>
           </div>
-        ) : tenants.length === 0 ? (
-          <div className="py-16 text-center text-gray-500 flex flex-col items-center gap-2">
-            <Building2 className="w-12 h-12 text-gray-300" />
-            <div className="text-sm font-bold">No active workspaces configured.</div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="text-[#2563EB] text-xs font-bold hover:underline mt-2"
-            >
-              Click here to register the first client.
-            </button>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50/50 text-[10px] font-extrabold uppercase text-gray-500 tracking-wider">
-                  <th className="py-3.5 px-5">Store Name & Owner</th>
-                  <th className="py-3.5 px-4">Status & Health</th>
-                  <th className="py-3.5 px-4">Monthly fee</th>
-                  <th className="py-3.5 px-4">License Expiry</th>
-                  <th className="py-3.5 px-4 text-center">Cloud Storage</th>
-                  <th className="py-3.5 px-5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {tenants.map((t) => {
-                  const isExpanded = expandedTenantId === t.id;
-                  const isExpiredSoon = new Date(t.expiryDate) < new Date(Date.now() + 7 * 24 * 3600 * 1000);
-                  
-                  return (
-                    <React.Fragment key={t.id}>
-                      <tr className="hover:bg-gray-50/50 transition-colors">
-                        {/* Company Name and Owner Info */}
-                        <td className="py-4 px-5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center font-bold text-gray-700 uppercase shrink-0 border border-gray-200">
-                              {t.name.slice(0, 2)}
-                            </div>
-                            <div>
-                              <div className="font-extrabold text-gray-900 text-xs sm:text-sm flex items-center gap-2">
-                                <span>{t.name}</span>
-                                <button
-                                  onClick={() => setExpandedTenantId(isExpanded ? null : t.id)}
-                                  className="text-gray-400 hover:text-gray-600"
-                                >
-                                  {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                                </button>
-                              </div>
-                              <div className="text-[11px] text-gray-500 font-medium flex items-center gap-1.5 mt-0.5">
-                                <User className="w-3 h-3 text-gray-400" />
-                                <span>{t.ownerName}</span>
-                                <span>•</span>
-                                <span className="font-mono">{t.ownerEmail}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Status badge */}
-                        <td className="py-4 px-4">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                            t.status === 'Active'
-                              ? 'bg-green-50 border-green-200 text-green-700'
-                              : t.status === 'Suspended'
-                              ? 'bg-red-50 border-red-200 text-red-700'
-                              : 'bg-amber-50 border-amber-200 text-amber-700'
-                          }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${
-                              t.status === 'Active' ? 'bg-green-500' : t.status === 'Suspended' ? 'bg-red-500' : 'bg-amber-500'
-                            }`} />
-                            <span>{t.status}</span>
-                          </span>
-                        </td>
-
-                        {/* Monthly Fee */}
-                        <td className="py-4 px-4 font-mono text-xs font-bold text-gray-900">
-                          Rs. {t.monthlyFee.toLocaleString()}
-                        </td>
-
-                        {/* Expiry Date */}
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800">
-                            <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                            <span className={isExpiredSoon && t.status === 'Active' ? 'text-amber-600' : ''}>
-                              {t.expiryDate}
-                            </span>
-                            {isExpiredSoon && t.status === 'Active' && (
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-ping" />
-                            )}
-                          </div>
-                          <div className="text-[10px] text-gray-400 font-medium mt-0.5 font-mono">
-                            Created: {t.createdAt.slice(0, 10)}
-                          </div>
-                        </td>
-
-                        {/* Usage Metrics overview */}
-                        <td className="py-4 px-4 text-center">
-                          <div className="inline-grid grid-cols-3 gap-3 text-center border border-gray-100 rounded-lg p-1 bg-gray-50/50">
-                            <div className="px-1.5">
-                              <div className="text-[9px] text-gray-400 uppercase font-bold tracking-tight">Products</div>
-                              <div className="text-xs font-black text-gray-700 font-mono">{t.productsCount}</div>
-                            </div>
-                            <div className="px-1.5 border-x border-gray-200">
-                              <div className="text-[9px] text-gray-400 uppercase font-bold tracking-tight">Sales</div>
-                              <div className="text-xs font-black text-gray-700 font-mono">{t.salesCount}</div>
-                            </div>
-                            <div className="px-1.5">
-                              <div className="text-[9px] text-gray-400 uppercase font-bold tracking-tight">Staff</div>
-                              <div className="text-xs font-black text-gray-700 font-mono">{t.subAccountsCount}</div>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Interactive actions */}
-                        <td className="py-4 px-5 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => downloadTenantBackup(t.id, t.name)}
-                              title="Download Backup"
-                              className="p-2 text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-all"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button
-                              onClick={() => openEditModal(t)}
-                              title="Edit Workspace"
-                              className="p-2 text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-all"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button
-                              onClick={() => handleDeleteTenant(t.id, t.name)}
-                              title="Wipe Workspace"
-                              className="p-2 text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-all"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-
-                      {/* Expandable row for showing detailed info */}
-                      {isExpanded && (
-                        <tr className="bg-gray-50/50">
-                          <td colSpan={6} className="p-4 border-t border-gray-100">
-                            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs space-y-4">
-                              <h3 className="text-xs font-extrabold uppercase text-gray-600 tracking-wider">
-                                Platform Analytics & Sub-Accounts of "{t.name}"
-                              </h3>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs font-medium text-gray-600">
-                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                  <div className="text-gray-400 font-bold uppercase text-[9px] tracking-wider">Total Sales Invoiced Volume</div>
-                                  <div className="text-base font-extrabold text-gray-800 mt-1 font-mono">Rs. {t.totalSalesValue.toLocaleString()}</div>
-                                </div>
-                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                  <div className="text-gray-400 font-bold uppercase text-[9px] tracking-wider">Workspace Owner Account</div>
-                                  <div className="text-base font-extrabold text-gray-800 mt-1">{t.ownerName}</div>
-                                </div>
-                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                  <div className="text-gray-400 font-bold uppercase text-[9px] tracking-wider">Platform Security Domain</div>
-                                  <div className="text-base font-extrabold text-gray-800 mt-1 font-mono">{t.id}</div>
-                                </div>
-                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                  <div className="text-gray-400 font-bold uppercase text-[9px] tracking-wider">Created Timestamp</div>
-                                  <div className="text-base font-extrabold text-gray-800 mt-1 font-mono">{t.createdAt}</div>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* CREATE WORKSPACE MODAL */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white max-w-xl w-full rounded-2xl shadow-2xl border border-gray-100 text-slate-800 animate-in zoom-in-95 duration-150 overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-gray-50">
-              <h3 className="text-sm sm:text-base font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                <Plus className="w-5 h-5 text-blue-600" />
-                <span>Register SaaS Company Workspace</span>
-              </h3>
-              <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600 text-xs font-bold uppercase">Cancel</button>
-            </div>
-
-            <form onSubmit={handleCreateTenant} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Company / Store Name</label>
-                  <input
-                    type="text"
-                    value={newCompanyName}
-                    onChange={(e) => setNewCompanyName(e.target.value)}
-                    placeholder="e.g. Al-Karam Medicine Traders"
-                    className="w-full px-3.5 py-2.5 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/10 focus:border-[#3B82F6] font-medium"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Owner Full Name</label>
-                  <input
-                    type="text"
-                    value={newOwnerName}
-                    onChange={(e) => setNewOwnerName(e.target.value)}
-                    placeholder="e.g. Dr. Tariq Mahmood"
-                    className="w-full px-3.5 py-2.5 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/10 focus:border-[#3B82F6] font-medium"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Owner Email Address</label>
-                  <input
-                    type="email"
-                    value={newOwnerEmail}
-                    onChange={(e) => setNewOwnerEmail(e.target.value)}
-                    placeholder="e.g. owner@alkaram.com"
-                    className="w-full px-3.5 py-2.5 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/10 focus:border-[#3B82F6] font-medium font-mono"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Primary Owner Admin Password</label>
-                  <input
-                    type="text"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Set workspace password"
-                    className="w-full px-3.5 py-2.5 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/10 focus:border-[#3B82F6] font-medium"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Monthly Subscription Fee (Rs.)</label>
-                  <input
-                    type="number"
-                    value={newMonthlyFee}
-                    onChange={(e) => setNewMonthlyFee(Number(e.target.value))}
-                    placeholder="e.g. 3500"
-                    className="w-full px-3.5 py-2.5 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/10 focus:border-[#3B82F6] font-mono font-bold"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">License Subscription Expiry</label>
-                  <input
-                    type="date"
-                    value={newExpiryDate}
-                    onChange={(e) => setNewExpiryDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/10 focus:border-[#3B82F6] font-bold"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4 flex justify-end gap-2 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 border border-gray-200 text-gray-700 bg-white rounded-xl text-xs font-bold transition-all hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isActionLoading}
-                  className="bg-[#3F83F8] hover:bg-[#2563EB] disabled:bg-gray-400 text-white px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
-                >
-                  {isActionLoading ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
-                  <span>Initialize Workspace</span>
-                </button>
-              </div>
-            </form>
-          </div>
+          <button onClick={() => setNotification(null)} className="text-[10px] uppercase font-bold hover:underline">
+            Dismiss
+          </button>
         </div>
       )}
 
-      {/* EDIT WORKSPACE CONFIG MODAL */}
-      {showEditModal && editingTenant && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white max-w-xl w-full rounded-2xl shadow-2xl border border-gray-100 text-slate-800 animate-in zoom-in-95 duration-150 overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-gray-50">
-              <h3 className="text-sm sm:text-base font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                <Edit2 className="w-5 h-5 text-blue-600" />
-                <span>Configure Workspace: {editingTenant.name}</span>
-              </h3>
-              <button onClick={() => { setShowEditModal(false); setEditingTenant(null); }} className="text-gray-400 hover:text-gray-600 text-xs font-bold uppercase">Cancel</button>
-            </div>
+      {/* Main Panel Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left Column: Accounts List (7 cols) */}
+        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden flex flex-col">
+          <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+            <span className="font-black text-xs md:text-sm text-[#002b49] uppercase tracking-wider flex items-center gap-1.5">
+              <Users className="w-4.5 h-4.5 text-[#0070ba]" />
+              <span>Registered Accounts List ({userAccounts.length})</span>
+            </span>
+            <span className="text-[10px] text-slate-500 font-bold bg-slate-200 px-2 py-0.5 rounded-full">
+              LOCAL DATABASE
+            </span>
+          </div>
 
-            <form onSubmit={handleUpdateTenant} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="p-3 divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
+            {userAccounts.map((acc) => {
+              const isMaster = acc.id === 'acc-master';
+              const isCurrent = acc.id === currentUser?.id;
+
+              return (
+                <div key={acc.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex gap-3">
+                    {/* User Avatar Badge based on Role */}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                      acc.role === 'Admin'
+                        ? 'bg-red-100 text-red-700'
+                        : acc.role === 'Manager'
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'bg-green-100 text-green-700'
+                    }`}>
+                      {acc.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-slate-800 text-xs sm:text-sm">{acc.name}</span>
+                        {isMaster && (
+                          <span className="bg-red-600 text-white font-mono text-[9px] font-bold px-1.5 py-0.1 rounded uppercase">
+                            MASTER
+                          </span>
+                        )}
+                        {isCurrent && (
+                          <span className="bg-blue-600 text-white font-mono text-[9px] font-bold px-1.5 py-0.1 rounded uppercase">
+                            YOU
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex flex-wrap gap-1 items-center">
+                        <Mail className="w-3 h-3 inline text-slate-400" />
+                        <span>{acc.email}</span>
+                        <span>•</span>
+                        <Lock className="w-3 h-3 inline text-slate-400" />
+                        <span className="text-slate-400 font-password">
+                          {acc.password ? '*'.repeat(acc.password.length) : '••••'}
+                        </span>
+                        <span>•</span>
+                        <span className={`font-bold uppercase tracking-wider text-[9px] px-1.5 rounded-xs ${
+                          acc.role === 'Admin'
+                            ? 'bg-red-50 border border-red-200 text-red-700'
+                            : acc.role === 'Manager'
+                            ? 'bg-purple-50 border border-purple-200 text-purple-700'
+                            : 'bg-green-50 border border-green-200 text-green-700'
+                        }`}>
+                          {acc.role}
+                        </span>
+                      </div>
+
+                      {/* Permissions Flags row */}
+                      <div className="flex flex-wrap gap-1.5 mt-2 max-w-md">
+                        {acc.permissions.canDashboard && (
+                          <span className="bg-slate-50 border border-slate-200 text-slate-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Dashboard
+                          </span>
+                        )}
+                        {acc.permissions.canSale && (
+                          <span className="bg-emerald-50 border border-emerald-100 text-emerald-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Sales
+                          </span>
+                        )}
+                        {acc.permissions.canReturn && (
+                          <span className="bg-red-50 border border-red-100 text-red-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Returns
+                          </span>
+                        )}
+                        {acc.permissions.canBillHistory && (
+                          <span className="bg-teal-50 border border-teal-100 text-teal-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Bill History
+                          </span>
+                        )}
+                        {acc.permissions.canCreditReceive && (
+                          <span className="bg-indigo-50 border border-indigo-100 text-indigo-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Khata
+                          </span>
+                        )}
+                        {acc.permissions.canPurchaseStock && (
+                          <span className="bg-cyan-50 border border-cyan-100 text-cyan-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Purchase
+                          </span>
+                        )}
+                        {acc.permissions.canProducts && (
+                          <span className="bg-violet-50 border border-violet-100 text-violet-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Products
+                          </span>
+                        )}
+                        {acc.permissions.canSuppliers && (
+                          <span className="bg-orange-50 border border-orange-100 text-orange-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Suppliers
+                          </span>
+                        )}
+                        {acc.permissions.canCustomers && (
+                          <span className="bg-sky-50 border border-sky-100 text-sky-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Customers
+                          </span>
+                        )}
+                        {acc.permissions.canBarcodeLabel && (
+                          <span className="bg-lime-50 border border-lime-100 text-lime-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Barcode Label
+                          </span>
+                        )}
+                        {acc.permissions.canDayClosing && (
+                          <span className="bg-pink-50 border border-pink-100 text-pink-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Day Closing
+                          </span>
+                        )}
+                        {acc.permissions.canExpenses && (
+                          <span className="bg-amber-50 border border-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Expenses
+                          </span>
+                        )}
+                        {acc.permissions.canReports && (
+                          <span className="bg-indigo-50 border border-indigo-100 text-indigo-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Reports
+                          </span>
+                        )}
+                        {acc.permissions.canSettings && (
+                          <span className="bg-slate-50 border border-slate-100 text-slate-800 text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Settings
+                          </span>
+                        )}
+                        {acc.permissions.canPlanPRD && (
+                          <span className="bg-[#e0f7fa] border border-[#b2ebf2] text-[#006064] text-[9px] font-bold px-1.5 py-0.2 rounded-xs">
+                            Roadmap
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions buttons */}
+                  <div className="flex items-center gap-1.5 self-end sm:self-center">
+                    <button
+                      type="button"
+                      onClick={() => handleStartEdit(acc)}
+                      className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors flex items-center justify-center gap-1 text-[10px] font-bold"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+                    {!isMaster && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAccount(acc)}
+                        className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors flex items-center justify-center gap-1 text-[10px] font-bold"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right Column: Add/Edit Account panel (5 cols) */}
+        <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+          {editingAccount ? (
+            /* Editing State Form */
+            <form onSubmit={handleSaveEdit}>
+              <div className="p-4 bg-amber-50 border-b border-amber-200 flex items-center justify-between">
+                <span className="font-black text-xs md:text-sm text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Edit className="w-4.5 h-4.5" />
+                  <span>Edit Credentials: {editingAccount.name}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setEditingAccount(null)}
+                  className="text-amber-800 text-xs font-bold hover:underline"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <div className="p-4 space-y-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Company / Store Name</label>
+                  <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">
+                    Full Name:
+                  </label>
                   <input
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/10 focus:border-[#3B82F6] font-medium"
+                    className="w-full bg-white border border-slate-300 px-3 py-2 text-xs rounded-lg text-slate-800 focus:outline-none focus:border-amber-500"
+                    placeholder="Enter full name"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Workspace Status & Health</label>
-                  <select
-                    value={editStatus}
-                    onChange={(e) => setEditStatus(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/10 focus:border-[#3B82F6] font-bold"
-                  >
-                    <option value="Active">Active (Unrestricted)</option>
-                    <option value="Suspended">Suspended (Access Denied)</option>
-                    <option value="Expired">Expired (Unlicensed)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Owner Name</label>
-                  <input
-                    type="text"
-                    value={editOwnerName}
-                    onChange={(e) => setEditOwnerName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/10 focus:border-[#3B82F6] font-medium"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Owner Email Address</label>
+                  <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">
+                    Email Address:
+                  </label>
                   <input
                     type="email"
-                    value={editOwnerEmail}
-                    onChange={(e) => setEditOwnerEmail(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/10 focus:border-[#3B82F6] font-medium font-mono"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Monthly Subscription Fee (Rs.)</label>
-                  <input
-                    type="number"
-                    value={editMonthlyFee}
-                    onChange={(e) => setEditMonthlyFee(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/10 focus:border-[#3B82F6] font-mono font-bold"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    className="w-full bg-white border border-slate-300 px-3 py-2 text-xs rounded-lg text-slate-800 focus:outline-none focus:border-amber-500"
+                    placeholder="example@gmail.com"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Subscription Expiry Date</label>
+                  <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">
+                    Password / PIN:
+                  </label>
                   <input
-                    type="date"
-                    value={editExpiryDate}
-                    onChange={(e) => setEditExpiryDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-xs border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/10 focus:border-[#3B82F6] font-bold"
+                    type="text"
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    className="w-full bg-white border border-slate-300 px-3 py-2 text-xs rounded-lg text-slate-800 focus:outline-none focus:border-amber-500 font-mono"
+                    placeholder="••••"
                     required
                   />
                 </div>
-              </div>
 
-              <div className="pt-4 flex justify-end gap-2 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => { setShowEditModal(false); setEditingTenant(null); }}
-                  className="px-4 py-2 border border-gray-200 text-gray-700 bg-white rounded-xl text-xs font-bold transition-all hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isActionLoading}
-                  className="bg-[#3F83F8] hover:bg-[#2563EB] disabled:bg-gray-400 text-white px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
-                >
-                  {isActionLoading ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
-                  <span>Save Configuration</span>
-                </button>
+                <div>
+                  <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">
+                    Role & Base Hierarchy:
+                  </label>
+                  <select
+                    value={editRole}
+                    onChange={(e) => handleEditRoleChange(e.target.value as UserRole)}
+                    className="w-full bg-white border border-slate-300 px-2 py-2 text-xs rounded-lg text-slate-800 focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="Admin">Admin (Full Access)</option>
+                    <option value="Manager">Manager (Intermediate Access)</option>
+                    <option value="Cashier">Cashier (Sales Register Only)</option>
+                  </select>
+                </div>
+
+                {/* Granular Permissions Checkboxes */}
+                <div className="pt-2 border-t border-slate-100">
+                  <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
+                    CUSTOMIZE PERMISSIONS (Toggle Menu Items & Buttons)
+                  </span>
+                  <div className="grid grid-cols-2 gap-2 max-h-[280px] overflow-y-auto pr-1">
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanDashboard}
+                        onChange={(e) => setEditCanDashboard(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Dashboard Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanSale}
+                        onChange={(e) => setEditCanSale(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Sale Invoice Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanReturn}
+                        onChange={(e) => setEditCanReturn(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Sale Return Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanBillHistory}
+                        onChange={(e) => setEditCanBillHistory(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Bill History Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanCreditReceive}
+                        onChange={(e) => setEditCanCreditReceive(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Credit Receive Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanPurchaseStock}
+                        onChange={(e) => setEditCanPurchaseStock(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Purchase Stock Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanProducts}
+                        onChange={(e) => setEditCanProducts(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Products Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanSuppliers}
+                        onChange={(e) => setEditCanSuppliers(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Suppliers Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanCustomers}
+                        onChange={(e) => setEditCanCustomers(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Customers Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanBarcodeLabel}
+                        onChange={(e) => setEditCanBarcodeLabel(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Barcode Generator</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanDayClosing}
+                        onChange={(e) => setEditCanDayClosing(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Day Closing Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editCanExpenses}
+                        onChange={(e) => setEditCanExpenses(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Pay Expense Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={editCanReports}
+                        onChange={(e) => setEditCanReports(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Reports & Analytics Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={editCanSettings}
+                        onChange={(e) => setEditCanSettings(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Store Settings Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={editCanPlanPRD}
+                        onChange={(e) => setEditCanPlanPRD(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Interactive Roadmap Tab</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="w-full bg-[#1e7e34] hover:bg-[#155724] text-white font-extrabold py-2 px-4 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition-colors"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>SAVE & UPDATE CREDENTIALS</span>
+                  </button>
+                </div>
               </div>
             </form>
-          </div>
+          ) : (
+            /* Creation State Form */
+            <form onSubmit={handleCreateAccount}>
+              <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center gap-1.5">
+                <UserPlus className="w-4.5 h-4.5 text-[#0070ba]" />
+                <span className="font-black text-xs md:text-sm text-[#002b49] uppercase tracking-wider">
+                  Create Account / Employee
+                </span>
+              </div>
+
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">
+                    Employee / Admin Name:
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-white border border-slate-300 px-3 py-2 text-xs rounded-lg text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                    placeholder="e.g. Hammad Malik"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">
+                    Login Email Address:
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-white border border-slate-300 px-3 py-2 text-xs rounded-lg text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                    placeholder="hammad@gmail.com"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">
+                    Login Password:
+                  </label>
+                  <input
+                    type="text"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-white border border-slate-300 px-3 py-2 text-xs rounded-lg text-slate-800 focus:outline-none focus:border-[#0070ba] font-mono"
+                    placeholder="Enter password"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">
+                    Designated Role:
+                  </label>
+                  <select
+                    value={role}
+                    onChange={(e) => handleRoleChange(e.target.value as UserRole)}
+                    className="w-full bg-white border border-slate-300 px-2 py-2 text-xs rounded-lg text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                  >
+                    <option value="Admin">Admin (Full Access)</option>
+                    <option value="Manager">Manager (Intermediate Access)</option>
+                    <option value="Cashier">Cashier (Sales Register Only)</option>
+                  </select>
+                </div>
+
+                {/* Granular Permissions Checkboxes */}
+                <div className="pt-2 border-t border-slate-100">
+                  <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
+                    SET CUSTOM PERMISSIONS (Toggle Menu Items & Buttons)
+                  </span>
+                  <div className="grid grid-cols-2 gap-2 max-h-[280px] overflow-y-auto pr-1">
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canDashboard}
+                        onChange={(e) => setCanDashboard(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Dashboard Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canSale}
+                        onChange={(e) => setCanSale(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Sale Invoice Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canReturn}
+                        onChange={(e) => setCanReturn(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Sale Return Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canBillHistory}
+                        onChange={(e) => setCanBillHistory(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Bill History Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canCreditReceive}
+                        onChange={(e) => setCanCreditReceive(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Credit Receive Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canPurchaseStock}
+                        onChange={(e) => setCanPurchaseStock(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Purchase Stock Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canProducts}
+                        onChange={(e) => setCanProducts(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Products Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canSuppliers}
+                        onChange={(e) => setCanSuppliers(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Suppliers Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canCustomers}
+                        onChange={(e) => setCanCustomers(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Customers Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canBarcodeLabel}
+                        onChange={(e) => setCanBarcodeLabel(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Barcode Generator</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canDayClosing}
+                        onChange={(e) => setCanDayClosing(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Day Closing Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={canExpenses}
+                        onChange={(e) => setCanExpenses(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Pay Expense Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={canReports}
+                        onChange={(e) => setCanReports(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Reports & Analytics Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={canSettings}
+                        onChange={(e) => setCanSettings(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Store Settings Tab</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer select-none col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={canPlanPRD}
+                        onChange={(e) => setCanPlanPRD(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-700">Interactive Roadmap Tab</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="w-full bg-[#0070ba] hover:bg-[#005a96] text-white font-extrabold py-2.5 px-4 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow transition-colors"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>CREATE ACCOUNT / EMPLOYEE</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
         </div>
-      )}
 
-      {/* Footer support block */}
-      <div className="text-center pt-8 text-[11px] text-[#9CA3AF] font-bold border-t border-gray-200">
-        POWERED BY THE PAK HACKTES SAAS CORE SYSTEMS • SECURED BY CLOUD SQL POSTGRES
       </div>
-
     </div>
   );
 };
