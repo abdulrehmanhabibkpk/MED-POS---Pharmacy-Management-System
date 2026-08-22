@@ -198,19 +198,6 @@ export interface ReceiptTemplate {
   feedCutLines: number; // 0 to 5
 }
 
-export interface CompanyAccount {
-  id: string;
-  name: string;
-  adminEmail: string;
-  adminPassword?: string;
-  monthlyFee: number;
-  paymentStatus: 'Paid' | 'Unpaid' | 'Pending';
-  billingStatus: 'Active' | 'Suspended';
-  dueDate: string; // YYYY-MM-DD
-  phone?: string;
-  address?: string;
-}
-
 export interface StoreSettings {
   storeName: string;
   tagline: string;
@@ -221,7 +208,6 @@ export interface StoreSettings {
   footerNote: string;
   defaultPaperSize?: ThermalPaperSize;
   receiptTemplate?: ReceiptTemplate;
-  companies?: CompanyAccount[];
 }
 
 export interface Supplier {
@@ -320,5 +306,4 @@ export type ActiveTab =
   | 'store-settings'
   | 'barcode-label'
   | 'plan-prd'
-  | 'super-admin'
   | 'master-admin';

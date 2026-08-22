@@ -1,11 +1,11 @@
 {
-  "projectId": "autonomous-ensign-m9v0l",
-  "appId": "1:248838309632:web:cedc1e8ca94eaa1344d5e5",
-  "apiKey": "AIzaSyCxpJQyf4jNmDXesow4gBA8wW2fBfukmlU",
-  "authDomain": "autonomous-ensign-m9v0l.firebaseapp.com",
-  "storageBucket": "autonomous-ensign-m9v0l.firebasestorage.app",
-  "messagingSenderId": "248838309632",
-  "measurementId": "",
-  "oAuthClientId": "248838309632-jklt40jqt8bcmv46qaqvbrkt2vgcudoc.apps.googleusercontent.com",
+  "projectId": "limo-pos",
+  "appId": "1:760819692733:web:dd7f3de80af8797f6d33d4",
+  "apiKey": "AIzaSyCGX6XsXTh-JS2S5fSwq3_enwdvp1cXkOM",
+  "authDomain": "limo-pos.firebaseapp.com",
+  "storageBucket": "limo-pos.firebasestorage.app",
+  "messagingSenderId": "760819692733",
+  "measurementId": "G-FDLRVLFHQY",
+  "oAuthClientId": "",
   "recaptchaSiteKey": ""
 }

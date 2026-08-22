@@ -1,22 +1,20 @@
 import React, { useState } from 'react';
 import {
-  LayoutDashboard,
+  LayoutGrid,
   FileText,
   RotateCcw,
   ClipboardList,
-  WalletCards,
-  Package,
+  Mail,
+  Box,
   Tag,
-  CalendarCheck,
-  Receipt,
+  Truck,
+  Users,
+  CalendarDays,
+  BadgeDollarSign,
   BarChart3,
   Settings,
   Smartphone,
   LogOut,
-  Pill,
-  Truck,
-  Users,
-  Building,
 } from 'lucide-react';
 import { usePOS } from '../context/POSContext';
 import { ActiveTab } from '../types';
@@ -27,24 +25,23 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile }) => {
-  const { activeTab, setActiveTab, logout, setShowSyncModal, userRole, setUserRole, currentUser } = usePOS();
-  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const { activeTab, setActiveTab, logout, setShowSyncModal, userRole, currentUser } = usePOS();
 
   const navItems: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { id: 'sale-invoice', label: 'Sale Invoice', icon: <FileText className="w-5 h-5" /> },
-    { id: 'sale-return', label: 'Sale Return', icon: <RotateCcw className="w-5 h-5" /> },
-    { id: 'bill-history', label: 'Bill History', icon: <ClipboardList className="w-5 h-5" /> },
-    { id: 'credit-receive', label: 'Credit Receive', icon: <WalletCards className="w-5 h-5" /> },
-    { id: 'purchase-stock', label: 'Purchase Stock', icon: <Package className="w-5 h-5" /> },
-    { id: 'products', label: 'Products & Inventory', icon: <Tag className="w-5 h-5" /> },
-    { id: 'suppliers', label: 'Suppliers List', icon: <Truck className="w-5 h-5" /> },
-    { id: 'customers', label: 'Customers Ledger', icon: <Users className="w-5 h-5" /> },
-    { id: 'barcode-label', label: 'Label Generator', icon: <Tag className="w-5 h-5" /> },
-    { id: 'day-closing', label: 'Day Closing', icon: <CalendarCheck className="w-5 h-5" /> },
-    { id: 'pay-expense', label: 'Pay Expense', icon: <Receipt className="w-5 h-5" /> },
-    { id: 'reports', label: 'Reports & Analytics', icon: <BarChart3 className="w-5 h-5" /> },
-    { id: 'store-settings', label: 'Software Settings', icon: <Settings className="w-5 h-5" /> },
+    { id: 'dashboard', label: 'DASHBOARD', icon: <LayoutGrid className="w-5 h-5" /> },
+    { id: 'sale-invoice', label: 'SALE INVOICE', icon: <FileText className="w-5 h-5" /> },
+    { id: 'sale-return', label: 'SALE RETURN', icon: <RotateCcw className="w-5 h-5" /> },
+    { id: 'bill-history', label: 'BILL HISTORY', icon: <ClipboardList className="w-5 h-5" /> },
+    { id: 'credit-receive', label: 'CREDIT RECEIVE', icon: <Mail className="w-5 h-5" /> },
+    { id: 'purchase-stock', label: 'PURCHASE STOCK', icon: <Box className="w-5 h-5" /> },
+    { id: 'products', label: 'PRODUCTS & INVENTORY', icon: <Tag className="w-5 h-5" /> },
+    { id: 'suppliers', label: 'SUPPLIERS LIST', icon: <Truck className="w-5 h-5" /> },
+    { id: 'customers', label: 'CUSTOMERS LEDGER', icon: <Users className="w-5 h-5" /> },
+    { id: 'barcode-label', label: 'LABEL GENERATOR', icon: <Tag className="w-5 h-5" /> },
+    { id: 'day-closing', label: 'DAY CLOSING', icon: <CalendarDays className="w-5 h-5" /> },
+    { id: 'pay-expense', label: 'PAY EXPENSE', icon: <BadgeDollarSign className="w-5 h-5" /> },
+    { id: 'reports', label: 'REPORTS & ANALYTICS', icon: <BarChart3 className="w-5 h-5" /> },
+    { id: 'store-settings', label: 'SOFTWARE SETTINGS', icon: <Settings className="w-5 h-5" /> },
   ];
 
   if (currentUser?.email.toLowerCase() === 'alitrader@gmail.com') {
@@ -55,19 +52,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
     });
   }
 
-  if (currentUser?.email.toLowerCase() === 'teemthepakhacktes.com@gmail.com') {
-    navItems.unshift({
-      id: 'super-admin',
-      label: 'SaaS Super Admin',
-      icon: <Building className="w-5 h-5 text-blue-600 animate-pulse" />,
-    });
-  }
-
   const visibleNavItems = navItems.filter((item) => {
-    if (
-      currentUser?.email.toLowerCase() === 'alitrader@gmail.com' ||
-      currentUser?.email.toLowerCase() === 'teemthepakhacktes.com@gmail.com'
-    ) {
+    if (currentUser?.email.toLowerCase() === 'alitrader@gmail.com') {
       return true;
     }
     
@@ -167,76 +153,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
               ✕
             </button>
           </div>
- 
-          {/* User Role Indicator Profile Block */}
-          <div className="relative mx-4 mt-4 mb-3">
-            <div
-              onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-              className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-100 hover:border-slate-300 transition-all shadow-xs"
-              title="Click to Switch User Role"
-            >
+          {/* User Profile Block */}
+          <div className="mx-4 mt-4 mb-3">
+            <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-3 shadow-xs">
               <div className="flex items-center gap-3 truncate">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#2563EB] to-[#3B82F6] flex items-center justify-center font-black text-white text-sm shrink-0 shadow-sm shadow-blue-100">
+                <div className="w-9 h-9 rounded-xl bg-[#3F83F8] flex items-center justify-center font-black text-white text-sm shrink-0 shadow-xs">
                   {userRole.charAt(0)}
                 </div>
                 <div className="truncate text-left">
-                  <div className="text-xs font-black text-slate-800 leading-tight uppercase tracking-widest">{userRole}</div>
-                  <span className="text-[10px] text-emerald-600 font-mono font-bold flex items-center gap-1.5 mt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    ID: {userRole === 'Admin' ? 'PK-001' : userRole === 'Manager' ? 'PK-002' : 'PK-003'}
+                  <div className="text-xs font-black text-slate-800 leading-tight uppercase tracking-wide truncate">
+                    {currentUser?.name || userRole}
+                  </div>
+                  <span className="text-[10px] text-emerald-600 font-mono font-bold flex items-center gap-1.5 mt-0.5 truncate">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <span className="truncate">{currentUser?.email || userRole}</span>
                   </span>
                 </div>
               </div>
-              <span className="text-slate-400 text-[10px] transition-transform duration-200 transform hover:translate-y-0.5">▼</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-[#1E429F] border border-blue-100 shrink-0">
+                {userRole}
+              </span>
             </div>
- 
-            {/* Role selection dropdown */}
-            {showRoleDropdown && (
-              <div className="absolute left-0 right-0 mt-2 bg-white text-slate-800 border border-slate-200 shadow-2xl rounded-2xl z-55 overflow-hidden text-xs animate-in slide-in-from-top-2 duration-100">
-                <div className="p-2.5 bg-slate-50 font-bold text-[10px] uppercase tracking-wider text-[#9CA3AF] border-b border-slate-100">
-                  Switch Active Role
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUserRole('Admin');
-                    setShowRoleDropdown(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 hover:bg-slate-50 font-semibold flex items-center justify-between transition-colors ${
-                    userRole === 'Admin' ? 'bg-blue-50/50 text-[#2563EB]' : 'text-slate-700'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">👑 Admin Role</span>
-                  {userRole === 'Admin' && <span className="text-[#2563EB] font-black">✓</span>}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUserRole('Manager');
-                    setShowRoleDropdown(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 hover:bg-slate-50 font-semibold flex items-center justify-between transition-colors ${
-                    userRole === 'Manager' ? 'bg-blue-50/50 text-[#2563EB]' : 'text-slate-700'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">💼 Manager Role</span>
-                  {userRole === 'Manager' && <span className="text-[#2563EB] font-black">✓</span>}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUserRole('Cashier');
-                    setShowRoleDropdown(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 hover:bg-slate-50 font-semibold flex items-center justify-between transition-colors ${
-                    userRole === 'Cashier' ? 'bg-blue-50/50 text-[#2563EB]' : 'text-slate-700'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">🛒 Cashier Role</span>
-                  {userRole === 'Cashier' && <span className="text-[#2563EB] font-black">✓</span>}
-                </button>
-              </div>
-            )}
           </div>
  
           {/* Navigation List */}

@@ -167,33 +167,6 @@ ALTER TABLE public.customer_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.supplier_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.store_settings ENABLE ROW LEVEL SECURITY;
 
--- Drop old policies if they exist to prevent errors when re-running
-DROP POLICY IF EXISTS "Allow all to service role" ON public.user_accounts;
-DROP POLICY IF EXISTS "Allow all to service role" ON public.products;
-DROP POLICY IF EXISTS "Allow all to service role" ON public.sales;
-DROP POLICY IF EXISTS "Allow all to service role" ON public.returns;
-DROP POLICY IF EXISTS "Allow all to service role" ON public.credits;
-DROP POLICY IF EXISTS "Allow all to service role" ON public.purchases;
-DROP POLICY IF EXISTS "Allow all to service role" ON public.expenses;
-DROP POLICY IF EXISTS "Allow all to service role" ON public.suppliers;
-DROP POLICY IF EXISTS "Allow all to service role" ON public.customers;
-DROP POLICY IF EXISTS "Allow all to service role" ON public.customer_transactions;
-DROP POLICY IF EXISTS "Allow all to service role" ON public.supplier_transactions;
-DROP POLICY IF EXISTS "Allow all to service role" ON public.store_settings;
-
-DROP POLICY IF EXISTS "Allow anon public access" ON public.user_accounts;
-DROP POLICY IF EXISTS "Allow anon public access" ON public.products;
-DROP POLICY IF EXISTS "Allow anon public access" ON public.sales;
-DROP POLICY IF EXISTS "Allow anon public access" ON public.returns;
-DROP POLICY IF EXISTS "Allow anon public access" ON public.credits;
-DROP POLICY IF EXISTS "Allow anon public access" ON public.purchases;
-DROP POLICY IF EXISTS "Allow anon public access" ON public.expenses;
-DROP POLICY IF EXISTS "Allow anon public access" ON public.suppliers;
-DROP POLICY IF EXISTS "Allow anon public access" ON public.customers;
-DROP POLICY IF EXISTS "Allow anon public access" ON public.customer_transactions;
-DROP POLICY IF EXISTS "Allow anon public access" ON public.supplier_transactions;
-DROP POLICY IF EXISTS "Allow anon public access" ON public.store_settings;
-
 -- Create permissive RLS policies for the service_role and anon keys
 CREATE POLICY "Allow all to service role" ON public.user_accounts FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all to service role" ON public.products FOR ALL TO service_role USING (true) WITH CHECK (true);
@@ -208,7 +181,7 @@ CREATE POLICY "Allow all to service role" ON public.customer_transactions FOR AL
 CREATE POLICY "Allow all to service role" ON public.supplier_transactions FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all to service role" ON public.store_settings FOR ALL TO service_role USING (true) WITH CHECK (true);
 
--- Also allow anon public access
+-- Also allow anon public access (for testing)
 CREATE POLICY "Allow anon public access" ON public.user_accounts FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Allow anon public access" ON public.products FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Allow anon public access" ON public.sales FOR ALL TO anon USING (true) WITH CHECK (true);

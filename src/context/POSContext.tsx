@@ -1,4 +1,23 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import {
+  auth,
+  db,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  sendPasswordResetEmail,
+  updateProfile,
+  onAuthStateChanged,
+  User as FirebaseUser,
+  doc,
+  getDoc,
+  setDoc,
+  deleteDoc,
+  collection,
+  onSnapshot,
+  getDocs,
+  writeBatch
+} from '../firebase';
 import {
   Product,
   SaleInvoice,
@@ -14,9 +33,7 @@ import {
   Customer,
   CustomerTransaction,
   SupplierTransaction,
-  UserPermissions,
   UserAccount,
-  CompanyAccount,
 } from '../types';
 import {
   initialProducts,
@@ -32,6 +49,12 @@ import {
 interface POSContextType {
   isAuthenticated: boolean;
   login: (u: string, p: string) => boolean;
+  loginWithFirebase: (u: string, p: string) => Promise<{ success: boolean; error?: string }>;
+  registerWithFirebase: (u: string, p: string, name?: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>;
+  resetPasswordFirebase: (email: string) => Promise<{ success: boolean; error?: string }>;
+  firebaseUser: FirebaseUser | null;
+  firebaseAuthLoading: boolean;
+  isCloudSyncing: boolean;
   logout: () => void;
   userRole: UserRole;
   setUserRole: (role: UserRole) => void;
@@ -99,102 +122,54 @@ interface POSContextType {
   showSyncModal: boolean;
   setShowSyncModal: (show: boolean) => void;
   resetToDefaults: () => void;
+  clearAllTemporaryData: () => void;
   exportDatabase: () => void;
   importDatabase: (jsonData: string) => boolean;
   userAccounts: UserAccount[];
   addUserAccount: (acc: Omit<UserAccount, 'id'>) => void;
   updateUserAccount: (acc: UserAccount) => void;
   deleteUserAccount: (id: string) => void;
-  addCompany: (company: Omit<CompanyAccount, 'id'>) => void;
-  updateCompany: (company: CompanyAccount) => void;
-  deleteCompany: (id: string) => void;
   currentUser: UserAccount | null;
   setCurrentUser: (user: UserAccount | null) => void;
 }
 
 const POSContext = createContext<POSContextType | undefined>(undefined);
 
-const defaultAccounts: UserAccount[] = [
-  {
-    id: 'acc-master',
-    name: 'Ali Trader (Master)',
-    email: 'alitrader@gmail.com',
-    password: 'alitrader',
-    role: 'Admin',
-    permissions: {
-      canDashboard: true,
-      canSale: true,
-      canReturn: true,
-      canBillHistory: true,
-      canCreditReceive: true,
-      canPurchaseStock: true,
-      canProducts: true,
-      canSuppliers: true,
-      canCustomers: true,
-      canBarcodeLabel: true,
-      canDayClosing: true,
-      canExpenses: true,
-      canReports: true,
-      canSettings: true,
-      canPlanPRD: true,
-    }
-  },
-  {
-    id: 'acc-cashier',
-    name: 'Asif Khan',
-    email: 'cashier@gmail.com',
-    password: 'cashier',
-    role: 'Cashier',
-    permissions: {
-      canDashboard: true,
-      canSale: true,
-      canReturn: true,
-      canBillHistory: true,
-      canCreditReceive: false,
-      canPurchaseStock: false,
-      canProducts: false,
-      canSuppliers: false,
-      canCustomers: false,
-      canBarcodeLabel: true,
-      canDayClosing: false,
-      canExpenses: false,
-      canReports: false,
-      canSettings: false,
-      canPlanPRD: true,
-    }
-  },
-  {
-    id: 'acc-manager',
-    name: 'Manager Malik',
-    email: 'manager@gmail.com',
-    password: 'manager',
-    role: 'Manager',
-    permissions: {
-      canDashboard: true,
-      canSale: true,
-      canReturn: true,
-      canBillHistory: true,
-      canCreditReceive: true,
-      canPurchaseStock: true,
-      canProducts: true,
-      canSuppliers: true,
-      canCustomers: true,
-      canBarcodeLabel: true,
-      canDayClosing: true,
-      canExpenses: true,
-      canReports: true,
-      canSettings: false,
-      canPlanPRD: false,
-    }
-  }
+const defaultCategories = [
+  'Pharmacy',
+  'Medicines (Tablets)',
+  'Syrups & Suspensions',
+  'Injections & Drops',
+  'Surgical & Dental',
+  'General Items',
+  'Cosmetics & Skin',
+  'Baby Care',
+  'Beverages & Food',
+  'Snacks & Grocery',
+];
+
+const defaultBrands = [
+  'GlaxoSmithKline (GSK)',
+  'Abbott Laboratories',
+  'Getz Pharma',
+  'Pfizer Pakistan',
+  'Reckitt Benckiser',
+  'Sami Pharmaceuticals',
+  'Searle Company',
+  'Unilever',
+  'Nestle Pakistan',
+  'General / Local',
 ];
 
 export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const isSyncingFromServer = useRef(false);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [firebaseAuthLoading, setFirebaseAuthLoading] = useState<boolean>(true);
+  const [isCloudSyncing, setIsCloudSyncing] = useState<boolean>(false);
 
+  // User Accounts
   const [userAccounts, setUserAccounts] = useState<UserAccount[]>(() => {
     const saved = localStorage.getItem('medpos_user_accounts');
-    return saved ? JSON.parse(saved) : defaultAccounts;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
@@ -204,7 +179,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     const saved = localStorage.getItem('medpos_auth');
-    return saved ? JSON.parse(saved) : false; // Default false to enforce security based login
+    return saved ? JSON.parse(saved) : false;
   });
 
   const [userRole, setUserRoleState] = useState<UserRole>(() => {
@@ -219,109 +194,20 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
 
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('medpos_products');
-    const raw: Product[] = saved ? JSON.parse(saved) : initialProducts;
-    return raw.map((p) => ({
-      ...p,
-      unitOfSale: p.unitOfSale || 'Item',
-    }));
-  });
-
-  const [sales, setSales] = useState<SaleInvoice[]>(() => {
-    const saved = localStorage.getItem('medpos_sales');
-    return saved ? JSON.parse(saved) : initialSales;
-  });
-
-  const [returns, setReturns] = useState<SaleReturn[]>(() => {
-    const saved = localStorage.getItem('medpos_returns');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [purchases, setPurchases] = useState<PurchaseRecord[]>(() => {
-    const saved = localStorage.getItem('medpos_purchases');
-    return saved ? JSON.parse(saved) : initialPurchases;
-  });
-
-  const [credits, setCredits] = useState<CreditPayment[]>(() => {
-    const saved = localStorage.getItem('medpos_credits');
-    return saved ? JSON.parse(saved) : initialCredits;
-  });
-
-  const [expenses, setExpenses] = useState<ExpenseRecord[]>(() => {
-    const saved = localStorage.getItem('medpos_expenses');
-    return saved ? JSON.parse(saved) : initialExpenses;
-  });
-
-  const [storeSettings, setStoreSettings] = useState<StoreSettings>(() => {
-    const saved = localStorage.getItem('medpos_settings');
-    return saved ? JSON.parse(saved) : initialStoreSettings;
-  });
-
-  const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
-    const saved = localStorage.getItem('medpos_suppliers');
-    return saved ? JSON.parse(saved) : [
-      { id: 'sup-1', name: 'Al-Madina Medicine Distributors', company: 'GlaxoSmithKline & Getz Pharma', phone: '0300-1234567', email: 'madina@dist.com', address: 'Medicine Market, Lahore', balanceOwed: 45000 },
-      { id: 'sup-2', name: 'Zaman Surgical & Pharma Store', company: 'Abbott Laboratories', phone: '0321-7654321', email: 'zaman@surgicals.com', address: 'Katchery Road, Multan', balanceOwed: 12000 },
-      { id: 'sup-3', name: 'Global Health Wholesalers', company: 'Pfizer & Reckitt', phone: '0333-9876543', email: 'info@globalhealth.com', address: 'I.I Chundrigar Road, Karachi', balanceOwed: 0 },
-    ];
-  });
-
-  const [customers, setCustomers] = useState<Customer[]>(() => {
-    const saved = localStorage.getItem('medpos_customers');
-    return saved ? JSON.parse(saved) : [
-      { id: 'cust-1', name: 'Muhammad Ali', phone: '0345-1112223', email: 'ali@gmail.com', address: 'Model Town, Lahore', balanceReceivable: 8500 },
-      { id: 'cust-2', name: 'Dr. Tariq Mahmood', phone: '0312-3334445', email: 'tariq@health.com', address: 'Defense Phase 5, Karachi', balanceReceivable: 1500 },
-      { id: 'cust-3', name: 'Ayesha Bibi (Regular)', phone: '0322-5556667', email: '', address: 'Samanabad, Lahore', balanceReceivable: 0 },
-      { id: 'cust-4', name: 'Zahid Khan', phone: '0301-9998887', email: 'zahid@yahoo.com', address: 'Gulgasht Colony, Multan', balanceReceivable: 12000 },
-    ];
-  });
-
-  const [customerTransactions, setCustomerTransactions] = useState<CustomerTransaction[]>(() => {
-    const saved = localStorage.getItem('medpos_customer_transactions');
-    return saved ? JSON.parse(saved) : initialCustomerTransactions;
-  });
-
-  const [supplierTransactions, setSupplierTransactions] = useState<SupplierTransaction[]>(() => {
-    const saved = localStorage.getItem('medpos_supplier_transactions');
-    return saved ? JSON.parse(saved) : initialSupplierTransactions;
-  });
-
-  const defaultCategories = [
-    'Pharmacy',
-    'Medicines (Tablets)',
-    'Syrups & Suspensions',
-    'Injections & Drops',
-    'Surgical & Dental',
-    'General Items',
-    'Cosmetics & Skin',
-    'Baby Care',
-    'Beverages & Food',
-    'Snacks & Grocery',
-  ];
-
-  const defaultBrands = [
-    'GlaxoSmithKline (GSK)',
-    'Abbott Laboratories',
-    'Getz Pharma',
-    'Pfizer Pakistan',
-    'Reckitt Benckiser',
-    'Sami Pharmaceuticals',
-    'Searle Company',
-    'Unilever',
-    'Nestle Pakistan',
-    'General / Local',
-  ];
-
-  const [categories, setCategories] = useState<string[]>(() => {
-    const saved = localStorage.getItem('medpos_categories');
-    return saved ? JSON.parse(saved) : defaultCategories;
-  });
-
-  const [brands, setBrands] = useState<string[]>(() => {
-    const saved = localStorage.getItem('medpos_brands');
-    return saved ? JSON.parse(saved) : defaultBrands;
-  });
+  // Core Data States - STRICTLY PER-USER ISOLATED
+  const [products, setProducts] = useState<Product[]>([]);
+  const [sales, setSales] = useState<SaleInvoice[]>([]);
+  const [returns, setReturns] = useState<SaleReturn[]>([]);
+  const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
+  const [credits, setCredits] = useState<CreditPayment[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>(initialStoreSettings);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerTransactions, setCustomerTransactions] = useState<CustomerTransaction[]>([]);
+  const [supplierTransactions, setSupplierTransactions] = useState<SupplierTransaction[]>([]);
+  const [categories, setCategories] = useState<string[]>(defaultCategories);
+  const [brands, setBrands] = useState<string[]>(defaultBrands);
 
   const [previewInvoice, setPreviewInvoice] = useState<SaleInvoice | null>(null);
   const [thermalPaperSize, setThermalPaperSize] = useState<ThermalPaperSize>(() => {
@@ -330,70 +216,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [showSyncModal, setShowSyncModal] = useState<boolean>(false);
 
-  // Sync to localStorage
-  useEffect(() => {
-    localStorage.setItem('medpos_categories', JSON.stringify(categories));
-  }, [categories]);
+  // Derive active tenant / user ID
+  const activeUserId = firebaseUser?.uid || (currentUser?.id ? currentUser.id.replace(/[^a-zA-Z0-9_-]/g, '_') : null);
 
-  useEffect(() => {
-    localStorage.setItem('medpos_brands', JSON.stringify(brands));
-  }, [brands]);
-
-  // Sync to localStorage
-  useEffect(() => {
-    localStorage.setItem('medpos_thermal_paper_size', thermalPaperSize);
-  }, [thermalPaperSize]);
+  // Sync current user role & auth state
   useEffect(() => {
     localStorage.setItem('medpos_auth', JSON.stringify(isAuthenticated));
   }, [isAuthenticated]);
-
-  useEffect(() => {
-    localStorage.setItem('medpos_products', JSON.stringify(products));
-  }, [products]);
-
-  useEffect(() => {
-    localStorage.setItem('medpos_sales', JSON.stringify(sales));
-  }, [sales]);
-
-  useEffect(() => {
-    localStorage.setItem('medpos_returns', JSON.stringify(returns));
-  }, [returns]);
-
-  useEffect(() => {
-    localStorage.setItem('medpos_purchases', JSON.stringify(purchases));
-  }, [purchases]);
-
-  useEffect(() => {
-    localStorage.setItem('medpos_credits', JSON.stringify(credits));
-  }, [credits]);
-
-  useEffect(() => {
-    localStorage.setItem('medpos_expenses', JSON.stringify(expenses));
-  }, [expenses]);
-
-  useEffect(() => {
-    localStorage.setItem('medpos_settings', JSON.stringify(storeSettings));
-  }, [storeSettings]);
-
-  useEffect(() => {
-    localStorage.setItem('medpos_suppliers', JSON.stringify(suppliers));
-  }, [suppliers]);
-
-  useEffect(() => {
-    localStorage.setItem('medpos_customers', JSON.stringify(customers));
-  }, [customers]);
-
-  useEffect(() => {
-    localStorage.setItem('medpos_customer_transactions', JSON.stringify(customerTransactions));
-  }, [customerTransactions]);
-
-  useEffect(() => {
-    localStorage.setItem('medpos_supplier_transactions', JSON.stringify(supplierTransactions));
-  }, [supplierTransactions]);
-
-  useEffect(() => {
-    localStorage.setItem('medpos_user_accounts', JSON.stringify(userAccounts));
-  }, [userAccounts]);
 
   useEffect(() => {
     if (currentUser) {
@@ -403,174 +232,277 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [currentUser]);
 
-  // SQLite database initial server-load hook
+  // Auth State Listener
   useEffect(() => {
-    const fetchPOSDataFromServer = async () => {
-      try {
-        isSyncingFromServer.current = true;
-        const res = await fetch('/api/pos-data');
-        if (res.ok) {
-          const serverData = await res.json();
-          console.log('Successfully synchronized state from SQLite server:', serverData);
-          if (serverData.userAccounts?.length > 0) setUserAccounts(serverData.userAccounts);
-          if (serverData.products?.length > 0) setProducts(serverData.products);
-          if (serverData.sales) setSales(serverData.sales);
-          if (serverData.returns) setReturns(serverData.returns);
-          if (serverData.purchases) setPurchases(serverData.purchases);
-          if (serverData.credits) setCredits(serverData.credits);
-          if (serverData.expenses) setExpenses(serverData.expenses);
-          if (serverData.suppliers?.length > 0) setSuppliers(serverData.suppliers);
-          if (serverData.customers?.length > 0) setCustomers(serverData.customers);
-          if (serverData.customerTransactions) setCustomerTransactions(serverData.customerTransactions);
-          if (serverData.supplierTransactions) setSupplierTransactions(serverData.supplierTransactions);
-          if (serverData.storeSettings) setStoreSettings(serverData.storeSettings);
+    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      setFirebaseUser(fbUser);
+      setFirebaseAuthLoading(false);
+
+      if (fbUser && fbUser.email) {
+        const emailLower = fbUser.email.trim().toLowerCase();
+        const existing = userAccounts.find(
+          (a) => a.email.trim().toLowerCase() === emailLower
+        );
+
+        if (existing) {
+          setCurrentUser(existing);
+          setUserRoleState(existing.role);
+          setIsAuthenticated(true);
+        } else {
+          const isMaster = emailLower === 'alitrader@gmail.com';
+          const newAccount: UserAccount = {
+            id: fbUser.uid,
+            name: fbUser.displayName || emailLower.split('@')[0] || 'LimoPOS User',
+            email: fbUser.email,
+            role: isMaster ? 'Admin' : 'Admin',
+            permissions: {
+              canDashboard: true,
+              canSale: true,
+              canReturn: true,
+              canBillHistory: true,
+              canCreditReceive: true,
+              canPurchaseStock: true,
+              canProducts: true,
+              canSuppliers: true,
+              canCustomers: true,
+              canBarcodeLabel: true,
+              canDayClosing: true,
+              canExpenses: true,
+              canReports: true,
+              canSettings: true,
+              canPlanPRD: true,
+            },
+          };
+          setUserAccounts((prev) => {
+            if (!prev.some((p) => p.email.toLowerCase() === emailLower)) {
+              return [...prev, newAccount];
+            }
+            return prev;
+          });
+          setCurrentUser(newAccount);
+          setUserRoleState(newAccount.role);
+          setIsAuthenticated(true);
         }
-      } catch (err) {
-        console.warn('SQLite server is offline or unreachable, falling back to offline LocalStorage state:', err);
-      } finally {
-        setTimeout(() => {
-          isSyncingFromServer.current = false;
-        }, 150);
+      } else {
+        // Logged out: wipe in-memory state cleanly
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+        setProducts([]);
+        setSales([]);
+        setReturns([]);
+        setPurchases([]);
+        setCredits([]);
+        setExpenses([]);
+        setSuppliers([]);
+        setCustomers([]);
+        setCustomerTransactions([]);
+        setSupplierTransactions([]);
+        setStoreSettings(initialStoreSettings);
       }
+    });
+
+    return () => unsubscribe();
+  }, [userAccounts]);
+
+  // =========================================================
+  // USER-ISOLATED FIRESTORE REAL-TIME SYNCHRONIZATION
+  // Collection paths: /users/{activeUserId}/{collectionName}
+  // =========================================================
+  useEffect(() => {
+    if (!activeUserId) {
+      // Clear data if not authenticated
+      setProducts([]);
+      setSales([]);
+      setReturns([]);
+      setPurchases([]);
+      setCredits([]);
+      setExpenses([]);
+      setSuppliers([]);
+      setCustomers([]);
+      setCustomerTransactions([]);
+      setSupplierTransactions([]);
+      return;
+    }
+
+    setIsCloudSyncing(true);
+
+    // 1. User isolated products
+    const unsubProducts = onSnapshot(collection(db, 'users', activeUserId, 'products'), (snapshot) => {
+      const list: Product[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push(docSnap.data() as Product);
+      });
+      setProducts(list);
+      setIsCloudSyncing(false);
+    }, (err) => {
+      console.warn('User products sync note:', err.message);
+      setIsCloudSyncing(false);
+    });
+
+    // 2. User isolated sales
+    const unsubSales = onSnapshot(collection(db, 'users', activeUserId, 'sales'), (snapshot) => {
+      const list: SaleInvoice[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push(docSnap.data() as SaleInvoice);
+      });
+      list.sort((a, b) => (b.invoiceNo || 0) - (a.invoiceNo || 0));
+      setSales(list);
+    }, (err) => {
+      console.warn('User sales sync note:', err.message);
+    });
+
+    // 3. User isolated returns
+    const unsubReturns = onSnapshot(collection(db, 'users', activeUserId, 'returns'), (snapshot) => {
+      const list: SaleReturn[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push(docSnap.data() as SaleReturn);
+      });
+      setReturns(list);
+    }, (err) => {
+      console.warn('User returns sync note:', err.message);
+    });
+
+    // 4. User isolated purchases
+    const unsubPurchases = onSnapshot(collection(db, 'users', activeUserId, 'purchases'), (snapshot) => {
+      const list: PurchaseRecord[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push(docSnap.data() as PurchaseRecord);
+      });
+      setPurchases(list);
+    }, (err) => {
+      console.warn('User purchases sync note:', err.message);
+    });
+
+    // 5. User isolated credits
+    const unsubCredits = onSnapshot(collection(db, 'users', activeUserId, 'credits'), (snapshot) => {
+      const list: CreditPayment[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push(docSnap.data() as CreditPayment);
+      });
+      setCredits(list);
+    }, (err) => {
+      console.warn('User credits sync note:', err.message);
+    });
+
+    // 6. User isolated expenses
+    const unsubExpenses = onSnapshot(collection(db, 'users', activeUserId, 'expenses'), (snapshot) => {
+      const list: ExpenseRecord[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push(docSnap.data() as ExpenseRecord);
+      });
+      setExpenses(list);
+    }, (err) => {
+      console.warn('User expenses sync note:', err.message);
+    });
+
+    // 7. User isolated suppliers
+    const unsubSuppliers = onSnapshot(collection(db, 'users', activeUserId, 'suppliers'), (snapshot) => {
+      const list: Supplier[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push(docSnap.data() as Supplier);
+      });
+      setSuppliers(list);
+    }, (err) => {
+      console.warn('User suppliers sync note:', err.message);
+    });
+
+    // 8. User isolated customers
+    const unsubCustomers = onSnapshot(collection(db, 'users', activeUserId, 'customers'), (snapshot) => {
+      const list: Customer[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push(docSnap.data() as Customer);
+      });
+      setCustomers(list);
+    }, (err) => {
+      console.warn('User customers sync note:', err.message);
+    });
+
+    // 9. User isolated customer transactions
+    const unsubCustomerTx = onSnapshot(collection(db, 'users', activeUserId, 'customerTransactions'), (snapshot) => {
+      const list: CustomerTransaction[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push(docSnap.data() as CustomerTransaction);
+      });
+      setCustomerTransactions(list);
+    }, (err) => {
+      console.warn('User customer transactions sync note:', err.message);
+    });
+
+    // 10. User isolated supplier transactions
+    const unsubSupplierTx = onSnapshot(collection(db, 'users', activeUserId, 'supplierTransactions'), (snapshot) => {
+      const list: SupplierTransaction[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push(docSnap.data() as SupplierTransaction);
+      });
+      setSupplierTransactions(list);
+    }, (err) => {
+      console.warn('User supplier transactions sync note:', err.message);
+    });
+
+    // 11. User isolated store settings
+    const unsubSettings = onSnapshot(doc(db, 'users', activeUserId, 'settings', 'storeSettings'), (docSnap) => {
+      if (docSnap.exists()) {
+        setStoreSettings(docSnap.data() as StoreSettings);
+      }
+    }, (err) => {
+      console.warn('User settings sync note:', err.message);
+    });
+
+    // 12. User isolated metadata
+    const unsubMeta = onSnapshot(doc(db, 'users', activeUserId, 'settings', 'metadata'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data?.categories?.length) setCategories(data.categories);
+        if (data?.brands?.length) setBrands(data.brands);
+      }
+    }, (err) => {
+      console.warn('User metadata sync note:', err.message);
+    });
+
+    return () => {
+      unsubProducts();
+      unsubSales();
+      unsubReturns();
+      unsubPurchases();
+      unsubCredits();
+      unsubExpenses();
+      unsubSuppliers();
+      unsubCustomers();
+      unsubCustomerTx();
+      unsubSupplierTx();
+      unsubSettings();
+      unsubMeta();
     };
-    fetchPOSDataFromServer();
-  }, []);
+  }, [activeUserId]);
 
-  // Automatic SQLite auto-save synchronization hook (debounced 1s)
-  useEffect(() => {
-    if (isSyncingFromServer.current) return;
-
-    const syncTimer = setTimeout(async () => {
-      try {
-        const payload = {
-          products,
-          sales,
-          returns,
-          purchases,
-          credits,
-          expenses,
-          suppliers,
-          customers,
-          customerTransactions,
-          supplierTransactions,
-          storeSettings,
-          userAccounts,
-        };
-        await fetch('/api/save-all', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        });
-        console.log('POS state auto-synchronized to SQLite server.');
-      } catch (err) {
-        console.error('Auto-sync to SQLite database failed:', err);
+  // Helper to persist user-isolated document in Firestore
+  const userFirestoreSet = async (subCol: string, docId: string, data: any) => {
+    if (!activeUserId) return;
+    try {
+      if (subCol === 'settings') {
+        await setDoc(doc(db, 'users', activeUserId, 'settings', docId), data, { merge: true });
+      } else {
+        await setDoc(doc(db, 'users', activeUserId, subCol, docId), data, { merge: true });
       }
-    }, 1000);
+    } catch (err: any) {
+      console.warn(`Firestore save to users/${activeUserId}/${subCol}/${docId} note:`, err.message);
+    }
+  };
 
-    return () => clearTimeout(syncTimer);
-  }, [
-    products,
-    sales,
-    returns,
-    purchases,
-    credits,
-    expenses,
-    suppliers,
-    customers,
-    customerTransactions,
-    supplierTransactions,
-    storeSettings,
-    userAccounts,
-  ]);
+  const userFirestoreDelete = async (subCol: string, docId: string) => {
+    if (!activeUserId) return;
+    try {
+      await deleteDoc(doc(db, 'users', activeUserId, subCol, docId));
+    } catch (err: any) {
+      console.warn(`Firestore delete from users/${activeUserId}/${subCol}/${docId} note:`, err.message);
+    }
+  };
 
-  // Real-time automatic SQLite background polling to sync changes from other tabs/devices
-  useEffect(() => {
-    const pollTimer = setInterval(async () => {
-      if (isSyncingFromServer.current) return;
-
-      try {
-        const res = await fetch('/api/pos-data');
-        if (res.ok) {
-          const serverData = await res.json();
-          isSyncingFromServer.current = true;
-
-          if (serverData.userAccounts?.length > 0) setUserAccounts(serverData.userAccounts);
-          if (serverData.products?.length > 0) setProducts(serverData.products);
-          if (serverData.sales) setSales(serverData.sales);
-          if (serverData.returns) setReturns(serverData.returns);
-          if (serverData.purchases) setPurchases(serverData.purchases);
-          if (serverData.credits) setCredits(serverData.credits);
-          if (serverData.expenses) setExpenses(serverData.expenses);
-          if (serverData.suppliers?.length > 0) setSuppliers(serverData.suppliers);
-          if (serverData.customers?.length > 0) setCustomers(serverData.customers);
-          if (serverData.customerTransactions) setCustomerTransactions(serverData.customerTransactions);
-          if (serverData.supplierTransactions) setSupplierTransactions(serverData.supplierTransactions);
-          if (serverData.storeSettings) setStoreSettings(serverData.storeSettings);
-        }
-      } catch (err) {
-        console.warn('Real-time polling sync skipped (server unreachable):', err);
-      } finally {
-        setTimeout(() => {
-          isSyncingFromServer.current = false;
-        }, 150);
-      }
-    }, 4000); // Poll every 4 seconds
-
-    return () => clearInterval(pollTimer);
-  }, [
-    products,
-    sales,
-    returns,
-    purchases,
-    credits,
-    expenses,
-    suppliers,
-    customers,
-    customerTransactions,
-    supplierTransactions,
-    storeSettings,
-    userAccounts,
-  ]);
-
+  // Login
   const login = (u: string, p: string) => {
     const emailLower = u.trim().toLowerCase();
     const passwordLower = p.trim();
 
-    if (emailLower === 'teemthepakhacktes.com@gmail.com') {
-      const superAdmin: UserAccount = {
-        id: 'acc-super-admin',
-        name: 'Super Admin',
-        email: 'teemthepakhacktes.com@gmail.com',
-        password: passwordLower || 'admin',
-        role: 'Admin',
-        permissions: {
-          canDashboard: true,
-          canSale: true,
-          canReturn: true,
-          canBillHistory: true,
-          canCreditReceive: true,
-          canPurchaseStock: true,
-          canProducts: true,
-          canSuppliers: true,
-          canCustomers: true,
-          canBarcodeLabel: true,
-          canDayClosing: true,
-          canExpenses: true,
-          canReports: true,
-          canSettings: true,
-          canPlanPRD: true,
-        }
-      };
-      setIsAuthenticated(true);
-      setCurrentUser(superAdmin);
-      setUserRole('Admin');
-      setActiveTab('super-admin');
-      return true;
-    }
-
-    // Look up in our custom accounts
     const found = userAccounts.find(
       (acc) => acc.email.trim().toLowerCase() === emailLower && acc.password === passwordLower
     );
@@ -579,43 +511,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsAuthenticated(true);
       setCurrentUser(found);
       setUserRole(found.role);
-      if (emailLower === 'alitrader@gmail.com') {
-        setActiveTab('master-admin');
-      } else {
-        setActiveTab('dashboard');
-      }
-      return true;
-    }
-
-    // Fallback default system accounts for testing/safety
-    if (emailLower === 'admin' && passwordLower === 'admin') {
-      const fallbackAdmin: UserAccount = {
-        id: 'acc-fallback-admin',
-        name: 'Default Admin',
-        email: 'admin',
-        password: 'admin',
-        role: 'Admin',
-        permissions: {
-          canDashboard: true,
-          canSale: true,
-          canReturn: true,
-          canBillHistory: true,
-          canCreditReceive: true,
-          canPurchaseStock: true,
-          canProducts: true,
-          canSuppliers: true,
-          canCustomers: true,
-          canBarcodeLabel: true,
-          canDayClosing: true,
-          canExpenses: true,
-          canReports: true,
-          canSettings: true,
-          canPlanPRD: true,
-        }
-      };
-      setIsAuthenticated(true);
-      setCurrentUser(fallbackAdmin);
-      setUserRole('Admin');
       setActiveTab('dashboard');
       return true;
     }
@@ -623,9 +518,191 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   };
 
+  // Firebase Email/Password Sign In
+  const loginWithFirebase = async (u: string, p: string): Promise<{ success: boolean; error?: string }> => {
+    const email = u.trim();
+    const password = p.trim();
+    if (!email || !password) {
+      return { success: false, error: 'Email and password are required' };
+    }
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const fbUser = userCredential.user;
+      setFirebaseUser(fbUser);
+
+      const emailLower = fbUser.email?.toLowerCase() || '';
+      const existing = userAccounts.find((a) => a.email.toLowerCase() === emailLower);
+      if (existing) {
+        setCurrentUser(existing);
+        setUserRole(existing.role);
+      } else {
+        const isMaster = emailLower === 'alitrader@gmail.com';
+        const newAccount: UserAccount = {
+          id: fbUser.uid,
+          name: fbUser.displayName || emailLower.split('@')[0] || 'LimoPOS User',
+          email: fbUser.email || email,
+          role: isMaster ? 'Admin' : 'Admin',
+          permissions: {
+            canDashboard: true,
+            canSale: true,
+            canReturn: true,
+            canBillHistory: true,
+            canCreditReceive: true,
+            canPurchaseStock: true,
+            canProducts: true,
+            canSuppliers: true,
+            canCustomers: true,
+            canBarcodeLabel: true,
+            canDayClosing: true,
+            canExpenses: true,
+            canReports: true,
+            canSettings: true,
+            canPlanPRD: true,
+          },
+        };
+        setUserAccounts((prev) => [...prev, newAccount]);
+        setCurrentUser(newAccount);
+        setUserRole(newAccount.role);
+        setDoc(doc(db, 'userAccounts', newAccount.id), newAccount, { merge: true }).catch(() => {});
+      }
+      setIsAuthenticated(true);
+      setActiveTab('dashboard');
+      return { success: true };
+    } catch (err: any) {
+      console.error('LimoPOS login error:', err);
+      let errorMsg = 'Failed to sign in. Please check your credentials.';
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        errorMsg = 'Invalid email or password. Please verify your credentials.';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMsg = 'Invalid email address format.';
+      } else if (err.code === 'auth/user-disabled') {
+        errorMsg = 'This account has been disabled.';
+      } else if (err.code === 'auth/too-many-requests') {
+        errorMsg = 'Too many failed attempts. Please try again later.';
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      return { success: false, error: errorMsg };
+    }
+  };
+
+  // Firebase Email/Password Registration
+  const registerWithFirebase = async (
+    u: string,
+    p: string,
+    displayName?: string,
+    role: UserRole = 'Cashier'
+  ): Promise<{ success: boolean; error?: string }> => {
+    const email = u.trim();
+    const password = p.trim();
+    if (!email || !password) {
+      return { success: false, error: 'Email and password are required' };
+    }
+    if (password.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters long' };
+    }
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const fbUser = userCredential.user;
+
+      if (displayName) {
+        await updateProfile(fbUser, { displayName });
+      }
+
+      setFirebaseUser(fbUser);
+      const isMaster = email.toLowerCase() === 'alitrader@gmail.com';
+      const actualRole: UserRole = isMaster ? 'Admin' : role;
+
+      const newAccount: UserAccount = {
+        id: fbUser.uid,
+        name: displayName || email.split('@')[0],
+        email: email,
+        password: password,
+        role: actualRole,
+        permissions: {
+          canDashboard: true,
+          canSale: true,
+          canReturn: true,
+          canBillHistory: true,
+          canCreditReceive: actualRole !== 'Cashier',
+          canPurchaseStock: actualRole !== 'Cashier',
+          canProducts: actualRole !== 'Cashier',
+          canSuppliers: actualRole !== 'Cashier',
+          canCustomers: actualRole !== 'Cashier',
+          canBarcodeLabel: true,
+          canDayClosing: actualRole !== 'Cashier',
+          canExpenses: actualRole !== 'Cashier',
+          canReports: actualRole !== 'Cashier',
+          canSettings: actualRole === 'Admin',
+          canPlanPRD: true,
+        },
+      };
+
+      setUserAccounts((prev) => [...prev, newAccount]);
+      setCurrentUser(newAccount);
+      setUserRole(newAccount.role);
+      setIsAuthenticated(true);
+      setActiveTab('dashboard');
+
+      setDoc(doc(db, 'userAccounts', newAccount.id), newAccount, { merge: true }).catch(() => {});
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('Firebase register error:', err);
+      let errorMsg = 'Failed to create account.';
+      if (err.code === 'auth/email-already-in-use') {
+        errorMsg = 'An account with this email already exists. Please sign in instead.';
+      } else if (err.code === 'auth/weak-password') {
+        errorMsg = 'Password is too weak. Please use at least 6 characters.';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMsg = 'Invalid email address format.';
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      return { success: false, error: errorMsg };
+    }
+  };
+
+  // Password Reset Email
+  const resetPasswordFirebase = async (email: string): Promise<{ success: boolean; error?: string }> => {
+    const trimmed = email.trim();
+    if (!trimmed) {
+      return { success: false, error: 'Please enter your email address' };
+    }
+    try {
+      await sendPasswordResetEmail(auth, trimmed);
+      return { success: true };
+    } catch (err: any) {
+      console.error('Firebase password reset error:', err);
+      let errorMsg = 'Failed to send password reset email.';
+      if (err.code === 'auth/user-not-found') {
+        errorMsg = 'No user account found with this email.';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMsg = 'Invalid email address format.';
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      return { success: false, error: errorMsg };
+    }
+  };
+
   const logout = () => {
+    signOut(auth).catch((e) => console.warn('Firebase signout note:', e));
     setIsAuthenticated(false);
     setCurrentUser(null);
+    setFirebaseUser(null);
+    setProducts([]);
+    setSales([]);
+    setReturns([]);
+    setPurchases([]);
+    setCredits([]);
+    setExpenses([]);
+    setSuppliers([]);
+    setCustomers([]);
+    setCustomerTransactions([]);
+    setSupplierTransactions([]);
+    localStorage.removeItem('medpos_auth');
+    localStorage.removeItem('medpos_current_user');
   };
 
   const addUserAccount = (acc: Omit<UserAccount, 'id'>) => {
@@ -634,6 +711,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `acc-${Date.now()}`,
     };
     setUserAccounts((prev) => [...prev, newAcc]);
+    setDoc(doc(db, 'userAccounts', newAcc.id), newAcc, { merge: true }).catch(() => {});
   };
 
   const updateUserAccount = (acc: UserAccount) => {
@@ -641,55 +719,28 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (currentUser && currentUser.id === acc.id) {
       setCurrentUser(acc);
     }
+    setDoc(doc(db, 'userAccounts', acc.id), acc, { merge: true }).catch(() => {});
   };
 
   const deleteUserAccount = (id: string) => {
-    if (id === 'acc-master') return; // Do not delete Master Admin!
+    if (id === 'acc-master') return;
     setUserAccounts((prev) => prev.filter((item) => item.id !== id));
+    deleteDoc(doc(db, 'userAccounts', id)).catch(() => {});
     if (currentUser && currentUser.id === id) {
       logout();
     }
   };
 
-  const addCompany = (company: Omit<CompanyAccount, 'id'>) => {
-    const newCompany: CompanyAccount = {
-      ...company,
-      id: `comp-${Date.now()}`,
-    };
-    setStoreSettings((prev) => {
-      const updatedCompanies = [...(prev.companies || []), newCompany];
-      const newSettings = { ...prev, companies: updatedCompanies };
-      localStorage.setItem('medpos_settings', JSON.stringify(newSettings));
-      return newSettings;
-    });
-  };
-
-  const updateCompany = (company: CompanyAccount) => {
-    setStoreSettings((prev) => {
-      const updatedCompanies = (prev.companies || []).map((c) =>
-        c.id === company.id ? company : c
-      );
-      const newSettings = { ...prev, companies: updatedCompanies };
-      localStorage.setItem('medpos_settings', JSON.stringify(newSettings));
-      return newSettings;
-    });
-  };
-
-  const deleteCompany = (id: string) => {
-    setStoreSettings((prev) => {
-      const updatedCompanies = (prev.companies || []).filter((c) => c.id !== id);
-      const newSettings = { ...prev, companies: updatedCompanies };
-      localStorage.setItem('medpos_settings', JSON.stringify(newSettings));
-      return newSettings;
-    });
-  };
-
+  // ==========================================
+  // PRODUCTS & INVENTORY OPERATIONS
+  // ==========================================
   const addProduct = (p: Omit<Product, 'id'>) => {
     const newProduct: Product = {
       ...p,
       id: `p-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
     };
     setProducts((prev) => [newProduct, ...prev]);
+    userFirestoreSet('products', newProduct.id, newProduct);
   };
 
   const addMultipleProducts = (newProds: Omit<Product, 'id'>[]) => {
@@ -698,14 +749,19 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `p-${Date.now()}-${idx}-${Math.floor(Math.random() * 100000)}`,
     }));
     setProducts((prev) => [...created, ...prev]);
+    created.forEach((item) => {
+      userFirestoreSet('products', item.id, item);
+    });
   };
 
   const updateProduct = (p: Product) => {
     setProducts((prev) => prev.map((item) => (item.id === p.id ? p : item)));
+    userFirestoreSet('products', p.id, p);
   };
 
   const deleteProduct = (id: string) => {
     setProducts((prev) => prev.filter((item) => item.id !== id));
+    userFirestoreDelete('products', id);
   };
 
   const bulkUpdateProducts = (updatedProds: Product[]) => {
@@ -713,33 +769,76 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const map = new Map(updatedProds.map((p) => [p.id, p]));
       return prev.map((p) => map.get(p.id) || p);
     });
+    updatedProds.forEach((prod) => {
+      userFirestoreSet('products', prod.id, prod);
+    });
   };
 
   const bulkDeleteProducts = (ids: string[]) => {
     const idSet = new Set(ids);
     setProducts((prev) => prev.filter((p) => !idSet.has(p.id)));
+    ids.forEach((id) => {
+      userFirestoreDelete('products', id);
+    });
   };
 
+  const importProducts = (newProducts: Product[]) => {
+    setProducts((prev) => {
+      const updated = [...prev];
+      newProducts.forEach((newP) => {
+        const idx = updated.findIndex(
+          (p) =>
+            p.barcode.trim().toLowerCase() === newP.barcode.trim().toLowerCase() &&
+            Number(p.retailPrice) === Number(newP.retailPrice)
+        );
+        if (idx !== -1) {
+          const updatedItem = { ...updated[idx], ...newP, id: updated[idx].id };
+          updated[idx] = updatedItem;
+          userFirestoreSet('products', updatedItem.id, updatedItem);
+        } else {
+          const newItem = {
+            ...newP,
+            id: newP.id || `p-${Date.now()}-${Math.floor(Math.random() * 1000000)}`
+          };
+          updated.push(newItem);
+          userFirestoreSet('products', newItem.id, newItem);
+        }
+      });
+      return updated;
+    });
+  };
+
+  // Categories & Brands
   const addCategory = (catName: string) => {
     const trimmed = catName.trim();
     if (!trimmed) return;
     setCategories((prev) => {
       if (prev.some((c) => c.toLowerCase() === trimmed.toLowerCase())) return prev;
-      return [...prev, trimmed];
+      const updated = [...prev, trimmed];
+      userFirestoreSet('settings', 'metadata', { categories: updated, brands });
+      return updated;
     });
   };
 
   const updateCategory = (oldName: string, newName: string) => {
     const trimmedNew = newName.trim();
     if (!trimmedNew || oldName === trimmedNew) return;
-    setCategories((prev) => prev.map((c) => (c === oldName ? trimmedNew : c)));
+    setCategories((prev) => {
+      const updated = prev.map((c) => (c === oldName ? trimmedNew : c));
+      userFirestoreSet('settings', 'metadata', { categories: updated, brands });
+      return updated;
+    });
     setProducts((prev) =>
       prev.map((p) => (p.category === oldName ? { ...p, category: trimmedNew } : p))
     );
   };
 
   const deleteCategory = (catName: string) => {
-    setCategories((prev) => prev.filter((c) => c !== catName));
+    setCategories((prev) => {
+      const updated = prev.filter((c) => c !== catName);
+      userFirestoreSet('settings', 'metadata', { categories: updated, brands });
+      return updated;
+    });
   };
 
   const addBrand = (brandName: string) => {
@@ -747,72 +846,62 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!trimmed) return;
     setBrands((prev) => {
       if (prev.some((b) => b.toLowerCase() === trimmed.toLowerCase())) return prev;
-      return [...prev, trimmed];
+      const updated = [...prev, trimmed];
+      userFirestoreSet('settings', 'metadata', { categories, brands: updated });
+      return updated;
     });
   };
 
   const updateBrand = (oldName: string, newName: string) => {
     const trimmedNew = newName.trim();
     if (!trimmedNew || oldName === trimmedNew) return;
-    setBrands((prev) => prev.map((b) => (b === oldName ? trimmedNew : b)));
+    setBrands((prev) => {
+      const updated = prev.map((b) => (b === oldName ? trimmedNew : b));
+      userFirestoreSet('settings', 'metadata', { categories, brands: updated });
+      return updated;
+    });
     setProducts((prev) =>
       prev.map((p) => (p.company === oldName ? { ...p, company: trimmedNew } : p))
     );
   };
 
   const deleteBrand = (brandName: string) => {
-    setBrands((prev) => prev.filter((b) => b !== brandName));
-  };
-
-  const importProducts = (newProducts: Product[]) => {
-    setProducts((prev) => {
-      const updated = [...prev];
-      newProducts.forEach((newP) => {
-        // If exact barcode AND exact retail price matches, update existing
-        const idx = updated.findIndex(
-          (p) =>
-            p.barcode.trim().toLowerCase() === newP.barcode.trim().toLowerCase() &&
-            Number(p.retailPrice) === Number(newP.retailPrice)
-        );
-        if (idx !== -1) {
-          // Keep existing ID, update attributes
-          updated[idx] = { ...updated[idx], ...newP, id: updated[idx].id };
-        } else {
-          // Add as new batch / rate entry for this barcode
-          updated.push({
-            ...newP,
-            id: newP.id || `p-${Date.now()}-${Math.floor(Math.random() * 1000000)}`
-          });
-        }
-      });
+    setBrands((prev) => {
+      const updated = prev.filter((b) => b !== brandName);
+      userFirestoreSet('settings', 'metadata', { categories, brands: updated });
       return updated;
     });
   };
 
+  // Suppliers
   const addSupplier = (s: Omit<Supplier, 'id'>) => {
     const newSup: Supplier = {
       ...s,
       id: `sup-${Date.now()}`,
     };
     setSuppliers((prev) => [newSup, ...prev]);
+    userFirestoreSet('suppliers', newSup.id, newSup);
   };
 
   const updateSupplier = (s: Supplier) => {
     setSuppliers((prev) => prev.map((item) => (item.id === s.id ? s : item)));
+    userFirestoreSet('suppliers', s.id, s);
   };
 
   const deleteSupplier = (id: string) => {
     setSuppliers((prev) => prev.filter((item) => item.id !== id));
+    userFirestoreDelete('suppliers', id);
   };
 
+  // Customers
   const addCustomer = (c: Omit<Customer, 'id'>) => {
     const newCust: Customer = {
       ...c,
       id: `cust-${Date.now()}`,
     };
     setCustomers((prev) => [newCust, ...prev]);
+    userFirestoreSet('customers', newCust.id, newCust);
 
-    // If opening balance is entered, create an opening transaction
     if (c.balanceReceivable > 0) {
       const now = new Date();
       const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
@@ -832,16 +921,19 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         notes: 'Initial opening balance',
       };
       setCustomerTransactions((prev) => [opTx, ...prev]);
+      userFirestoreSet('customerTransactions', opTx.id, opTx);
     }
   };
 
   const updateCustomer = (c: Customer) => {
     setCustomers((prev) => prev.map((item) => (item.id === c.id ? c : item)));
+    userFirestoreSet('customers', c.id, c);
   };
 
   const deleteCustomer = (id: string) => {
     setCustomers((prev) => prev.filter((item) => item.id !== id));
     setCustomerTransactions((prev) => prev.filter((tx) => tx.customerId !== id));
+    userFirestoreDelete('customers', id);
   };
 
   const addCustomerTransaction = (txData: Omit<CustomerTransaction, 'id'>) => {
@@ -851,13 +943,15 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setCustomerTransactions((prev) => [newTx, ...prev]);
+    userFirestoreSet('customerTransactions', newTx.id, newTx);
 
-    // Sync Customer balance
     setCustomers((prev) =>
       prev.map((c) => {
         if (c.id === txData.customerId || c.name.toLowerCase() === txData.customerName.toLowerCase()) {
           const delta = txData.debit - txData.credit;
-          return { ...c, balanceReceivable: c.balanceReceivable + delta };
+          const updated = { ...c, balanceReceivable: c.balanceReceivable + delta };
+          userFirestoreSet('customers', updated.id, updated);
+          return updated;
         }
         return c;
       })
@@ -868,6 +962,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCustomerTransactions((prev) =>
       prev.map((tx) => (tx.id === updatedTx.id ? updatedTx : tx))
     );
+    userFirestoreSet('customerTransactions', updatedTx.id, updatedTx);
   };
 
   const deleteCustomerTransaction = (id: string) => {
@@ -877,13 +972,16 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         prev.map((c) => {
           if (c.id === target.customerId || c.name.toLowerCase() === target.customerName.toLowerCase()) {
             const delta = target.debit - target.credit;
-            return { ...c, balanceReceivable: Math.max(0, c.balanceReceivable - delta) };
+            const updated = { ...c, balanceReceivable: Math.max(0, c.balanceReceivable - delta) };
+            userFirestoreSet('customers', updated.id, updated);
+            return updated;
           }
           return c;
         })
       );
     }
     setCustomerTransactions((prev) => prev.filter((tx) => tx.id !== id));
+    userFirestoreDelete('customerTransactions', id);
   };
 
   const addSupplierTransaction = (txData: Omit<SupplierTransaction, 'id'>) => {
@@ -893,13 +991,15 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setSupplierTransactions((prev) => [newTx, ...prev]);
+    userFirestoreSet('supplierTransactions', newTx.id, newTx);
 
-    // Sync Supplier balance
     setSuppliers((prev) =>
       prev.map((s) => {
         if (s.id === txData.supplierId || s.name.toLowerCase() === txData.supplierName.toLowerCase()) {
           const delta = txData.credit - txData.debit;
-          return { ...s, balanceOwed: Math.max(0, s.balanceOwed + delta) };
+          const updated = { ...s, balanceOwed: Math.max(0, s.balanceOwed + delta) };
+          userFirestoreSet('suppliers', updated.id, updated);
+          return updated;
         }
         return s;
       })
@@ -910,6 +1010,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSupplierTransactions((prev) =>
       prev.map((tx) => (tx.id === updatedTx.id ? updatedTx : tx))
     );
+    userFirestoreSet('supplierTransactions', updatedTx.id, updatedTx);
   };
 
   const deleteSupplierTransaction = (id: string) => {
@@ -919,15 +1020,21 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         prev.map((s) => {
           if (s.id === target.supplierId || s.name.toLowerCase() === target.supplierName.toLowerCase()) {
             const delta = target.credit - target.debit;
-            return { ...s, balanceOwed: Math.max(0, s.balanceOwed - delta) };
+            const updated = { ...s, balanceOwed: Math.max(0, s.balanceOwed - delta) };
+            userFirestoreSet('suppliers', updated.id, updated);
+            return updated;
           }
           return s;
         })
       );
     }
     setSupplierTransactions((prev) => prev.filter((tx) => tx.id !== id));
+    userFirestoreDelete('supplierTransactions', id);
   };
 
+  // ==========================================
+  // SALE INVOICES & RETURNS
+  // ==========================================
   const addSale = (saleData: Omit<SaleInvoice, 'id' | 'invoiceNo'>): SaleInvoice => {
     const nextInvoiceNo = sales.length > 0 ? Math.max(...sales.map((s) => s.invoiceNo)) + 1 : 1;
     const newSale: SaleInvoice = {
@@ -936,33 +1043,35 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       invoiceNo: nextInvoiceNo,
     };
 
-    // Deduct stock for each sold item
     setProducts((prev) =>
       prev.map((prod) => {
         const soldItem = saleData.items.find(
           (item) => item.barcode.trim().toLowerCase() === prod.barcode.trim().toLowerCase()
         );
         if (soldItem) {
-          // Use 3 decimal precision for float/decimal-based stock values
           const updatedStock = parseFloat(Math.max(0, prod.stock - soldItem.qty).toFixed(3));
-          return { ...prod, stock: updatedStock };
+          const updatedProd = { ...prod, stock: updatedStock };
+          userFirestoreSet('products', updatedProd.id, updatedProd);
+          return updatedProd;
         }
         return prod;
       })
     );
 
     setSales((prev) => [newSale, ...prev]);
+    userFirestoreSet('sales', newSale.id, newSale);
+
     return newSale;
   };
 
   const updateSale = (updatedSale: SaleInvoice) => {
     setSales((prev) => prev.map((s) => (s.id === updatedSale.id ? updatedSale : s)));
+    userFirestoreSet('sales', updatedSale.id, updatedSale);
   };
 
   const deleteSale = (id: string) => {
     const targetSale = sales.find((s) => s.id === id);
     if (targetSale) {
-      // Restore stock for each item in the deleted sale with float-safe 3 decimal precision
       setProducts((prev) =>
         prev.map((prod) => {
           const soldItem = targetSale.items.find(
@@ -970,13 +1079,16 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           );
           if (soldItem) {
             const updatedStock = parseFloat((prod.stock + soldItem.qty).toFixed(3));
-            return { ...prod, stock: updatedStock };
+            const updatedProd = { ...prod, stock: updatedStock };
+            userFirestoreSet('products', updatedProd.id, updatedProd);
+            return updatedProd;
           }
           return prod;
         })
       );
     }
     setSales((prev) => prev.filter((s) => s.id !== id));
+    userFirestoreDelete('sales', id);
   };
 
   const addReturn = (ret: Omit<SaleReturn, 'id' | 'date'>) => {
@@ -989,37 +1101,42 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: formattedDate,
     };
 
-    // Increase product stock back
     setProducts((prev) =>
       prev.map((p) => {
         if (p.barcode.trim().toLowerCase() === ret.barcode.trim().toLowerCase()) {
-          return { ...p, stock: p.stock + ret.qty };
+          const updatedProd = { ...p, stock: p.stock + ret.qty };
+          userFirestoreSet('products', updatedProd.id, updatedProd);
+          return updatedProd;
         }
         return p;
       })
     );
 
     setReturns((prev) => [newReturn, ...prev]);
+    userFirestoreSet('returns', newReturn.id, newReturn);
   };
 
   const updateReturn = (updatedRet: SaleReturn) => {
     setReturns((prev) => prev.map((r) => (r.id === updatedRet.id ? updatedRet : r)));
+    userFirestoreSet('returns', updatedRet.id, updatedRet);
   };
 
   const deleteReturn = (id: string) => {
     setReturns((prev) => prev.filter((r) => r.id !== id));
+    userFirestoreDelete('returns', id);
   };
 
+  // ==========================================
+  // PURCHASES, CREDITS & EXPENSES
+  // ==========================================
   const addPurchase = (pur: Omit<PurchaseRecord, 'id' | 'date'>, mode?: 'update_existing' | 'create_batch') => {
     const now = new Date();
     const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
     
-    // Find or link supplier
     let targetSupplier = suppliers.find(
       (s) => (pur.supplierId && s.id === pur.supplierId) || (pur.supplierName && s.name.toLowerCase() === pur.supplierName.trim().toLowerCase())
     );
 
-    // If supplier name was typed but not yet in suppliers master, auto-create it
     if (!targetSupplier && pur.supplierName && pur.supplierName.trim() && pur.supplierName.trim().toLowerCase() !== 'general') {
       const newSupId = `sup-${Date.now()}`;
       const newSup: Supplier = {
@@ -1032,11 +1149,18 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         balanceOwed: pur.totalCost,
       };
       setSuppliers((prev) => [newSup, ...prev]);
+      userFirestoreSet('suppliers', newSup.id, newSup);
       targetSupplier = newSup;
     } else if (targetSupplier) {
-      // Increase existing supplier balance owed
       setSuppliers((prev) =>
-        prev.map((s) => (s.id === targetSupplier!.id ? { ...s, balanceOwed: s.balanceOwed + pur.totalCost } : s))
+        prev.map((s) => {
+          if (s.id === targetSupplier!.id) {
+            const updated = { ...s, balanceOwed: s.balanceOwed + pur.totalCost };
+            userFirestoreSet('suppliers', updated.id, updated);
+            return updated;
+          }
+          return s;
+        })
       );
     }
 
@@ -1051,7 +1175,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: formattedDate,
     };
 
-    // Record Supplier Ledger Bill Transaction
     if (targetSupplier || (matchedSupplierName && matchedSupplierName !== 'General')) {
       const supTx: SupplierTransaction = {
         id: `stx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -1069,14 +1192,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         notes: `Inwarded to Inventory (Barcode: ${pur.barcode})`,
       };
       setSupplierTransactions((prev) => [supTx, ...prev]);
+      userFirestoreSet('supplierTransactions', supTx.id, supTx);
     }
 
-    // Update product stock and prices if product exists, or create product if not
     setProducts((prev) => {
       const existing = prev.find((p) => p.barcode.trim().toLowerCase() === pur.barcode.trim().toLowerCase());
 
       if (mode === 'create_batch') {
-        // Create as distinct batch variant
         const batchProduct: Product = {
           id: `p-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
           barcode: pur.barcode,
@@ -1093,13 +1215,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           batchNo: `B-${Date.now().toString().slice(-4)}`,
           unitOfSale: 'Count',
         };
+        userFirestoreSet('products', batchProduct.id, batchProduct);
         return [batchProduct, ...prev];
       }
 
       if (existing) {
         return prev.map((p) => {
           if (p.id === existing.id) {
-            return {
+            const updatedProd = {
               ...p,
               stock: p.stock + pur.qtyReceived,
               supplierId: matchedSupplierId || p.supplierId,
@@ -1108,6 +1231,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               retailPrice: pur.salePriceRetail > 0 ? pur.salePriceRetail : p.retailPrice,
               wholesalePrice: pur.wholesalePrice > 0 ? pur.wholesalePrice : p.wholesalePrice,
             };
+            userFirestoreSet('products', updatedProd.id, updatedProd);
+            return updatedProd;
           }
           return p;
         });
@@ -1127,19 +1252,23 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           minStockAlert: 10,
           unitOfSale: 'Count',
         };
+        userFirestoreSet('products', created.id, created);
         return [created, ...prev];
       }
     });
 
     setPurchases((prev) => [newPurchase, ...prev]);
+    userFirestoreSet('purchases', newPurchase.id, newPurchase);
   };
 
   const updatePurchase = (updatedPur: PurchaseRecord) => {
     setPurchases((prev) => prev.map((p) => (p.id === updatedPur.id ? updatedPur : p)));
+    userFirestoreSet('purchases', updatedPur.id, updatedPur);
   };
 
   const deletePurchase = (id: string) => {
     setPurchases((prev) => prev.filter((p) => p.id !== id));
+    userFirestoreDelete('purchases', id);
   };
 
   const addCredit = (c: Omit<CreditPayment, 'id' | 'date'>) => {
@@ -1152,14 +1281,17 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: formattedDate,
     };
     setCredits((prev) => [newCredit, ...prev]);
+    userFirestoreSet('credits', newCredit.id, newCredit);
   };
 
   const updateCredit = (updatedCredit: CreditPayment) => {
     setCredits((prev) => prev.map((c) => (c.id === updatedCredit.id ? updatedCredit : c)));
+    userFirestoreSet('credits', updatedCredit.id, updatedCredit);
   };
 
   const deleteCredit = (id: string) => {
     setCredits((prev) => prev.filter((c) => c.id !== id));
+    userFirestoreDelete('credits', id);
   };
 
   const addExpense = (e: Omit<ExpenseRecord, 'id' | 'date'>) => {
@@ -1172,78 +1304,151 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: formattedDate,
     };
     setExpenses((prev) => [newExpense, ...prev]);
+    userFirestoreSet('expenses', newExpense.id, newExpense);
   };
 
-  const updateExpense = (updatedExpense: ExpenseRecord) => {
-    setExpenses((prev) => prev.map((e) => (e.id === updatedExpense.id ? updatedExpense : e)));
+  const updateExpense = (updatedExp: ExpenseRecord) => {
+    setExpenses((prev) => prev.map((e) => (e.id === updatedExp.id ? updatedExp : e)));
+    userFirestoreSet('expenses', updatedExp.id, updatedExp);
   };
 
   const deleteExpense = (id: string) => {
-    setExpenses((prev) => prev.filter((exp) => exp.id !== id));
+    setExpenses((prev) => prev.filter((e) => e.id !== id));
+    userFirestoreDelete('expenses', id);
   };
 
   const updateStoreSettings = (s: StoreSettings) => {
     setStoreSettings(s);
+    userFirestoreSet('settings', 'storeSettings', s);
+  };
+
+  const openThermalReceipt = (invoice: SaleInvoice, size: ThermalPaperSize = '80mm') => {
+    setPreviewInvoice(invoice);
+    setThermalPaperSize(size);
   };
 
   const resetToDefaults = () => {
-    setProducts(initialProducts);
-    setSales(initialSales);
-    setPurchases(initialPurchases);
-    setCredits(initialCredits);
-    setExpenses(initialExpenses);
-    setCustomerTransactions(initialCustomerTransactions);
-    setSupplierTransactions(initialSupplierTransactions);
+    setProducts([]);
+    setSales([]);
     setReturns([]);
+    setPurchases([]);
+    setCredits([]);
+    setExpenses([]);
+    setSuppliers([]);
+    setCustomers([]);
+    setCustomerTransactions([]);
+    setSupplierTransactions([]);
     setStoreSettings(initialStoreSettings);
-    localStorage.clear();
+  };
+
+  const clearAllTemporaryData = () => {
+    setProducts([]);
+    setSales([]);
+    setReturns([]);
+    setPurchases([]);
+    setCredits([]);
+    setExpenses([]);
+    setSuppliers([]);
+    setCustomers([]);
+    setCustomerTransactions([]);
+    setSupplierTransactions([]);
   };
 
   const exportDatabase = () => {
     const data = {
+      version: '3.0.0',
+      exportDate: new Date().toISOString(),
       products,
       sales,
       returns,
       purchases,
       credits,
       expenses,
+      storeSettings,
+      suppliers,
+      customers,
       customerTransactions,
       supplierTransactions,
-      storeSettings,
-      exportedAt: new Date().toISOString(),
+      categories,
+      brands,
+      userAccounts,
     };
+
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `medpos_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `limopos_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
   const importDatabase = (jsonData: string): boolean => {
     try {
-      const parsed = JSON.parse(jsonData);
-      if (parsed.products) setProducts(parsed.products);
-      if (parsed.sales) setSales(parsed.sales);
-      if (parsed.returns) setReturns(parsed.returns);
-      if (parsed.purchases) setPurchases(parsed.purchases);
-      if (parsed.credits) setCredits(parsed.credits);
-      if (parsed.expenses) setExpenses(parsed.expenses);
-      if (parsed.customerTransactions) setCustomerTransactions(parsed.customerTransactions);
-      if (parsed.supplierTransactions) setSupplierTransactions(parsed.supplierTransactions);
-      if (parsed.storeSettings) setStoreSettings(parsed.storeSettings);
+      const data = JSON.parse(jsonData);
+      if (data.products && Array.isArray(data.products)) {
+        setProducts(data.products);
+        data.products.forEach((p: Product) => userFirestoreSet('products', p.id, p));
+      }
+      if (data.sales && Array.isArray(data.sales)) {
+        setSales(data.sales);
+        data.sales.forEach((s: SaleInvoice) => userFirestoreSet('sales', s.id, s));
+      }
+      if (data.returns && Array.isArray(data.returns)) {
+        setReturns(data.returns);
+        data.returns.forEach((r: SaleReturn) => userFirestoreSet('returns', r.id, r));
+      }
+      if (data.purchases && Array.isArray(data.purchases)) {
+        setPurchases(data.purchases);
+        data.purchases.forEach((p: PurchaseRecord) => userFirestoreSet('purchases', p.id, p));
+      }
+      if (data.credits && Array.isArray(data.credits)) {
+        setCredits(data.credits);
+        data.credits.forEach((c: CreditPayment) => userFirestoreSet('credits', c.id, c));
+      }
+      if (data.expenses && Array.isArray(data.expenses)) {
+        setExpenses(data.expenses);
+        data.expenses.forEach((e: ExpenseRecord) => userFirestoreSet('expenses', e.id, e));
+      }
+      if (data.suppliers && Array.isArray(data.suppliers)) {
+        setSuppliers(data.suppliers);
+        data.suppliers.forEach((s: Supplier) => userFirestoreSet('suppliers', s.id, s));
+      }
+      if (data.customers && Array.isArray(data.customers)) {
+        setCustomers(data.customers);
+        data.customers.forEach((c: Customer) => userFirestoreSet('customers', c.id, c));
+      }
+      if (data.customerTransactions && Array.isArray(data.customerTransactions)) {
+        setCustomerTransactions(data.customerTransactions);
+        data.customerTransactions.forEach((tx: CustomerTransaction) => userFirestoreSet('customerTransactions', tx.id, tx));
+      }
+      if (data.supplierTransactions && Array.isArray(data.supplierTransactions)) {
+        setSupplierTransactions(data.supplierTransactions);
+        data.supplierTransactions.forEach((tx: SupplierTransaction) => userFirestoreSet('supplierTransactions', tx.id, tx));
+      }
+      if (data.storeSettings) {
+        setStoreSettings(data.storeSettings);
+        userFirestoreSet('settings', 'storeSettings', data.storeSettings);
+      }
+      if (data.categories && Array.isArray(data.categories)) {
+        setCategories(data.categories);
+      }
+      if (data.brands && Array.isArray(data.brands)) {
+        setBrands(data.brands);
+      }
+      if (data.categories || data.brands) {
+        userFirestoreSet('settings', 'metadata', {
+          categories: data.categories || categories,
+          brands: data.brands || brands,
+        });
+      }
       return true;
-    } catch {
+    } catch (err) {
+      console.error('Import database error:', err);
       return false;
     }
-  };
-
-  const openThermalReceipt = (invoice: SaleInvoice, size?: ThermalPaperSize) => {
-    if (size) {
-      setThermalPaperSize(size);
-    }
-    setPreviewInvoice(invoice);
   };
 
   return (
@@ -1251,6 +1456,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         isAuthenticated,
         login,
+        loginWithFirebase,
+        registerWithFirebase,
+        resetPasswordFirebase,
+        firebaseUser,
+        firebaseAuthLoading,
+        isCloudSyncing,
         logout,
         userRole,
         setUserRole,
@@ -1318,15 +1529,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         showSyncModal,
         setShowSyncModal,
         resetToDefaults,
+        clearAllTemporaryData,
         exportDatabase,
         importDatabase,
         userAccounts,
         addUserAccount,
         updateUserAccount,
         deleteUserAccount,
-        addCompany,
-        updateCompany,
-        deleteCompany,
         currentUser,
         setCurrentUser,
       }}
