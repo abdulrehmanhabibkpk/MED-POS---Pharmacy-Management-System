@@ -10,15 +10,27 @@ export const LoginScreen: React.FC = () => {
   const [error, setError] = useState('');
   const [showAgreementModal, setShowAgreementModal] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim()) {
       setError('Please enter a valid email or username');
       return;
     }
-    const success = login(username, password);
-    if (!success) {
-      setError('Invalid login credentials.');
+    
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const result = await login(username, password);
+      if (!result.success) {
+        setError(result.error || 'Invalid login credentials.');
+      }
+    } catch (err) {
+      setError('Server unreachable. Please check your connection.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -226,10 +238,20 @@ export const LoginScreen: React.FC = () => {
             <button
               id="login-submit-btn"
               type="submit"
-              className="w-full bg-[#3F83F8] hover:bg-[#2563EB] text-white font-bold py-3.5 px-5 rounded-2xl shadow-lg shadow-blue-100 transition-all flex items-center justify-center gap-2 text-sm tracking-wide active:scale-[0.98] transform translateZ(0) will-change-transform"
+              disabled={isLoading}
+              className="w-full bg-[#3F83F8] hover:bg-[#2563EB] disabled:bg-[#9CA3AF] text-white font-bold py-3.5 px-5 rounded-2xl shadow-lg shadow-blue-100 disabled:shadow-none transition-all flex items-center justify-center gap-2 text-sm tracking-wide active:scale-[0.98] transform translateZ(0) will-change-transform"
             >
-              <span>Sign In</span>
-              <ArrowRight className="w-4.5 h-4.5" />
+              {isLoading ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Verifying Account...</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <ArrowRight className="w-4.5 h-4.5" />
+                </>
+              )}
             </button>
 
             <div className="flex items-center justify-between pt-4 text-xs font-bold border-t border-slate-100">
