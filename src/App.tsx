@@ -19,6 +19,7 @@ import { ReportsView } from './components/ReportsView';
 import { StoreSettingsView } from './components/StoreSettingsView';
 import { BarcodeLabelView } from './components/BarcodeLabelView';
 import { PlanPRDView } from './components/PlanPRDView';
+import { SuperAdminView } from './components/SuperAdminView';
 import { ReceiptModal } from './components/ReceiptModal';
 import { AndroidSyncModal } from './components/AndroidSyncModal';
 import { MobileScannerTerminal } from './components/MobileScannerTerminal';
@@ -96,6 +97,8 @@ const MainLayout: React.FC = () => {
         return 'Interactive POS Roadmap & PRD Plan';
       case 'master-admin':
         return 'Master Admin Panel';
+      case 'super-admin':
+        return 'SaaS Super Admin Control Center';
       default:
         return 'Dashboard';
     }
@@ -124,6 +127,11 @@ const MainLayout: React.FC = () => {
       if (activeTab === 'master-admin' && currentUser.email.toLowerCase() !== 'alitrader@gmail.com') {
         return false;
       }
+
+      // 'super-admin' is ONLY for Super Admin
+      if (activeTab === 'super-admin' && currentUser.email.toLowerCase() !== 'teemthepakhacktes.com@gmail.com') {
+        return false;
+      }
     } else {
       // Fallback
       if (userRole === 'Cashier') {
@@ -131,7 +139,7 @@ const MainLayout: React.FC = () => {
         return cashierAllowed.includes(activeTab);
       }
       if (userRole === 'Manager') {
-        const managerRestricted: ActiveTab[] = ['store-settings', 'master-admin'];
+        const managerRestricted: ActiveTab[] = ['store-settings', 'master-admin', 'super-admin'];
         return !managerRestricted.includes(activeTab);
       }
     }
@@ -210,6 +218,7 @@ const MainLayout: React.FC = () => {
               {activeTab === 'store-settings' && <StoreSettingsView />}
               {activeTab === 'plan-prd' && <PlanPRDView />}
               {activeTab === 'master-admin' && <MasterAdminView />}
+              {activeTab === 'super-admin' && <SuperAdminView />}
             </>
           )}
         </main>

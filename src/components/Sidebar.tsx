@@ -16,6 +16,7 @@ import {
   Pill,
   Truck,
   Users,
+  Building,
 } from 'lucide-react';
 import { usePOS } from '../context/POSContext';
 import { ActiveTab } from '../types';
@@ -54,8 +55,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
     });
   }
 
+  if (currentUser?.email.toLowerCase() === 'teemthepakhacktes.com@gmail.com') {
+    navItems.unshift({
+      id: 'super-admin',
+      label: 'SaaS Super Admin',
+      icon: <Building className="w-5 h-5 text-blue-600 animate-pulse" />,
+    });
+  }
+
   const visibleNavItems = navItems.filter((item) => {
-    if (currentUser?.email.toLowerCase() === 'alitrader@gmail.com') {
+    if (
+      currentUser?.email.toLowerCase() === 'alitrader@gmail.com' ||
+      currentUser?.email.toLowerCase() === 'teemthepakhacktes.com@gmail.com'
+    ) {
       return true;
     }
     

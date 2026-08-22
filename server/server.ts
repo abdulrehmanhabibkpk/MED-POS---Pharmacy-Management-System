@@ -7,6 +7,7 @@ import {
 } from '../src/db/schema.ts';
 import { seedDatabaseIfEmpty } from './db/seed.ts';
 import { eq } from 'drizzle-orm';
+import { syncAllToSupabase } from './supabaseSync.ts';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -430,6 +431,9 @@ app.post('/api/save-all', async (req, res) => {
         }
       }
     });
+
+    // Replicate database tables to Supabase project in the background (asynchronously)
+    syncAllToSupabase(req.body);
 
     res.json({ success: true, message: 'All POS database tables successfully live-synchronized with PostgreSQL!' });
   } catch (error: any) {
