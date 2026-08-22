@@ -36,13 +36,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
     { id: 'bill-history', label: 'Bill History', icon: <ClipboardList className="w-5 h-5" /> },
     { id: 'credit-receive', label: 'Credit Receive', icon: <WalletCards className="w-5 h-5" /> },
     { id: 'purchase-stock', label: 'Purchase Stock', icon: <Package className="w-5 h-5" /> },
-    { id: 'products', label: 'Products', icon: <Tag className="w-5 h-5" /> },
+    { id: 'products', label: 'Products & Inventory', icon: <Tag className="w-5 h-5" /> },
     { id: 'suppliers', label: 'Suppliers List', icon: <Truck className="w-5 h-5" /> },
     { id: 'customers', label: 'Customers Ledger', icon: <Users className="w-5 h-5" /> },
     { id: 'barcode-label', label: 'Label Generator', icon: <Tag className="w-5 h-5" /> },
     { id: 'day-closing', label: 'Day Closing', icon: <CalendarCheck className="w-5 h-5" /> },
     { id: 'pay-expense', label: 'Pay Expense', icon: <Receipt className="w-5 h-5" /> },
-    { id: 'reports', label: 'Reports', icon: <BarChart3 className="w-5 h-5" /> },
+    { id: 'reports', label: 'Reports & Analytics', icon: <BarChart3 className="w-5 h-5" /> },
     { id: 'store-settings', label: 'Software Settings', icon: <Settings className="w-5 h-5" /> },
   ];
 
@@ -50,12 +50,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
     navItems.unshift({
       id: 'master-admin',
       label: 'Master Admin Panel',
-      icon: <Users className="w-5 h-5 text-amber-300" />,
+      icon: <Users className="w-5 h-5 text-amber-400 animate-pulse" />,
     });
   }
 
   const visibleNavItems = navItems.filter((item) => {
-    // If master admin account, they can see EVERYTHING
     if (currentUser?.email.toLowerCase() === 'alitrader@gmail.com') {
       return true;
     }
@@ -81,7 +80,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
       }
     }
     
-    // Fallback based on userRole
     if (userRole === 'Cashier') {
       const cashierAllowed: ActiveTab[] = ['dashboard', 'sale-invoice', 'sale-return', 'bill-history', 'barcode-label', 'plan-prd'];
       return cashierAllowed.includes(item.id);
@@ -98,14 +96,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
       {/* Mobile Backdrop Overlay */}
       {isOpenOnMobile && (
         <div
-          className="fixed inset-0 bg-black/60 z-40 md:hidden transition-all duration-300"
+          className="fixed inset-0 bg-slate-950/40 z-40 md:hidden backdrop-blur-sm transition-all duration-300"
           onClick={onCloseMobile}
         />
       )}
 
       <aside
         id="pos-sidebar"
-        className={`fixed md:static inset-y-0 left-0 z-50 w-64 min-w-[16rem] bg-[#002244] text-white flex flex-col justify-between select-none shadow-xl border-r border-[#001730] shrink-0 transition-transform duration-300 md:translate-x-0 ${
+        className={`fixed md:static inset-y-0 left-0 z-50 w-72 min-w-[18rem] bg-white text-slate-800 flex flex-col justify-between select-none shadow-xl border-r border-slate-200/85 shrink-0 transition-all duration-300 transform md:translate-x-0 ${
           isOpenOnMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
@@ -117,35 +115,34 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
               setActiveTab('dashboard');
               onCloseMobile?.();
             }}
-            className="p-4 flex items-center justify-between border-b border-[#003366] cursor-pointer hover:bg-[#002d59] transition-colors"
+            className="p-5 flex items-center justify-between border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-all duration-150 active:scale-98"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#001c38] flex items-center justify-center text-white overflow-hidden shrink-0 border border-[#003366] p-1">
+              <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center text-[#1E3A8A] overflow-hidden shrink-0 border border-slate-200 shadow-inner p-1.5 transition-transform hover:scale-105">
                 <img 
                   src="/WhatsApp_Image_2026-08-07_at_11.56.27_PM-removebg-preview.png" 
-                  alt="HACKTES Logo" 
+                  alt="LimoPOS Logo" 
                   className="w-full h-full object-contain"
                   onError={(e) => {
-                    // Show fallback pill if image fails to load
                     e.currentTarget.style.display = 'none';
                     const parent = e.currentTarget.parentElement;
                     if (parent) {
                       const fallback = document.createElement('div');
-                      fallback.className = 'text-white flex items-center justify-center';
-                      fallback.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pill w-6 h-6 rotate-45"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"></path><path d="m8.5 8.5 7 7"></path></svg>';
+                      fallback.className = 'text-blue-600 font-black text-xs';
+                      fallback.innerText = 'Limo';
                       parent.appendChild(fallback);
                     }
                   }}
                 />
               </div>
               <div>
-                <h1 className="text-base font-black tracking-wide leading-none text-white flex items-center gap-1">
-                  LimoPOS
+                <h1 className="text-lg font-black tracking-tight leading-none text-slate-900 flex items-center gap-1.5">
+                  <span>Limo<span className="text-blue-600">POS</span></span>
                 </h1>
-                <p className="text-xs text-[#7ec8e3] mt-1 font-medium">POS System</p>
+                <p className="text-[11px] text-slate-500 mt-1 font-bold uppercase tracking-wider">Enterprise System</p>
               </div>
             </div>
-
+ 
             {/* Mobile close button */}
             <button
               type="button"
@@ -153,37 +150,38 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
                 e.stopPropagation();
                 onCloseMobile?.();
               }}
-              className="md:hidden text-slate-300 hover:text-white p-1 rounded hover:bg-white/10"
+              className="md:hidden text-slate-400 hover:text-slate-900 p-2 rounded-xl hover:bg-slate-100 transition-colors"
             >
               ✕
             </button>
           </div>
-
+ 
           {/* User Role Indicator Profile Block */}
-          <div className="relative mx-3 mt-3 mb-2">
+          <div className="relative mx-4 mt-4 mb-3">
             <div
               onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-              className="p-3 bg-[#001c38] border border-[#003366] rounded-sm flex items-center justify-between gap-2.5 cursor-pointer hover:bg-[#002850] transition-colors"
+              className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-100 hover:border-slate-300 transition-all shadow-xs"
               title="Click to Switch User Role"
             >
-              <div className="flex items-center gap-2.5 truncate">
-                <div className="w-8 h-8 rounded-full bg-[#0070ba] flex items-center justify-center font-bold text-white text-xs shrink-0">
+              <div className="flex items-center gap-3 truncate">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#2563EB] to-[#3B82F6] flex items-center justify-center font-black text-white text-sm shrink-0 shadow-sm shadow-blue-100">
                   {userRole.charAt(0)}
                 </div>
                 <div className="truncate text-left">
-                  <div className="text-xs font-bold text-white leading-tight uppercase tracking-wider">{userRole} Session</div>
-                  <span className="text-[10px] text-emerald-400 font-mono">
+                  <div className="text-xs font-black text-slate-800 leading-tight uppercase tracking-widest">{userRole}</div>
+                  <span className="text-[10px] text-emerald-600 font-mono font-bold flex items-center gap-1.5 mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     ID: {userRole === 'Admin' ? 'PK-001' : userRole === 'Manager' ? 'PK-002' : 'PK-003'}
                   </span>
                 </div>
               </div>
-              <span className="text-slate-400 text-xs">▼</span>
+              <span className="text-slate-400 text-[10px] transition-transform duration-200 transform hover:translate-y-0.5">▼</span>
             </div>
-
+ 
             {/* Role selection dropdown */}
             {showRoleDropdown && (
-              <div className="absolute left-0 right-0 mt-1 bg-white text-slate-800 border border-slate-200 shadow-xl rounded-sm z-55 overflow-hidden text-xs">
-                <div className="p-1.5 bg-slate-100 font-bold text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
+              <div className="absolute left-0 right-0 mt-2 bg-white text-slate-800 border border-slate-200 shadow-2xl rounded-2xl z-55 overflow-hidden text-xs animate-in slide-in-from-top-2 duration-100">
+                <div className="p-2.5 bg-slate-50 font-bold text-[10px] uppercase tracking-wider text-[#9CA3AF] border-b border-slate-100">
                   Switch Active Role
                 </div>
                 <button
@@ -192,12 +190,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
                     setUserRole('Admin');
                     setShowRoleDropdown(false);
                   }}
-                  className={`w-full text-left px-3 py-2 hover:bg-slate-50 font-semibold flex items-center justify-between ${
-                    userRole === 'Admin' ? 'bg-slate-100 text-[#0070ba]' : 'text-slate-700'
+                  className={`w-full text-left px-4 py-3 hover:bg-slate-50 font-semibold flex items-center justify-between transition-colors ${
+                    userRole === 'Admin' ? 'bg-blue-50/50 text-[#2563EB]' : 'text-slate-700'
                   }`}
                 >
-                  <span>👑 Admin Role</span>
-                  {userRole === 'Admin' && <span className="text-[#0070ba] font-bold">✓</span>}
+                  <span className="flex items-center gap-2">👑 Admin Role</span>
+                  {userRole === 'Admin' && <span className="text-[#2563EB] font-black">✓</span>}
                 </button>
                 <button
                   type="button"
@@ -205,12 +203,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
                     setUserRole('Manager');
                     setShowRoleDropdown(false);
                   }}
-                  className={`w-full text-left px-3 py-2 hover:bg-slate-50 font-semibold flex items-center justify-between ${
-                    userRole === 'Manager' ? 'bg-slate-100 text-[#0070ba]' : 'text-slate-700'
+                  className={`w-full text-left px-4 py-3 hover:bg-slate-50 font-semibold flex items-center justify-between transition-colors ${
+                    userRole === 'Manager' ? 'bg-blue-50/50 text-[#2563EB]' : 'text-slate-700'
                   }`}
                 >
-                  <span>💼 Manager Role</span>
-                  {userRole === 'Manager' && <span className="text-[#0070ba] font-bold">✓</span>}
+                  <span className="flex items-center gap-2">💼 Manager Role</span>
+                  {userRole === 'Manager' && <span className="text-[#2563EB] font-black">✓</span>}
                 </button>
                 <button
                   type="button"
@@ -218,19 +216,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
                     setUserRole('Cashier');
                     setShowRoleDropdown(false);
                   }}
-                  className={`w-full text-left px-3 py-2 hover:bg-slate-50 font-semibold flex items-center justify-between ${
-                    userRole === 'Cashier' ? 'bg-slate-100 text-[#0070ba]' : 'text-slate-700'
+                  className={`w-full text-left px-4 py-3 hover:bg-slate-50 font-semibold flex items-center justify-between transition-colors ${
+                    userRole === 'Cashier' ? 'bg-blue-50/50 text-[#2563EB]' : 'text-slate-700'
                   }`}
                 >
-                  <span>🛒 Cashier Role</span>
-                  {userRole === 'Cashier' && <span className="text-[#0070ba] font-bold">✓</span>}
+                  <span className="flex items-center gap-2">🛒 Cashier Role</span>
+                  {userRole === 'Cashier' && <span className="text-[#2563EB] font-black">✓</span>}
                 </button>
               </div>
             )}
           </div>
-
+ 
           {/* Navigation List */}
-          <nav id="sidebar-nav" className="py-2 space-y-0.5 px-2 max-h-[calc(100vh-270px)] overflow-y-auto no-scrollbar">
+          <nav id="sidebar-nav" className="py-2.5 space-y-1 px-3 max-h-[calc(100vh-280px)] overflow-y-auto no-scrollbar scroll-smooth">
             {visibleNavItems.map((item) => {
               const isActive = activeTab === item.id;
               return (
@@ -241,49 +239,49 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenOnMobile, onCloseMobile 
                     setActiveTab(item.id);
                     onCloseMobile?.();
                   }}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-sm text-sm font-medium transition-all ${
+                  className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-extrabold tracking-wide transition-all uppercase duration-150 active:scale-98 ${
                     isActive
-                      ? 'bg-[#0078d7] text-white shadow-md font-semibold'
-                      : 'text-slate-200 hover:bg-[#003366] hover:text-white'
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-100'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                   }`}
                 >
-                  <span className={isActive ? 'text-white' : 'text-slate-300'}>{item.icon}</span>
+                  <span className={isActive ? 'text-white' : 'text-slate-500 hover:text-slate-900'}>{item.icon}</span>
                   <span>{item.label}</span>
                 </button>
               );
             })}
           </nav>
         </div>
-
+ 
         {/* Bottom Actions */}
-        <div id="sidebar-footer" className="p-3 border-t border-[#003366] space-y-2">
+        <div id="sidebar-footer" className="p-4 border-t border-slate-100 space-y-3">
           <button
             id="btn-android-sync"
             onClick={() => {
               setShowSyncModal(true);
               onCloseMobile?.();
             }}
-            className="w-full flex items-center justify-center gap-2 bg-[#28a745] hover:bg-[#218838] text-white font-semibold py-2 px-3 rounded shadow transition-all active:scale-[0.98] text-sm"
+            className="w-full flex items-center justify-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white font-bold py-3 px-4 rounded-2xl shadow-md shadow-emerald-100 transition-all active:scale-98 text-xs uppercase tracking-wider"
           >
             <Smartphone className="w-4 h-4" />
             <span>Android Sync</span>
           </button>
-
+ 
           <button
             id="btn-logout"
             onClick={() => {
               logout();
               onCloseMobile?.();
             }}
-            className="w-full flex items-center justify-center gap-2 bg-[#dc3545] hover:bg-[#c82333] text-white font-semibold py-2 px-3 rounded shadow transition-all active:scale-[0.98] text-sm"
+            className="w-full flex items-center justify-center gap-2 bg-[#EF4444] hover:bg-[#DC2626] text-white font-bold py-3 px-4 rounded-2xl shadow-md shadow-rose-100 transition-all active:scale-98 text-xs uppercase tracking-wider"
           >
             <LogOut className="w-4 h-4" />
             <span>Log Out</span>
           </button>
-
+ 
           <div className="text-center pt-2">
-            <p className="text-[11px] text-slate-400 font-sans tracking-wide">
-              © THE PAK HACKTES 2025
+            <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase">
+              © THE PAK HACKTES 2026
             </p>
           </div>
         </div>

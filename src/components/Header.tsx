@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Menu, Tablet } from 'lucide-react';
-import { usePOS } from '../context/POSContext';
+import { Download, Menu } from 'lucide-react';
 
 interface HeaderProps {
   title: string;
@@ -40,7 +39,6 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
   }, []);
 
   const handleInstallClick = async () => {
-    // Check if the application is running inside a sandbox preview iframe
     const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
 
     if (isInsideIframe) {
@@ -61,7 +59,6 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
       }
       setDeferredPrompt(null);
     } else {
-      // Direct user fallback instructions
       alert('LimoPOS install karne ke liye:\n\n1. Browser ke top-right 3-dots (⋮) par click karein.\n2. "Install App" ya "Add to Home Screen" par click karein.');
     }
   };
@@ -79,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
       const seconds = String(now.getSeconds()).padStart(2, '0');
       const ampm = hours >= 12 ? 'PM' : 'AM';
       hours = hours % 12;
-      hours = hours ? hours : 12; // the hour '0' should be '12'
+      hours = hours ? hours : 12;
       const formattedHours = String(hours).padStart(2, '0');
 
       setCurrentDateTime({
@@ -96,33 +93,35 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
   return (
     <header
       id="main-app-header"
-      className="bg-white border-b border-slate-200 px-4 md:px-6 py-2.5 flex items-center justify-between shadow-xs select-none shrink-0"
+      className="bg-white border-b border-slate-100 px-4 md:px-8 py-4 flex items-center justify-between shadow-xs select-none shrink-0"
     >
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-3">
         {onMenuClick && (
           <button
             type="button"
             onClick={onMenuClick}
-            className="md:hidden text-slate-700 hover:text-slate-900 focus:outline-none p-1.5 rounded hover:bg-slate-100 transition-colors"
+            className="md:hidden text-slate-700 hover:text-slate-900 focus:outline-none p-2 rounded-xl hover:bg-slate-50 transition-colors"
             title="Open Menu"
           >
             <Menu className="w-5 h-5" />
           </button>
         )}
-        <h2 id="page-header-title" className="text-sm md:text-lg font-black text-[#002b49] tracking-tight truncate max-w-[140px] xs:max-w-none">
-          {title}
-        </h2>
+        <div className="flex flex-col">
+          <h2 id="page-header-title" className="text-base md:text-lg font-black text-[#111827] tracking-tight truncate max-w-[150px] xs:max-w-none">
+            {title}
+          </h2>
+        </div>
       </div>
 
-      <div id="header-datetime" className="flex items-center gap-2 md:gap-3 text-xs font-semibold shrink-0">
+      <div id="header-datetime" className="flex items-center gap-2 md:gap-3.5 text-xs font-bold shrink-0">
         {!isInstalled && (
           <button
             type="button"
             onClick={handleInstallClick}
-            className="flex items-center gap-1 bg-[#0070ba] hover:bg-[#005a96] text-white px-2 py-1 rounded text-[10px] md:text-xs font-bold transition-colors cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 bg-[#3F83F8] hover:bg-[#2563EB] text-white px-3.5 py-2 rounded-xl text-[10px] md:text-xs font-bold transition-all cursor-pointer shadow-sm shadow-blue-150 active:scale-95"
             title="Install App on Device / Android"
           >
-            <Download className="w-3 h-3" />
+            <Download className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Install App</span>
           </button>
         )}
@@ -130,10 +129,10 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
         <a
           href="/MEDPOS_COMPLETE_USER_MANUAL.txt"
           download="MEDPOS_COMPLETE_USER_MANUAL.txt"
-          className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-2 py-1 rounded text-[10px] md:text-xs font-bold transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 px-3.5 py-2 rounded-xl text-[10px] md:text-xs font-bold transition-all cursor-pointer active:scale-95"
           title="Download Complete Software User Manual & Features Guide (.TXT)"
         >
-          <Download className="w-3 h-3 text-slate-600" />
+          <Download className="w-3.5 h-3.5 text-slate-500" />
           <span className="hidden sm:inline">User Manual (.TXT)</span>
         </a>
 
@@ -143,15 +142,17 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
             const event = new CustomEvent('open-mobile-scanner');
             window.dispatchEvent(event);
           }}
-          className="flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-1 rounded text-[10px] md:text-xs transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-[#03543F] border border-emerald-100 px-3.5 py-2 rounded-xl text-[10px] md:text-xs font-bold transition-all cursor-pointer active:scale-95"
           title="Open Android Barcode Scanner Gun View"
         >
-          <span className="font-mono font-black text-[8px] bg-slate-900 text-white px-1 py-0.2 rounded-xs">|||</span>
+          <span className="font-mono font-black text-[9px] bg-[#03543F] text-white px-1.5 py-0.5 rounded-md">|||</span>
           <span className="hidden sm:inline">Scanner Gun</span>
         </button>
 
-        <span className="text-[#0070ba] hidden xs:inline">{currentDateTime.date}</span>
-        <span className="text-slate-500 font-mono text-[10px] md:text-xs hidden md:inline">{currentDateTime.time}</span>
+        <div className="hidden xs:flex items-center gap-2 text-slate-400 font-bold border-l border-slate-200 pl-3 md:pl-4">
+          <span className="text-[#2563EB]">{currentDateTime.date}</span>
+          <span className="text-slate-500 font-mono text-[10px] md:text-xs hidden md:inline">{currentDateTime.time}</span>
+        </div>
       </div>
     </header>
   );

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { WalletCards, ClipboardList, CheckCircle2, DollarSign } from 'lucide-react';
+import { WalletCards, ClipboardList, CheckCircle2 } from 'lucide-react';
 import { usePOS } from '../context/POSContext';
 
 export const CreditReceiveView: React.FC = () => {
@@ -38,41 +38,58 @@ export const CreditReceiveView: React.FC = () => {
   const totalCreditReceived = credits.reduce((acc, c) => acc + c.amountReceived, 0);
 
   return (
-    <div id="credit-receive-container" className="p-6 bg-[#f4f7fa] min-h-full space-y-6">
+    <div id="credit-receive-container" className="p-4 sm:p-8 bg-[#F8FAFC] min-h-full space-y-6 max-w-7xl mx-auto pb-12 font-sans">
+      
+      {/* Header banner */}
+      <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl border border-purple-100">
+            <WalletCards className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
+              Customer Credit (Khata) Payments
+            </h1>
+            <p className="text-xs text-slate-500 mt-1 font-semibold">
+              Record manual cash & online recovery payments received from credit customers to balance their khata account ledgers.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Form: Record Credit Payment (4 cols) */}
-        <div className="lg:col-span-4 bg-white border border-slate-200 p-5 shadow-xs">
-          <div className="flex items-center gap-2 text-[#002b49] font-bold text-sm mb-4 border-b border-slate-100 pb-3">
-            <WalletCards className="w-5 h-5 text-[#0070ba]" />
-            <span>Record Credit Payment</span>
+        <div className="lg:col-span-4 bg-white border border-slate-200/80 p-6 rounded-3xl shadow-xs space-y-5">
+          <div className="flex items-center gap-2 text-slate-900 font-black text-xs uppercase tracking-wider border-b border-slate-100 pb-3">
+            <span>➕ Record Credit Recovery</span>
           </div>
 
           {successMsg && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-800 text-xs flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+            <div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs font-bold rounded-2xl flex items-center gap-2 animate-in fade-in duration-150">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>{successMsg}</span>
             </div>
           )}
 
-          <form onSubmit={handleSavePayment} className="space-y-4">
+          <form onSubmit={handleSavePayment} className="space-y-4 text-xs font-semibold">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Customer Name:
+              <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">
+                Customer Name *
               </label>
               <input
                 id="credit-customer-input"
                 type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Customer name..."
-                className="w-full bg-white border border-slate-300 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                placeholder="Type customer name..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 font-bold text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Amount Received ({storeSettings.currency}):
+              <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">
+                Amount Received ({storeSettings.currency}) *
               </label>
               <input
                 id="credit-amount-input"
@@ -82,78 +99,78 @@ export const CreditReceiveView: React.FC = () => {
                 value={amountReceived === 0 ? '' : amountReceived}
                 onChange={(e) => setAmountReceived(parseFloat(e.target.value) || 0)}
                 placeholder="0.00"
-                className="w-full bg-white border border-slate-300 px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 font-mono font-bold text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Notes:
+              <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">
+                Notes / Reference
               </label>
               <input
                 id="credit-notes-input"
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Optional notes..."
-                className="w-full bg-white border border-slate-300 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                placeholder="Optional payment notes..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 font-bold text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
               />
             </div>
 
             <button
               id="btn-save-credit-payment"
               type="submit"
-              className="bg-[#28a745] hover:bg-[#218838] text-white font-bold py-2 px-5 text-xs flex items-center gap-2 shadow transition-colors active:scale-[0.98]"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-extrabold py-3 px-6 rounded-2xl text-xs flex items-center justify-center gap-2 cursor-pointer shadow-sm shadow-purple-100 transition-all active:scale-95 uppercase tracking-wider"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Save Payment</span>
+              <span>Save Credit Payment</span>
             </button>
           </form>
         </div>
 
         {/* Right Table: Credit History (8 cols) */}
-        <div className="lg:col-span-8 bg-white border border-slate-200 shadow-xs flex flex-col">
-          <div className="p-3 border-b border-slate-200 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-slate-800 font-bold text-xs">
-              <ClipboardList className="w-4 h-4 text-[#8e44ad]" />
-              <span>Credit History</span>
+        <div className="lg:col-span-8 bg-white border border-slate-200/80 rounded-3xl shadow-xs flex flex-col overflow-hidden">
+          <div className="p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/50">
+            <div className="flex items-center gap-2 text-slate-900 font-black text-xs uppercase tracking-wider">
+              <ClipboardList className="w-4 h-4 text-purple-600" />
+              <span>Credit payment Ledger Log</span>
             </div>
-            <div className="text-xs text-slate-600 font-medium">
+            <div className="text-xs text-slate-500 font-bold bg-white border border-slate-200 px-3.5 py-1.5 rounded-xl font-mono">
               Total Collections:{' '}
-              <strong className="text-[#8e44ad]">
+              <span className="text-purple-600 font-black">
                 {storeSettings.currency} {totalCreditReceived.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </strong>
+              </span>
             </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#8e44ad] text-white">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-slate-50 text-slate-500 font-extrabold uppercase tracking-wider text-[10px] border-b border-slate-100">
                 <tr>
-                  <th className="py-2.5 px-3 font-semibold">Date</th>
-                  <th className="py-2.5 px-3 font-semibold">Customer</th>
-                  <th className="py-2.5 px-3 font-semibold text-right">Amount Received</th>
-                  <th className="py-2.5 px-3 font-semibold">Notes</th>
+                  <th className="py-3 px-4 font-black">Date</th>
+                  <th className="py-3 px-4 font-black">Customer</th>
+                  <th className="py-3 px-4 text-right font-black">Amount Received</th>
+                  <th className="py-3 px-4 font-black">Notes</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 font-semibold text-slate-800">
                 {credits.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-10 text-center text-slate-400">
+                    <td colSpan={4} className="py-20 text-center text-slate-400 font-bold">
                       No credit payment records found.
                     </td>
                   </tr>
                 ) : (
                   credits.map((c) => (
-                    <tr key={c.id} className="hover:bg-purple-50 text-slate-700">
-                      <td className="py-2.5 px-3">{c.date}</td>
-                      <td className="py-2.5 px-3 font-semibold text-slate-900">{c.customerName}</td>
-                      <td className="py-2.5 px-3 text-right font-bold text-[#8e44ad]">
+                    <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-3 px-4 font-mono text-[10px] text-slate-400">{c.date}</td>
+                      <td className="py-3 px-4 font-black text-slate-900">{c.customerName}</td>
+                      <td className="py-3 px-4 text-right font-mono font-black text-purple-600 bg-purple-50/20">
                         {storeSettings.currency}{' '}
                         {c.amountReceived.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
-                      <td className="py-2.5 px-3 text-slate-500">{c.notes || '-'}</td>
+                      <td className="py-3 px-4 text-slate-500">{c.notes || '-'}</td>
                     </tr>
                   ))
                 )}

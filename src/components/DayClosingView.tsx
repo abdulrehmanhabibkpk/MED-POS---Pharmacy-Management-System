@@ -10,8 +10,6 @@ export const DayClosingView: React.FC = () => {
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   });
 
-  const [showPrintSlip, setShowPrintSlip] = useState(false);
-
   // Filter for today
   const todaySales = sales.filter((s) => s.date.startsWith(selectedDate));
   const todaySalesAmount = todaySales.reduce((acc, s) => acc + s.netAmount, 0);
@@ -22,7 +20,6 @@ export const DayClosingView: React.FC = () => {
 
   const todayCredits = credits.filter((c) => c.date.startsWith(selectedDate));
   const todayCreditsAmount = todayCredits.reduce((acc, c) => acc + c.amountReceived, 0);
-  const totalCreditsAllTime = credits.reduce((acc, c) => acc + c.amountReceived, 0);
 
   const todayExpenses = expenses.filter((e) => e.date.startsWith(selectedDate));
   const todayExpensesAmount = todayExpenses.reduce((acc, e) => acc + e.amount, 0);
@@ -39,120 +36,140 @@ export const DayClosingView: React.FC = () => {
   };
 
   return (
-    <div id="day-closing-container" className="p-6 bg-[#f4f7fa] min-h-full space-y-6">
+    <div id="day-closing-container" className="p-4 sm:p-8 bg-[#F8FAFC] min-h-full space-y-6 max-w-2xl mx-auto pb-12 font-sans">
+      
+      {/* Upper header */}
+      <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100">
+            <CalendarCheck className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
+              Day Closing & Cash Reconciliation
+            </h1>
+            <p className="text-xs text-slate-500 mt-1 font-semibold">
+              Select any calendar date to audit shift logs, inspect total collections, and verify net cash in hand safely.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Date selector */}
-      <div className="flex items-center gap-3 bg-white p-3 border border-slate-200 shadow-xs max-w-xl">
-        <label className="text-xs font-bold text-slate-700">Select Closing Date:</label>
+      <div className="flex items-center justify-between gap-3 bg-white p-4 border border-slate-200/80 rounded-2xl shadow-xs">
+        <label className="text-xs font-black text-slate-700 uppercase tracking-wider">Select Closing Date:</label>
         <input
           type="date"
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
-          className="bg-white border border-slate-300 px-3 py-1 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+          className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-800 font-extrabold focus:outline-none focus:border-blue-600 transition-all font-mono"
         />
       </div>
 
-      {/* Main Closing Card matching Image 9 */}
-      <div className="bg-white border border-slate-200 p-6 md:p-8 shadow-xs max-w-xl text-slate-800 space-y-5 print:border-none print:shadow-none">
+      {/* Main Closing Card */}
+      <div className="bg-white border border-slate-200/80 p-6 md:p-8 rounded-3xl shadow-xs text-slate-800 space-y-6 print:border-none print:shadow-none">
         {/* Header */}
-        <div className="border-b border-slate-200 pb-4">
-          <div className="flex items-center gap-2 text-xl font-bold text-[#002b49]">
-            <CalendarCheck className="w-6 h-6 text-[#0070ba]" />
-            <span>End of Day Closing Report</span>
+        <div className="border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-2 text-base font-black text-slate-900 uppercase tracking-wider">
+            <span>Shift Closure Report</span>
           </div>
-          <div className="text-xs text-slate-500 mt-1 font-medium">
-            Date: {new Date(selectedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+          <div className="text-xs text-slate-500 mt-1 font-bold">
+            Target Date:{' '}
+            <span className="text-slate-800">
+              {new Date(selectedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </span>
           </div>
         </div>
 
         {/* Metrics List */}
-        <div className="space-y-3.5 text-xs">
+        <div className="space-y-4 text-xs font-bold">
           <div className="flex justify-between items-center py-1">
-            <span className="font-semibold text-slate-700 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#002b49]"></span>
+            <span className="font-extrabold text-slate-500 uppercase tracking-wider text-[10px] flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
               Today's Sales Invoices
             </span>
-            <span className="font-bold text-slate-900">{todaySalesCount} Bills</span>
+            <span className="font-black text-slate-900 text-sm">{todaySalesCount} Bills</span>
           </div>
 
           <div className="flex justify-between items-center py-1">
-            <span className="font-semibold text-slate-700 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#28a745]"></span>
+            <span className="font-extrabold text-slate-500 uppercase tracking-wider text-[10px] flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
               Today's Sales Amount
             </span>
-            <span className="font-bold text-[#28a745]">
+            <span className="font-black text-emerald-600 text-sm">
               {storeSettings.currency} {todaySalesAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           </div>
 
           <div className="flex justify-between items-center py-1">
-            <span className="font-semibold text-slate-700 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#0070ba]"></span>
+            <span className="font-extrabold text-slate-500 uppercase tracking-wider text-[10px] flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
               Total Sales (All Time)
             </span>
-            <span className="font-bold text-[#0070ba]">
+            <span className="font-black text-slate-900">
               {storeSettings.currency} {totalSalesAllTime.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           </div>
 
           <div className="flex justify-between items-center py-1">
-            <span className="font-semibold text-slate-700 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#8e44ad]"></span>
-              Total Purchases
+            <span className="font-extrabold text-slate-500 uppercase tracking-wider text-[10px] flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+              Total Purchases (All Time)
             </span>
-            <span className="font-bold text-[#8e44ad]">
+            <span className="font-black text-amber-600">
               {storeSettings.currency} {totalPurchasesAllTime.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           </div>
 
           <div className="flex justify-between items-center py-1">
-            <span className="font-semibold text-slate-700 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#17a2b8]"></span>
-              Credit Collections
+            <span className="font-extrabold text-slate-500 uppercase tracking-wider text-[10px] flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
+              Credit Collections (Khata Today)
             </span>
-            <span className="font-bold text-[#17a2b8]">
+            <span className="font-black text-purple-600">
               {storeSettings.currency} {todayCreditsAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           </div>
 
           <div className="flex justify-between items-center py-1">
-            <span className="font-semibold text-slate-700 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#dc3545]"></span>
+            <span className="font-extrabold text-slate-500 uppercase tracking-wider text-[10px] flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-600"></span>
               Today's Expenses
             </span>
-            <span className="font-bold text-[#dc3545]">
+            <span className="font-black text-rose-600">
               {storeSettings.currency} {todayExpensesAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           </div>
 
           <div className="flex justify-between items-center py-1">
-            <span className="font-semibold text-slate-700 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#e67e22]"></span>
+            <span className="font-extrabold text-slate-500 uppercase tracking-wider text-[10px] flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
               Total Expenses (All Time)
             </span>
-            <span className="font-bold text-[#e67e22]">
+            <span className="font-black text-slate-700">
               {storeSettings.currency} {totalExpensesAllTime.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           </div>
 
           {/* Divider */}
-          <div className="border-t-2 border-dashed border-slate-200 my-3"></div>
+          <div className="border-t-2 border-dashed border-slate-200/60 my-4"></div>
 
           {/* Net Cash In Hand (Today) */}
-          <div className="flex justify-between items-center py-1 bg-slate-50 p-2 border border-slate-200">
-            <span className="font-black text-[#002b49] text-xs uppercase tracking-wide">
+          <div className="flex justify-between items-center py-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 font-black">
+            <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
               💵 NET CASH IN HAND (Today)
             </span>
-            <span className="font-black text-sm text-[#28a745]">
+            <span className="text-base text-emerald-600 font-mono">
               {storeSettings.currency} {netCashInHandToday.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           </div>
 
           {/* Estimated Profit (All) */}
-          <div className="flex justify-between items-center py-1 bg-blue-50/50 p-2 border border-blue-100">
-            <span className="font-black text-[#002b49] text-xs uppercase tracking-wide">
+          <div className="flex justify-between items-center py-3 bg-blue-50/50 border border-blue-100 rounded-2xl px-4 font-black">
+            <span className="text-[10px] font-black text-blue-900 uppercase tracking-wider flex items-center gap-2">
               📈 ESTIMATED PROFIT (All)
             </span>
-            <span className="font-black text-sm text-[#0070ba]">
+            <span className="text-base text-blue-600 font-mono">
               {storeSettings.currency} {estimatedProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           </div>
@@ -163,10 +180,10 @@ export const DayClosingView: React.FC = () => {
           <button
             id="btn-print-day-closing"
             onClick={handlePrintClosing}
-            className="bg-[#0078d7] hover:bg-[#0066b8] text-white font-bold py-2.5 px-6 text-xs flex items-center gap-2 shadow transition-colors active:scale-[0.98]"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3 px-6 rounded-2xl text-xs flex items-center justify-center gap-2 cursor-pointer shadow-sm shadow-blue-100 transition-all active:scale-95 uppercase tracking-wider"
           >
             <Printer className="w-4 h-4" />
-            <span>Print Closing Report</span>
+            <span>Print Shift Closing Report</span>
           </button>
         </div>
       </div>

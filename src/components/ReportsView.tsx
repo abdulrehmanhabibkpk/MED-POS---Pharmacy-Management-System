@@ -352,18 +352,18 @@ export const ReportsView: React.FC = () => {
   };
 
   return (
-    <div id="reports-view-container" className="p-6 bg-[#F9FAFB] min-h-full space-y-6 max-w-7xl mx-auto pb-12">
+    <div id="reports-view-container" className="p-4 sm:p-8 bg-[#F8FAFC] min-h-full space-y-6 max-w-7xl mx-auto pb-12 font-sans">
       {/* TOP HEADER BAR */}
-      <div className="bg-white border border-gray-200 p-5 rounded-xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-slate-50 text-slate-700 rounded-xl border border-gray-200">
-            <BarChart3 className="w-6 h-6 text-[#002b49]" />
+      <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+        <div className="flex items-center gap-3.5">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100">
+            <BarChart3 className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
-              Reports & Audit Management Center
+              LimoPOS Reports & Audit Center
             </h1>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1 font-semibold">
               Full date-filtered reporting, detailed ledger analysis, live data editing, voucher printing, and CSV exports.
             </p>
           </div>
@@ -372,7 +372,7 @@ export const ReportsView: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={handleExportCSV}
-            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer animate-in fade-in"
+            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer animate-in fade-in active:scale-95"
           >
             <Download className="w-4 h-4 text-slate-500" />
             <span>Export CSV Sheet</span>
@@ -381,136 +381,136 @@ export const ReportsView: React.FC = () => {
       </div>
 
       {/* MAIN SETTINGS NAVIGATION TABS */}
-      <div className="bg-white border border-gray-200 p-2 rounded-xl shadow-xs flex flex-wrap items-center gap-1.5 no-print">
+      <div className="bg-white border border-slate-200/80 p-2.5 rounded-3xl shadow-xs flex flex-wrap items-center gap-1.5 no-print">
         <button
           onClick={() => setActiveReportTab('sales')}
-          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer ${
             activeReportTab === 'sales'
-              ? 'bg-[#002b49] text-white shadow-xs'
-              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-gray-150'
+              ? 'bg-blue-600 text-white shadow-sm shadow-blue-100'
+              : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <BarChart3 className="w-3.5 h-3.5 text-blue-400" />
+          <BarChart3 className="w-3.5 h-3.5" />
           <span>Sales & Invoices ({filteredSales.length})</span>
         </button>
 
         <button
           onClick={() => setActiveReportTab('purchases')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer ${
             activeReportTab === 'purchases'
-              ? 'bg-[#002b49] text-white shadow-xs'
-              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-blue-600 text-white shadow-sm shadow-blue-100'
+              : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <Box className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Purchases / Stock In ({filteredPurchases.length})</span>
+          <Box className="w-3.5 h-3.5" />
+          <span>Purchases ({filteredPurchases.length})</span>
         </button>
 
         <button
           onClick={() => setActiveReportTab('expenses')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer ${
             activeReportTab === 'expenses'
-              ? 'bg-[#002b49] text-white shadow-xs'
-              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-blue-600 text-white shadow-sm shadow-blue-100'
+              : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <Receipt className="w-3.5 h-3.5 text-rose-400" />
+          <Receipt className="w-3.5 h-3.5" />
           <span>Expenses ({filteredExpenses.length})</span>
         </button>
 
         <button
           onClick={() => setActiveReportTab('returns')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer ${
             activeReportTab === 'returns'
-              ? 'bg-[#002b49] text-white shadow-xs'
-              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-blue-600 text-white shadow-sm shadow-blue-100'
+              : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-          <span>Sale Returns ({filteredReturns.length})</span>
+          <RotateCcw className="w-3.5 h-3.5" />
+          <span>Returns ({filteredReturns.length})</span>
         </button>
 
         <button
           onClick={() => setActiveReportTab('customer_ledger')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer ${
             activeReportTab === 'customer_ledger'
-              ? 'bg-[#002b49] text-white shadow-xs'
-              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-blue-600 text-white shadow-sm shadow-blue-100'
+              : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <Users className="w-3.5 h-3.5 text-cyan-400" />
+          <Users className="w-3.5 h-3.5" />
           <span>Customer Khata ({filteredCustomerTx.length})</span>
         </button>
 
         <button
           onClick={() => setActiveReportTab('supplier_ledger')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer ${
             activeReportTab === 'supplier_ledger'
-              ? 'bg-[#002b49] text-white shadow-xs'
-              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-blue-600 text-white shadow-sm shadow-blue-100'
+              : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <Building2 className="w-3.5 h-3.5 text-teal-400" />
+          <Building2 className="w-3.5 h-3.5" />
           <span>Supplier Khata ({filteredSupplierTx.length})</span>
         </button>
 
         <button
           onClick={() => setActiveReportTab('stock')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer ${
             activeReportTab === 'stock'
-              ? 'bg-[#002b49] text-white shadow-xs'
-              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-blue-600 text-white shadow-sm shadow-blue-100'
+              : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <Layers className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Stock & Valuation</span>
+          <Layers className="w-3.5 h-3.5" />
+          <span>Stock Valuation</span>
         </button>
 
         <button
           onClick={() => setActiveReportTab('profit_loss')}
-          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer ${
             activeReportTab === 'profit_loss'
-              ? 'bg-[#002b49] text-white shadow-xs'
-              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-blue-600 text-white shadow-sm shadow-blue-100'
+              : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <Wallet className="w-3.5 h-3.5 text-purple-400" />
+          <Wallet className="w-3.5 h-3.5" />
           <span>Profit & Loss</span>
         </button>
       </div>
 
       {/* Date Filter & Selector Bar */}
-      <div className="bg-white border border-slate-200 p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2.5">
+      <div className="bg-white border border-slate-200/80 p-4 rounded-3xl shadow-xs flex flex-wrap items-center justify-between gap-4 font-semibold text-xs text-slate-800 no-print">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <label className="text-xs font-bold text-slate-700">From:</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase">From:</label>
             <input
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="bg-white border border-slate-300 px-2 py-1 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-blue-600 transition-all font-mono"
             />
           </div>
 
           <div className="flex items-center gap-1.5">
-            <label className="text-xs font-bold text-slate-700">To:</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase">To:</label>
             <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="bg-white border border-slate-300 px-2 py-1 text-xs text-slate-800 focus:outline-none focus:border-[#0070ba]"
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-blue-600 transition-all font-mono"
             />
           </div>
 
           {/* Quick Date Presets */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-150">
             <button
               onClick={() => {
                 const today = new Date().toISOString().slice(0, 10);
                 setFromDate(today);
                 setToDate(today);
               }}
-              className="px-2 py-1 text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+              className="px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-slate-600 hover:text-slate-900 rounded-lg hover:bg-white transition-all cursor-pointer"
             >
               Today
             </button>
@@ -522,7 +522,7 @@ export const ReportsView: React.FC = () => {
                 setFromDate(startOfMonth);
                 setToDate(endOfMonth);
               }}
-              className="px-2 py-1 text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+              className="px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-slate-600 hover:text-slate-900 rounded-lg hover:bg-white transition-all cursor-pointer"
             >
               This Month
             </button>
@@ -531,7 +531,7 @@ export const ReportsView: React.FC = () => {
                 setFromDate('');
                 setToDate('');
               }}
-              className="px-2 py-1 text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+              className="px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-slate-600 hover:text-slate-900 rounded-lg hover:bg-white transition-all cursor-pointer"
             >
               All Time
             </button>
@@ -540,11 +540,11 @@ export const ReportsView: React.FC = () => {
           {/* Customer Filter */}
           {activeReportTab === 'customer_ledger' && (
             <div className="flex items-center gap-1.5">
-              <label className="text-xs font-bold text-slate-700">Customer:</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase">Customer:</label>
               <select
                 value={selectedCustomerId}
                 onChange={(e) => setSelectedCustomerId(e.target.value)}
-                className="bg-white border border-slate-300 px-2 py-1 text-xs text-slate-800 font-bold focus:outline-none focus:border-[#0070ba]"
+                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-blue-600 transition-all"
               >
                 <option value="ALL">All Customers ({customers.length})</option>
                 {customers.map((c) => (

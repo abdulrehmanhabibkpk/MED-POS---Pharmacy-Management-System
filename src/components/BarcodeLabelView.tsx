@@ -403,50 +403,50 @@ export const BarcodeLabelView: React.FC = () => {
   };
 
   return (
-    <div id="barcode-studio-container" className="p-4 md:p-6 bg-[#F9FAFB] min-h-full space-y-6 max-w-7xl mx-auto pb-12">
+    <div id="barcode-studio-container" className="p-4 md:p-8 bg-[#F8FAFC] min-h-full space-y-6 max-w-7xl mx-auto pb-12 font-sans">
       {/* TOP HEADER BANNER (With scannable vector engine badge) */}
-      <div className="bg-[#002b49] text-white p-6 rounded-xl shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
-          <div className="bg-white/10 p-3 rounded-lg shrink-0">
-            <BarcodeIcon className="w-7 h-7 text-white" />
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100">
+            <BarcodeIcon className="w-6 h-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="text-lg font-black tracking-wider uppercase">Barcode Label Generator & Printing Studio</h2>
-              <span className="inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">Barcode Label Generator & Printing Studio</h2>
+              <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-700 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
                 100% Scannable Vector Engine
               </span>
             </div>
-            <p className="text-xs text-slate-300 font-semibold mt-1">Genuine ISO/IEC Standard Vector Barcodes for Thermal Rolls & A4 Sticker Sheets</p>
+            <p className="text-xs text-slate-500 font-semibold mt-1">Genuine ISO/IEC Standard Vector Barcodes for Thermal Rolls & A4 Sticker Sheets</p>
           </div>
         </div>
       </div>
 
       {/* LIVE BARCODE SCANNER VERIFICATION TOOL */}
-      <div className="bg-white p-4 border border-gray-200 rounded-xl shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3 mb-3">
+      <div className="bg-white p-5 border border-slate-200/80 rounded-3xl shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
             <ScanLine className="w-4 h-4 text-blue-600 animate-pulse" />
-            <span className="text-xs font-black text-gray-800 uppercase tracking-wide">Live Barcode Scanner Verification Tool:</span>
+            <span className="text-xs font-black text-slate-800 uppercase tracking-wider">Live Barcode Scanner Verification Tool</span>
           </div>
-          <span className="text-[10px] font-bold text-gray-400 uppercase">Point handheld scanner or type here</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase">Point handheld scanner or type here</span>
         </div>
         
         <form onSubmit={handleTestScanSubmit} className="flex gap-3">
           <div className="relative flex-1">
-            <ScanLine className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+            <ScanLine className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
             <input
               type="text"
               value={testScanInput}
               onChange={(e) => setTestScanInput(e.target.value)}
               placeholder="Scan any printed barcode here with your USB/Bluetooth laser scanner to test..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-800 focus:outline-none focus:border-blue-500 font-bold font-mono"
+              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-all font-bold font-mono"
             />
           </div>
           <button
             type="submit"
-            className="bg-[#002b49] hover:bg-[#001c30] text-white font-extrabold px-6 py-2 rounded-lg text-xs uppercase transition-all tracking-wider cursor-pointer shadow-xs"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-6 py-3 rounded-2xl text-xs uppercase transition-all tracking-wider cursor-pointer shadow-sm shadow-blue-100"
           >
             Verify
           </button>
@@ -454,15 +454,15 @@ export const BarcodeLabelView: React.FC = () => {
 
         {/* Dynamic Verification Alert Box */}
         {lastScannedResult && (
-          <div className={`mt-3 p-3 rounded-lg border text-xs font-bold transition-all flex items-center gap-2 ${
+          <div className={`p-4 rounded-2xl border text-xs font-bold transition-all flex items-center gap-2.5 ${
             lastScannedResult.matchedProduct
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              : 'bg-amber-50 border-amber-200 text-amber-800'
+              ? 'bg-emerald-50 border-emerald-150 text-emerald-800'
+              : 'bg-amber-50 border-amber-150 text-amber-800'
           }`}>
             <Check className="w-4 h-4 shrink-0" />
             <div>
               <span className="font-bold">Scanned: </span>
-              <span className="font-mono bg-white px-1.5 py-0.5 border rounded">
+              <span className="font-mono bg-white px-2 py-0.5 border border-slate-200 rounded-lg">
                 {lastScannedResult.code}
               </span>
               {lastScannedResult.matchedProduct ? (
@@ -481,15 +481,15 @@ export const BarcodeLabelView: React.FC = () => {
         {/* Left Side: Setup & Configuration Panel (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           {/* Main Tab Controller */}
-          <div className="bg-white border border-slate-200 shadow-xs">
-            <div className="flex border-b border-slate-200 bg-slate-50 text-xs">
+          <div className="bg-white border border-slate-200/80 rounded-3xl shadow-xs overflow-hidden">
+            <div className="flex border-b border-slate-100 bg-slate-50 p-1 text-xs">
               <button
                 type="button"
                 onClick={() => setActiveTab('single')}
-                className={`flex-1 py-2.5 px-3 font-bold text-center flex items-center justify-center gap-1.5 border-b-2 transition-colors ${
+                className={`flex-1 py-2.5 px-3 rounded-2xl font-black uppercase text-center flex items-center justify-center gap-1.5 transition-all ${
                   activeTab === 'single'
-                    ? 'border-[#0070ba] text-[#0070ba] bg-white'
-                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-white text-blue-600 shadow-xs border border-slate-200/50'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 <Tag className="w-3.5 h-3.5" />
@@ -499,53 +499,53 @@ export const BarcodeLabelView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('batch')}
-                className={`flex-1 py-2.5 px-3 font-bold text-center flex items-center justify-center gap-1.5 border-b-2 transition-colors ${
+                className={`flex-1 py-2.5 px-3 rounded-2xl font-black uppercase text-center flex items-center justify-center gap-1.5 transition-all ${
                   activeTab === 'batch'
-                    ? 'border-[#0070ba] text-[#0070ba] bg-white'
-                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-white text-blue-600 shadow-xs border border-slate-200/50'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
-                <span>Batch Queue ({batchQueue.length})</span>
+                <span>Batch ({batchQueue.length})</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('custom')}
-                className={`flex-1 py-2.5 px-3 font-bold text-center flex items-center justify-center gap-1.5 border-b-2 transition-colors ${
+                className={`flex-1 py-2.5 px-3 rounded-2xl font-black uppercase text-center flex items-center justify-center gap-1.5 transition-all ${
                   activeTab === 'custom'
-                    ? 'border-[#0070ba] text-[#0070ba] bg-white'
-                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-white text-blue-600 shadow-xs border border-slate-200/50'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Custom / Freeform</span>
+                <span>Custom</span>
               </button>
             </div>
 
-            <div className="p-4 space-y-4 text-xs">
+            <div className="p-5 space-y-4 text-xs font-semibold">
               {/* TAB 1: Single Item Selection */}
               {activeTab === 'single' && (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {/* Currently Selected Product Details */}
-                  <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-sm">
-                    <span className="block text-[10px] font-black text-blue-900 uppercase tracking-wider mb-1">
+                  <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-2xl">
+                    <span className="block text-[10px] font-black text-blue-900 uppercase tracking-wider mb-2">
                       Active Target Product:
                     </span>
                     {selectedProduct ? (
-                      <div className="space-y-0.5">
+                      <div className="space-y-1">
                         <div className="font-extrabold text-slate-900 text-xs truncate">
                           {selectedProduct.name}
                         </div>
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-slate-600">
+                          <span className="text-slate-500 font-semibold">
                             Barcode: <strong className="font-mono text-slate-900">{selectedProduct.barcode}</strong>
                           </span>
-                          <span className="font-bold text-emerald-700 font-mono">
+                          <span className="font-bold text-emerald-600 font-mono">
                             {storeSettings.currency} {selectedProduct.retailPrice.toLocaleString()}
                           </span>
                         </div>
-                        <div className="text-[10px] text-slate-500 truncate">
+                        <div className="text-[10px] text-slate-400 font-bold truncate">
                           Brand: {selectedProduct.company} | Stock: {selectedProduct.stock} units
                         </div>
                       </div>

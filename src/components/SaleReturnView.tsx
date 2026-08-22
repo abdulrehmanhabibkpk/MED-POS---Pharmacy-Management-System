@@ -57,49 +57,66 @@ export const SaleReturnView: React.FC = () => {
   };
 
   return (
-    <div id="sale-return-container" className="p-4 sm:p-6 bg-[#f4f7fa] min-h-full space-y-6 max-w-7xl mx-auto pb-12">
+    <div id="sale-return-container" className="p-4 sm:p-8 bg-[#F8FAFC] min-h-full space-y-6 max-w-7xl mx-auto pb-12 font-sans">
+      
+      {/* Header Banner */}
+      <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl border border-rose-100">
+            <RotateCcw className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
+              Customer Sale Returns & Restocking
+            </h1>
+            <p className="text-xs text-slate-500 mt-1 font-semibold">
+              Enter barcodes to process items returned by customers, automatically calculate refunds, and safely restock medicine units.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Return Card (5 cols) */}
-        <div className="lg:col-span-5 bg-white border border-slate-200 p-6 shadow-xs">
-          <div className="flex items-center gap-2 text-[#c0392b] font-bold text-sm mb-5 border-b border-slate-100 pb-3">
-            <RotateCcw className="w-5 h-5 text-[#c0392b]" />
-            <span>Process Customer Sale Return</span>
+        <div className="lg:col-span-5 bg-white border border-slate-200/80 p-6 rounded-3xl shadow-xs space-y-5">
+          <div className="flex items-center gap-2 text-slate-900 font-black text-xs uppercase tracking-wider border-b border-slate-100 pb-3">
+            <span>🔄 Process Return Details</span>
           </div>
 
           {message && (
             <div
-              className={`mb-4 p-3 border text-xs flex items-center gap-2 ${
+              className={`p-4 border text-xs font-semibold rounded-2xl flex items-start gap-2.5 animate-in fade-in duration-150 ${
                 message.type === 'success'
-                  ? 'bg-green-50 border-green-300 text-green-800'
-                  : 'bg-red-50 border-red-300 text-red-800'
+                  ? 'bg-emerald-50 border-emerald-150 text-emerald-800'
+                  : 'bg-rose-50 border-rose-150 text-rose-800'
               }`}
             >
               {message.type === 'success' ? (
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-green-600" />
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
               ) : (
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
               )}
               <span>{message.text}</span>
             </div>
           )}
 
-          <form onSubmit={handleProcessReturn} className="space-y-4">
+          <form onSubmit={handleProcessReturn} className="space-y-4 text-xs font-semibold">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Medicine / Product Barcode:</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Medicine / Product Barcode</label>
               <input
                 id="return-barcode-input"
                 type="text"
                 value={barcode}
                 onChange={(e) => setBarcode(e.target.value)}
                 placeholder="Scan or enter barcode..."
-                className="w-full bg-white border border-slate-300 px-3 py-2 text-xs font-mono text-slate-800 focus:outline-none focus:border-[#c0392b]"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 font-mono font-bold text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
                 autoFocus
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Return Quantity:
+              <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">
+                Return Quantity
               </label>
               <input
                 id="return-qty-input"
@@ -107,14 +124,14 @@ export const SaleReturnView: React.FC = () => {
                 min="1"
                 value={returnQty}
                 onChange={(e) => setReturnQty(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full bg-white border border-slate-300 px-3 py-2 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-[#c0392b]"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 font-mono font-bold text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
               />
             </div>
 
             <button
               id="btn-process-return"
               type="submit"
-              className="bg-[#c0392b] hover:bg-[#a93226] text-white font-bold py-2 px-6 text-xs flex items-center gap-2 shadow transition-colors cursor-pointer"
+              className="w-full bg-rose-600 hover:bg-rose-700 text-white font-extrabold py-3 px-6 rounded-2xl text-xs flex items-center justify-center gap-2 cursor-pointer shadow-sm shadow-rose-100 transition-all active:scale-95 uppercase tracking-wider"
             >
               <RotateCcw className="w-4 h-4" />
               <span>Process Return & Restock</span>
@@ -123,52 +140,52 @@ export const SaleReturnView: React.FC = () => {
         </div>
 
         {/* Return History Table (7 cols) */}
-        <div className="lg:col-span-7 bg-white border border-slate-200 shadow-xs flex flex-col">
-          <div className="p-3 border-b border-slate-200 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-slate-800 font-bold text-xs">
-              <History className="w-4 h-4 text-[#0070ba]" />
-              <span>Recent Return History</span>
+        <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-3xl shadow-xs flex flex-col overflow-hidden">
+          <div className="p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/50">
+            <div className="flex items-center gap-2 text-slate-900 font-black text-xs uppercase tracking-wider">
+              <History className="w-4 h-4 text-blue-600" />
+              <span>Recent Return History Log</span>
             </div>
-            <div className="text-xs text-slate-600 font-medium">
-              Total Returns: <strong className="text-red-600">{returns.length}</strong>
+            <div className="text-xs text-slate-500 font-bold bg-white border border-slate-200 px-3 py-1 rounded-xl">
+              Total Returns: <span className="text-rose-600 font-black">{returns.length}</span>
             </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#002b49] text-white">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-slate-50 text-slate-500 font-extrabold uppercase tracking-wider text-[10px] border-b border-slate-100">
                 <tr>
-                  <th className="py-2.5 px-3">Date</th>
-                  <th className="py-2.5 px-3">Barcode</th>
-                  <th className="py-2.5 px-3">Product Name</th>
-                  <th className="py-2.5 px-3 text-center">Returned Qty</th>
-                  <th className="py-2.5 px-3 text-right">Refund Amount</th>
-                  <th className="py-2.5 px-3 text-center">Manage</th>
+                  <th className="py-3 px-4 font-black">Date</th>
+                  <th className="py-3 px-4 font-black">Barcode</th>
+                  <th className="py-3 px-4 font-black">Product Name</th>
+                  <th className="py-3 px-4 text-center font-black">Returned Qty</th>
+                  <th className="py-3 px-4 text-right font-black">Refund Amount</th>
+                  <th className="py-3 px-4 text-center font-black">Manage</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 font-semibold text-slate-800">
                 {returns.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-10 text-center text-slate-400">
+                    <td colSpan={6} className="py-20 text-center text-slate-400 font-bold">
                       No returns processed yet.
                     </td>
                   </tr>
                 ) : (
                   returns.map((r) => (
-                    <tr key={r.id} className="hover:bg-slate-50 text-slate-700 transition-colors">
-                      <td className="py-2.5 px-3 font-mono text-[11px] text-slate-500">{r.date}</td>
-                      <td className="py-2.5 px-3 font-mono font-bold">{r.barcode}</td>
-                      <td className="py-2.5 px-3 font-medium text-slate-900">{r.itemName}</td>
-                      <td className="py-2.5 px-3 text-center font-bold text-red-600">{r.qty}</td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-red-600">
+                    <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-3 px-4 font-mono text-[10px] text-slate-400">{r.date}</td>
+                      <td className="py-3 px-4 font-mono text-slate-600">{r.barcode}</td>
+                      <td className="py-3 px-4 font-black text-slate-900">{r.itemName}</td>
+                      <td className="py-3 px-4 text-center font-black text-rose-600 bg-rose-50/20">{r.qty}</td>
+                      <td className="py-3 px-4 text-right font-mono font-bold text-rose-600">
                         {storeSettings.currency}{' '}
                         {r.refundAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
-                      <td className="py-2.5 px-3 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => setEditingReturn(r)}
-                            className="p-1 text-slate-600 hover:text-blue-600 rounded hover:bg-slate-100"
+                            className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-xl transition-all"
                             title="Edit Return"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -179,7 +196,7 @@ export const SaleReturnView: React.FC = () => {
                                 deleteReturn(r.id);
                               }
                             }}
-                            className="p-1 text-slate-600 hover:text-red-600 rounded hover:bg-slate-100"
+                            className="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-slate-100 rounded-xl transition-all"
                             title="Delete Return"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -197,13 +214,13 @@ export const SaleReturnView: React.FC = () => {
 
       {/* Edit Return Modal */}
       {editingReturn && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white max-w-lg w-full border border-slate-300 shadow-2xl animate-in fade-in text-slate-800 rounded-xs">
-            <div className="bg-[#002b49] text-white p-3.5 flex items-center justify-between">
-              <span className="font-bold text-xs uppercase tracking-wider">
+        <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white max-w-lg w-full border border-slate-100 shadow-2xl animate-in zoom-in-95 duration-150 text-slate-800 rounded-3xl overflow-hidden">
+            <div className="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+              <span className="font-black text-slate-900 text-sm uppercase tracking-wider">
                 ✏️ Edit Return Record ({editingReturn.itemName})
               </span>
-              <button onClick={() => setEditingReturn(null)} className="text-slate-300 hover:text-white">
+              <button onClick={() => setEditingReturn(null)} className="text-slate-400 hover:text-slate-950 p-1 rounded-xl hover:bg-slate-100 transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -213,61 +230,61 @@ export const SaleReturnView: React.FC = () => {
                 updateReturn(editingReturn);
                 setEditingReturn(null);
               }}
-              className="p-5 space-y-3 text-xs"
+              className="p-6 space-y-4 text-xs font-semibold"
             >
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Item Name:</label>
+                <label className="block font-black text-slate-600 uppercase tracking-wider mb-2">Item Name:</label>
                 <input
                   type="text"
                   value={editingReturn.itemName}
                   onChange={(e) => setEditingReturn({ ...editingReturn, itemName: e.target.value })}
-                  className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 font-bold text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Returned Qty:</label>
+                  <label className="block font-black text-slate-600 uppercase tracking-wider mb-2">Returned Qty:</label>
                   <input
                     type="number"
                     value={editingReturn.qty}
                     onChange={(e) => setEditingReturn({ ...editingReturn, qty: parseInt(e.target.value) || 1 })}
-                    className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 font-mono font-bold focus:outline-none focus:border-[#0070ba]"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 font-mono font-bold text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Refund Amount ({storeSettings.currency}):</label>
+                  <label className="block font-black text-slate-600 uppercase tracking-wider mb-2">Refund Amount ({storeSettings.currency}):</label>
                   <input
                     type="number"
                     step="any"
                     value={editingReturn.refundAmount}
                     onChange={(e) => setEditingReturn({ ...editingReturn, refundAmount: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 font-mono font-bold text-red-600 focus:outline-none focus:border-[#0070ba]"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 font-mono font-bold text-rose-600 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Reason for Return:</label>
+                <label className="block font-black text-slate-600 uppercase tracking-wider mb-2">Reason for Return:</label>
                 <input
                   type="text"
                   value={editingReturn.reason}
                   onChange={(e) => setEditingReturn({ ...editingReturn, reason: e.target.value })}
-                  className="w-full bg-white border border-slate-300 px-3 py-1.5 text-slate-800 focus:outline-none focus:border-[#0070ba]"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 font-bold text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-all"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setEditingReturn(null)}
-                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-1.5 text-xs font-bold cursor-pointer"
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-2xl text-xs font-bold transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#002b49] hover:bg-[#001f35] text-white px-5 py-1.5 text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-sm"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Update Return</span>

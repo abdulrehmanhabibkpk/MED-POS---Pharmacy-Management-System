@@ -1,6 +1,12 @@
 import express from 'express';
 import cors from 'cors';
-import db from './db/database';
+import { db } from '../src/db/index.ts';
+import { 
+  userAccounts, products, sales, returns, credits, purchases, expenses, 
+  suppliers, customers, customerTransactions, supplierTransactions, storeSettings 
+} from '../src/db/schema.ts';
+import { seedDatabaseIfEmpty } from './db/seed.ts';
+import { eq } from 'drizzle-orm';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -8,77 +14,61 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// Helper function to run queries with async/await
-const query = (sql: string, params: any[] = []): Promise<any[]> => {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
-};
-
-const run = (sql: string, params: any[] = []): Promise<{ lastID: number; changes: number }> => {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) reject(err);
-      else resolve({ lastID: this.lastID, changes: this.changes });
-    });
-  });
-};
-
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
-// Single Round-Trip: Load all POS data from SQLite database
+// Single Round-Trip: Load all POS data from PostgreSQL database
 app.get('/api/pos-data', async (req, res) => {
   try {
-    const user_accounts = await query('SELECT * FROM user_accounts');
-    const products = await query('SELECT * FROM products');
-    const sales = await query('SELECT * FROM sales');
-    const returns = await query('SELECT * FROM returns');
-    const credits = await query('SELECT * FROM credits');
-    const purchases = await query('SELECT * FROM purchases');
-    const expenses = await query('SELECT * FROM expenses');
-    const suppliers = await query('SELECT * FROM suppliers');
-    const customers = await query('SELECT * FROM customers');
-    const customer_transactions = await query('SELECT * FROM customer_transactions');
-    const supplier_transactions = await query('SELECT * FROM supplier_transactions');
-    const store_settings_rows = await query('SELECT * FROM store_settings');
+    // Ensure seed data is populated if empty (lazy loading check)
+    await seedDatabaseIfEmpty();
+
+    const accountsList = await db.select().from(userAccounts);
+    const productsList = await db.select().from(products);
+    const salesList = await db.select().from(sales);
+    const returnsList = await db.select().from(returns);
+    const creditsList = await db.select().from(credits);
+    const purchasesList = await db.select().from(purchases);
+    const expensesList = await db.select().from(expenses);
+    const suppliersList = await db.select().from(suppliers);
+    const customersList = await db.select().from(customers);
+    const customerTransactionsList = await db.select().from(customerTransactions);
+    const supplierTransactionsList = await db.select().from(supplierTransactions);
+    const storeSettingsList = await db.select().from(storeSettings);
 
     // Parse JSON columns
-    const formattedUserAccounts = user_accounts.map(acc => ({
+    const formattedUserAccounts = accountsList.map(acc => ({
       ...acc,
-      permissions: JSON.parse(acc.permissions || '{}')
+      permissions: typeof acc.permissions === 'string' ? JSON.parse(acc.permissions || '{}') : acc.permissions
     }));
 
-    const formattedSales = sales.map(s => ({
+    const formattedSales = salesList.map(s => ({
       ...s,
-      items: JSON.parse(s.items || '[]')
+      items: typeof s.items === 'string' ? JSON.parse(s.items || '[]') : s.items
     }));
 
     // Find and parse store settings
-    const settingsRow = store_settings_rows.find(r => r.key === 'settings');
-    const storeSettings = settingsRow ? JSON.parse(settingsRow.value) : null;
+    const settingsRow = storeSettingsList.find(r => r.key === 'settings');
+    const parsedStoreSettings = settingsRow ? (typeof settingsRow.value === 'string' ? JSON.parse(settingsRow.value) : settingsRow.value) : null;
 
     res.json({
       userAccounts: formattedUserAccounts,
-      products,
+      products: productsList,
       sales: formattedSales,
-      returns,
-      credits,
-      purchases,
-      expenses,
-      suppliers,
-      customers,
-      customerTransactions: customer_transactions,
-      supplierTransactions: supplier_transactions,
-      storeSettings
+      returns: returnsList,
+      credits: creditsList,
+      purchases: purchasesList,
+      expenses: expensesList,
+      suppliers: suppliersList,
+      customers: customersList,
+      customerTransactions: customerTransactionsList,
+      supplierTransactions: supplierTransactionsList,
+      storeSettings: parsedStoreSettings
     });
   } catch (error: any) {
-    console.error('Error fetching POS data:', error);
+    console.error('Error fetching POS data from PostgreSQL:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -86,253 +76,419 @@ app.get('/api/pos-data', async (req, res) => {
 // Single Round-Trip: Save/Restore entire state (Perfect for automatic complete sync & recovery)
 app.post('/api/save-all', async (req, res) => {
   const {
-    products,
-    sales,
-    returns,
-    purchases,
-    credits,
-    expenses,
-    suppliers,
-    customers,
-    customerTransactions,
-    supplierTransactions,
-    storeSettings,
-    userAccounts
+    products: productsIn,
+    sales: salesIn,
+    returns: returnsIn,
+    purchases: purchasesIn,
+    credits: creditsIn,
+    expenses: expensesIn,
+    suppliers: suppliersIn,
+    customers: customersIn,
+    customerTransactions: customerTransactionsIn,
+    supplierTransactions: supplierTransactionsIn,
+    storeSettings: storeSettingsIn,
+    userAccounts: userAccountsIn
   } = req.body;
 
   try {
-    // We execute inside a SQLite transaction
-    await run('BEGIN TRANSACTION');
-
-    if (products) {
-      await run('DELETE FROM products');
-      for (const p of products) {
-        await run(
-          `INSERT OR REPLACE INTO products (id, barcode, name, company, category, supplierId, supplierName, purchasePrice, retailPrice, wholesalePrice, stock, minStockAlert, batchNo, expiryDate, unitOfSale, weightValue) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            p.id,
-            p.barcode,
-            p.name,
-            p.company,
-            p.category,
-            p.supplierId || null,
-            p.supplierName || null,
-            p.purchasePrice || 0,
-            p.retailPrice || 0,
-            p.wholesalePrice || 0,
-            p.stock || 0,
-            p.minStockAlert || 0,
-            p.batchNo || null,
-            p.expiryDate || null,
-            p.unitOfSale || 'Item',
-            p.weightValue || null
-          ]
-        );
+    // We execute inside a Drizzle transaction
+    await db.transaction(async (tx) => {
+      if (productsIn) {
+        await tx.delete(products);
+        for (const p of productsIn) {
+          await tx.insert(products).values({
+            id: p.id,
+            barcode: p.barcode,
+            name: p.name,
+            company: p.company,
+            category: p.category,
+            supplierId: p.supplierId || null,
+            supplierName: p.supplierName || null,
+            purchasePrice: p.purchasePrice || 0,
+            retailPrice: p.retailPrice || 0,
+            wholesalePrice: p.wholesalePrice || 0,
+            stock: p.stock || 0,
+            minStockAlert: p.minStockAlert || 0,
+            batchNo: p.batchNo || null,
+            expiryDate: p.expiryDate || null,
+            unitOfSale: p.unitOfSale || 'Item',
+            weightValue: p.weightValue || null
+          }).onConflictDoUpdate({
+            target: products.id,
+            set: {
+              barcode: p.barcode,
+              name: p.name,
+              company: p.company,
+              category: p.category,
+              supplierId: p.supplierId || null,
+              supplierName: p.supplierName || null,
+              purchasePrice: p.purchasePrice || 0,
+              retailPrice: p.retailPrice || 0,
+              wholesalePrice: p.wholesalePrice || 0,
+              stock: p.stock || 0,
+              minStockAlert: p.minStockAlert || 0,
+              batchNo: p.batchNo || null,
+              expiryDate: p.expiryDate || null,
+              unitOfSale: p.unitOfSale || 'Item',
+              weightValue: p.weightValue || null
+            }
+          });
+        }
       }
-    }
 
-    if (sales) {
-      await run('DELETE FROM sales');
-      for (const s of sales) {
-        await run(
-          `INSERT OR REPLACE INTO sales (id, invoiceNo, date, customerName, saleType, items, totalAmount, discountAmount, netAmount, paidAmount, changeAmount, cashier)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            s.id,
-            s.invoiceNo,
-            s.date,
-            s.customerName,
-            s.saleType,
-            JSON.stringify(s.items || []),
-            s.totalAmount,
-            s.discountAmount,
-            s.netAmount,
-            s.paidAmount,
-            s.changeAmount,
-            s.cashier
-          ]
-        );
+      if (salesIn) {
+        await tx.delete(sales);
+        for (const s of salesIn) {
+          await tx.insert(sales).values({
+            id: s.id,
+            invoiceNo: s.invoiceNo,
+            date: s.date,
+            customerName: s.customerName,
+            saleType: s.saleType,
+            items: JSON.stringify(s.items || []),
+            totalAmount: s.totalAmount,
+            discountAmount: s.discountAmount,
+            netAmount: s.netAmount,
+            paidAmount: s.paidAmount,
+            changeAmount: s.changeAmount,
+            cashier: s.cashier
+          }).onConflictDoUpdate({
+            target: sales.id,
+            set: {
+              invoiceNo: s.invoiceNo,
+              date: s.date,
+              customerName: s.customerName,
+              saleType: s.saleType,
+              items: JSON.stringify(s.items || []),
+              totalAmount: s.totalAmount,
+              discountAmount: s.discountAmount,
+              netAmount: s.netAmount,
+              paidAmount: s.paidAmount,
+              changeAmount: s.changeAmount,
+              cashier: s.cashier
+            }
+          });
+        }
       }
-    }
 
-    if (returns) {
-      await run('DELETE FROM returns');
-      for (const r of returns) {
-        await run(
-          `INSERT OR REPLACE INTO returns (id, date, barcode, itemName, qty, refundAmount, reason)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [r.id, r.date, r.barcode, r.itemName, r.qty, r.refundAmount, r.reason || null]
-        );
+      if (returnsIn) {
+        await tx.delete(returns);
+        for (const r of returnsIn) {
+          await tx.insert(returns).values({
+            id: r.id,
+            date: r.date,
+            barcode: r.barcode,
+            itemName: r.itemName,
+            qty: r.qty,
+            refundAmount: r.refundAmount,
+            reason: r.reason || null
+          }).onConflictDoUpdate({
+            target: returns.id,
+            set: {
+              date: r.date,
+              barcode: r.barcode,
+              itemName: r.itemName,
+              qty: r.qty,
+              refundAmount: r.refundAmount,
+              reason: r.reason || null
+            }
+          });
+        }
       }
-    }
 
-    if (purchases) {
-      await run('DELETE FROM purchases');
-      for (const pur of purchases) {
-        await run(
-          `INSERT OR REPLACE INTO purchases (id, date, supplierId, supplierName, barcode, itemName, qtyReceived, unitCostPrice, salePriceRetail, wholesalePrice, totalCost)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            pur.id,
-            pur.date,
-            pur.supplierId || null,
-            pur.supplierName,
-            pur.barcode,
-            pur.itemName,
-            pur.qtyReceived,
-            pur.unitCostPrice,
-            pur.salePriceRetail,
-            pur.wholesalePrice,
-            pur.totalCost
-          ]
-        );
+      if (purchasesIn) {
+        await tx.delete(purchases);
+        for (const pur of purchasesIn) {
+          await tx.insert(purchases).values({
+            id: pur.id,
+            date: pur.date,
+            supplierId: pur.supplierId || null,
+            supplierName: pur.supplierName,
+            barcode: pur.barcode,
+            itemName: pur.itemName,
+            qtyReceived: pur.qtyReceived,
+            unitCostPrice: pur.unitCostPrice,
+            salePriceRetail: pur.salePriceRetail,
+            wholesalePrice: pur.wholesalePrice,
+            totalCost: pur.totalCost
+          }).onConflictDoUpdate({
+            target: purchases.id,
+            set: {
+              date: pur.date,
+              supplierId: pur.supplierId || null,
+              supplierName: pur.supplierName,
+              barcode: pur.barcode,
+              itemName: pur.itemName,
+              qtyReceived: pur.qtyReceived,
+              unitCostPrice: pur.unitCostPrice,
+              salePriceRetail: pur.salePriceRetail,
+              wholesalePrice: pur.wholesalePrice,
+              totalCost: pur.totalCost
+            }
+          });
+        }
       }
-    }
 
-    if (credits) {
-      await run('DELETE FROM credits');
-      for (const c of credits) {
-        await run(
-          `INSERT OR REPLACE INTO credits (id, date, customerName, amountReceived, notes)
-           VALUES (?, ?, ?, ?, ?)`,
-          [c.id, c.date, c.customerName, c.amountReceived, c.notes || null]
-        );
+      if (creditsIn) {
+        await tx.delete(credits);
+        for (const c of creditsIn) {
+          await tx.insert(credits).values({
+            id: c.id,
+            date: c.date,
+            customerName: c.customerName,
+            amountReceived: c.amountReceived,
+            notes: c.notes || null
+          }).onConflictDoUpdate({
+            target: credits.id,
+            set: {
+              date: c.date,
+              customerName: c.customerName,
+              amountReceived: c.amountReceived,
+              notes: c.notes || null
+            }
+          });
+        }
       }
-    }
 
-    if (expenses) {
-      await run('DELETE FROM expenses');
-      for (const e of expenses) {
-        await run(
-          `INSERT OR REPLACE INTO expenses (id, date, category, amount, description, recordedBy)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [e.id, e.date, e.category, e.amount, e.description || '', e.recordedBy || '']
-        );
+      if (expensesIn) {
+        await tx.delete(expenses);
+        for (const e of expensesIn) {
+          await tx.insert(expenses).values({
+            id: e.id,
+            date: e.date,
+            category: e.category,
+            amount: e.amount,
+            description: e.description || '',
+            recordedBy: e.recordedBy || ''
+          }).onConflictDoUpdate({
+            target: expenses.id,
+            set: {
+              date: e.date,
+              category: e.category,
+              amount: e.amount,
+              description: e.description || '',
+              recordedBy: e.recordedBy || ''
+            }
+          });
+        }
       }
-    }
 
-    if (suppliers) {
-      await run('DELETE FROM suppliers');
-      for (const sup of suppliers) {
-        await run(
-          `INSERT OR REPLACE INTO suppliers (id, name, company, phone, email, address, balanceOwed)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [sup.id, sup.name, sup.company, sup.phone || null, sup.email || null, sup.address || null, sup.balanceOwed]
-        );
+      if (suppliersIn) {
+        await tx.delete(suppliers);
+        for (const sup of suppliersIn) {
+          await tx.insert(suppliers).values({
+            id: sup.id,
+            name: sup.name,
+            company: sup.company,
+            phone: sup.phone || null,
+            email: sup.email || null,
+            address: sup.address || null,
+            balanceOwed: sup.balanceOwed
+          }).onConflictDoUpdate({
+            target: suppliers.id,
+            set: {
+              name: sup.name,
+              company: sup.company,
+              phone: sup.phone || null,
+              email: sup.email || null,
+              address: sup.address || null,
+              balanceOwed: sup.balanceOwed
+            }
+          });
+        }
       }
-    }
 
-    if (customers) {
-      await run('DELETE FROM customers');
-      for (const cust of customers) {
-        await run(
-          `INSERT OR REPLACE INTO customers (id, name, phone, email, address, balanceReceivable)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [cust.id, cust.name, cust.phone || null, cust.email || null, cust.address || null, cust.balanceReceivable]
-        );
+      if (customersIn) {
+        await tx.delete(customers);
+        for (const cust of customersIn) {
+          await tx.insert(customers).values({
+            id: cust.id,
+            name: cust.name,
+            phone: cust.phone || null,
+            email: cust.email || null,
+            address: cust.address || null,
+            balanceReceivable: cust.balanceReceivable
+          }).onConflictDoUpdate({
+            target: customers.id,
+            set: {
+              name: cust.name,
+              phone: cust.phone || null,
+              email: cust.email || null,
+              address: cust.address || null,
+              balanceReceivable: cust.balanceReceivable
+            }
+          });
+        }
       }
-    }
 
-    if (customerTransactions) {
-      await run('DELETE FROM customer_transactions');
-      for (const tx of customerTransactions) {
-        await run(
-          `INSERT OR REPLACE INTO customer_transactions (id, customerId, customerName, date, type, referenceNo, description, itemsSummary, debit, credit, balance, paymentMethod, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            tx.id,
-            tx.customerId,
-            tx.customerName,
-            tx.date,
-            tx.type,
-            tx.referenceNo,
-            tx.description,
-            tx.itemsSummary || null,
-            tx.debit,
-            tx.credit,
-            tx.balance,
-            tx.paymentMethod || null,
-            tx.notes || null
-          ]
-        );
+      if (customerTransactionsIn) {
+        await tx.delete(customerTransactions);
+        for (const txItem of customerTransactionsIn) {
+          await tx.insert(customerTransactions).values({
+            id: txItem.id,
+            customerId: txItem.customerId,
+            customerName: txItem.customerName,
+            date: txItem.date,
+            type: txItem.type,
+            referenceNo: txItem.referenceNo,
+            description: txItem.description,
+            itemsSummary: txItem.itemsSummary || null,
+            debit: txItem.debit,
+            credit: txItem.credit,
+            balance: txItem.balance,
+            paymentMethod: txItem.paymentMethod || null,
+            notes: txItem.notes || null
+          }).onConflictDoUpdate({
+            target: customerTransactions.id,
+            set: {
+              customerId: txItem.customerId,
+              customerName: txItem.customerName,
+              date: txItem.date,
+              type: txItem.type,
+              referenceNo: txItem.referenceNo,
+              description: txItem.description,
+              itemsSummary: txItem.itemsSummary || null,
+              debit: txItem.debit,
+              credit: txItem.credit,
+              balance: txItem.balance,
+              paymentMethod: txItem.paymentMethod || null,
+              notes: txItem.notes || null
+            }
+          });
+        }
       }
-    }
 
-    if (supplierTransactions) {
-      await run('DELETE FROM supplier_transactions');
-      for (const tx of supplierTransactions) {
-        await run(
-          `INSERT OR REPLACE INTO supplier_transactions (id, supplierId, supplierName, date, type, referenceNo, description, itemsSummary, debit, credit, balance, paymentMethod, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            tx.id,
-            tx.supplierId,
-            tx.supplierName,
-            tx.date,
-            tx.type,
-            tx.referenceNo,
-            tx.description,
-            tx.itemsSummary || null,
-            tx.debit,
-            tx.credit,
-            tx.balance,
-            tx.paymentMethod || null,
-            tx.notes || null
-          ]
-        );
+      if (supplierTransactionsIn) {
+        await tx.delete(supplierTransactions);
+        for (const txItem of supplierTransactionsIn) {
+          await tx.insert(supplierTransactions).values({
+            id: txItem.id,
+            supplierId: txItem.supplierId,
+            supplierName: txItem.supplierName,
+            date: txItem.date,
+            type: txItem.type,
+            referenceNo: txItem.referenceNo,
+            description: txItem.description,
+            itemsSummary: txItem.itemsSummary || null,
+            debit: txItem.debit,
+            credit: txItem.credit,
+            balance: txItem.balance,
+            paymentMethod: txItem.paymentMethod || null,
+            notes: txItem.notes || null
+          }).onConflictDoUpdate({
+            target: supplierTransactions.id,
+            set: {
+              supplierId: txItem.supplierId,
+              supplierName: txItem.supplierName,
+              date: txItem.date,
+              type: txItem.type,
+              referenceNo: txItem.referenceNo,
+              description: txItem.description,
+              itemsSummary: txItem.itemsSummary || null,
+              debit: txItem.debit,
+              credit: txItem.credit,
+              balance: txItem.balance,
+              paymentMethod: txItem.paymentMethod || null,
+              notes: txItem.notes || null
+            }
+          });
+        }
       }
-    }
 
-    if (storeSettings) {
-      await run(
-        `INSERT OR REPLACE INTO store_settings (key, value) VALUES ('settings', ?)`,
-        [JSON.stringify(storeSettings)]
-      );
-    }
-
-    if (userAccounts) {
-      await run('DELETE FROM user_accounts');
-      for (const acc of userAccounts) {
-        await run(
-          `INSERT OR REPLACE INTO user_accounts (id, name, email, password, role, permissions)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [acc.id, acc.name, acc.email, acc.password || '', acc.role, JSON.stringify(acc.permissions || {})]
-        );
+      if (storeSettingsIn) {
+        await tx.insert(storeSettings).values({
+          key: 'settings',
+          value: JSON.stringify(storeSettingsIn)
+        }).onConflictDoUpdate({
+          target: storeSettings.key,
+          set: {
+            value: JSON.stringify(storeSettingsIn)
+          }
+        });
       }
-    }
 
-    await run('COMMIT');
-    res.json({ success: true, message: 'All POS database tables successfully live-synchronized!' });
+      if (userAccountsIn) {
+        await tx.delete(userAccounts);
+        for (const acc of userAccountsIn) {
+          await tx.insert(userAccounts).values({
+            id: acc.id,
+            name: acc.name,
+            email: acc.email,
+            password: acc.password || '',
+            role: acc.role,
+            permissions: JSON.stringify(acc.permissions || {})
+          }).onConflictDoUpdate({
+            target: userAccounts.id,
+            set: {
+              name: acc.name,
+              email: acc.email,
+              password: acc.password || '',
+              role: acc.role,
+              permissions: JSON.stringify(acc.permissions || {})
+            }
+          });
+        }
+      }
+    });
+
+    res.json({ success: true, message: 'All POS database tables successfully live-synchronized with PostgreSQL!' });
   } catch (error: any) {
-    await run('ROLLBACK');
-    console.error('Error saving all POS data:', error);
+    console.error('Error saving all POS data in PostgreSQL transaction:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Dynamic Incremental Mutations (To allow instant lightweight writes)
+// Dynamic Incremental Mutations
 app.post('/api/products', async (req, res) => {
   const p = req.body;
   try {
-    await run(
-      `INSERT OR REPLACE INTO products (id, barcode, name, company, category, supplierId, supplierName, purchasePrice, retailPrice, wholesalePrice, stock, minStockAlert, batchNo, expiryDate, unitOfSale, weightValue) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        p.id, p.barcode, p.name, p.company, p.category, p.supplierId || null, p.supplierName || null,
-        p.purchasePrice || 0, p.retailPrice || 0, p.wholesalePrice || 0, p.stock || 0, p.minStockAlert || 0,
-        p.batchNo || null, p.expiryDate || null, p.unitOfSale || 'Item', p.weightValue || null
-      ]
-    );
+    await db.insert(products).values({
+      id: p.id,
+      barcode: p.barcode,
+      name: p.name,
+      company: p.company,
+      category: p.category,
+      supplierId: p.supplierId || null,
+      supplierName: p.supplierName || null,
+      purchasePrice: p.purchasePrice || 0,
+      retailPrice: p.retailPrice || 0,
+      wholesalePrice: p.wholesalePrice || 0,
+      stock: p.stock || 0,
+      minStockAlert: p.minStockAlert || 0,
+      batchNo: p.batchNo || null,
+      expiryDate: p.expiryDate || null,
+      unitOfSale: p.unitOfSale || 'Item',
+      weightValue: p.weightValue || null
+    }).onConflictDoUpdate({
+      target: products.id,
+      set: {
+        barcode: p.barcode,
+        name: p.name,
+        company: p.company,
+        category: p.category,
+        supplierId: p.supplierId || null,
+        supplierName: p.supplierName || null,
+        purchasePrice: p.purchasePrice || 0,
+        retailPrice: p.retailPrice || 0,
+        wholesalePrice: p.wholesalePrice || 0,
+        stock: p.stock || 0,
+        minStockAlert: p.minStockAlert || 0,
+        batchNo: p.batchNo || null,
+        expiryDate: p.expiryDate || null,
+        unitOfSale: p.unitOfSale || 'Item',
+        weightValue: p.weightValue || null
+      }
+    });
     res.json({ success: true });
   } catch (err: any) {
+    console.error('Error posting product:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.delete('/api/products/:id', async (req, res) => {
   try {
-    await run('DELETE FROM products WHERE id = ?', [req.params.id]);
+    await db.delete(products).where(eq(products.id, req.params.id));
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -342,14 +498,35 @@ app.delete('/api/products/:id', async (req, res) => {
 app.post('/api/sales', async (req, res) => {
   const s = req.body;
   try {
-    await run(
-      `INSERT OR REPLACE INTO sales (id, invoiceNo, date, customerName, saleType, items, totalAmount, discountAmount, netAmount, paidAmount, changeAmount, cashier)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        s.id, s.invoiceNo, s.date, s.customerName, s.saleType, JSON.stringify(s.items || []),
-        s.totalAmount, s.discountAmount, s.netAmount, s.paidAmount, s.changeAmount, s.cashier
-      ]
-    );
+    await db.insert(sales).values({
+      id: s.id,
+      invoiceNo: s.invoiceNo,
+      date: s.date,
+      customerName: s.customerName,
+      saleType: s.saleType,
+      items: JSON.stringify(s.items || []),
+      totalAmount: s.totalAmount,
+      discountAmount: s.discountAmount,
+      netAmount: s.netAmount,
+      paidAmount: s.paidAmount,
+      changeAmount: s.changeAmount,
+      cashier: s.cashier
+    }).onConflictDoUpdate({
+      target: sales.id,
+      set: {
+        invoiceNo: s.invoiceNo,
+        date: s.date,
+        customerName: s.customerName,
+        saleType: s.saleType,
+        items: JSON.stringify(s.items || []),
+        totalAmount: s.totalAmount,
+        discountAmount: s.discountAmount,
+        netAmount: s.netAmount,
+        paidAmount: s.paidAmount,
+        changeAmount: s.changeAmount,
+        cashier: s.cashier
+      }
+    });
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -358,7 +535,7 @@ app.post('/api/sales', async (req, res) => {
 
 app.delete('/api/sales/:id', async (req, res) => {
   try {
-    await run('DELETE FROM sales WHERE id = ?', [req.params.id]);
+    await db.delete(sales).where(eq(sales.id, req.params.id));
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -368,11 +545,25 @@ app.delete('/api/sales/:id', async (req, res) => {
 app.post('/api/returns', async (req, res) => {
   const r = req.body;
   try {
-    await run(
-      `INSERT OR REPLACE INTO returns (id, date, barcode, itemName, qty, refundAmount, reason)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [r.id, r.date, r.barcode, r.itemName, r.qty, r.refundAmount, r.reason || null]
-    );
+    await db.insert(returns).values({
+      id: r.id,
+      date: r.date,
+      barcode: r.barcode,
+      itemName: r.itemName,
+      qty: r.qty,
+      refundAmount: r.refundAmount,
+      reason: r.reason || null
+    }).onConflictDoUpdate({
+      target: returns.id,
+      set: {
+        date: r.date,
+        barcode: r.barcode,
+        itemName: r.itemName,
+        qty: r.qty,
+        refundAmount: r.refundAmount,
+        reason: r.reason || null
+      }
+    });
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -381,7 +572,7 @@ app.post('/api/returns', async (req, res) => {
 
 app.delete('/api/returns/:id', async (req, res) => {
   try {
-    await run('DELETE FROM returns WHERE id = ?', [req.params.id]);
+    await db.delete(returns).where(eq(returns.id, req.params.id));
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -391,14 +582,33 @@ app.delete('/api/returns/:id', async (req, res) => {
 app.post('/api/purchases', async (req, res) => {
   const pur = req.body;
   try {
-    await run(
-      `INSERT OR REPLACE INTO purchases (id, date, supplierId, supplierName, barcode, itemName, qtyReceived, unitCostPrice, salePriceRetail, wholesalePrice, totalCost)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        pur.id, pur.date, pur.supplierId || null, pur.supplierName, pur.barcode, pur.itemName,
-        pur.qtyReceived, pur.unitCostPrice, pur.salePriceRetail, pur.wholesalePrice, pur.totalCost
-      ]
-    );
+    await db.insert(purchases).values({
+      id: pur.id,
+      date: pur.date,
+      supplierId: pur.supplierId || null,
+      supplierName: pur.supplierName,
+      barcode: pur.barcode,
+      itemName: pur.itemName,
+      qtyReceived: pur.qtyReceived,
+      unitCostPrice: pur.unitCostPrice,
+      salePriceRetail: pur.salePriceRetail,
+      wholesalePrice: pur.wholesalePrice,
+      totalCost: pur.totalCost
+    }).onConflictDoUpdate({
+      target: purchases.id,
+      set: {
+        date: pur.date,
+        supplierId: pur.supplierId || null,
+        supplierName: pur.supplierName,
+        barcode: pur.barcode,
+        itemName: pur.itemName,
+        qtyReceived: pur.qtyReceived,
+        unitCostPrice: pur.unitCostPrice,
+        salePriceRetail: pur.salePriceRetail,
+        wholesalePrice: pur.wholesalePrice,
+        totalCost: pur.totalCost
+      }
+    });
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -407,7 +617,7 @@ app.post('/api/purchases', async (req, res) => {
 
 app.delete('/api/purchases/:id', async (req, res) => {
   try {
-    await run('DELETE FROM purchases WHERE id = ?', [req.params.id]);
+    await db.delete(purchases).where(eq(purchases.id, req.params.id));
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -417,11 +627,21 @@ app.delete('/api/purchases/:id', async (req, res) => {
 app.post('/api/credits', async (req, res) => {
   const c = req.body;
   try {
-    await run(
-      `INSERT OR REPLACE INTO credits (id, date, customerName, amountReceived, notes)
-       VALUES (?, ?, ?, ?, ?)`,
-      [c.id, c.date, c.customerName, c.amountReceived, c.notes || null]
-    );
+    await db.insert(credits).values({
+      id: c.id,
+      date: c.date,
+      customerName: c.customerName,
+      amountReceived: c.amountReceived,
+      notes: c.notes || null
+    }).onConflictDoUpdate({
+      target: credits.id,
+      set: {
+        date: c.date,
+        customerName: c.customerName,
+        amountReceived: c.amountReceived,
+        notes: c.notes || null
+      }
+    });
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -430,7 +650,7 @@ app.post('/api/credits', async (req, res) => {
 
 app.delete('/api/credits/:id', async (req, res) => {
   try {
-    await run('DELETE FROM credits WHERE id = ?', [req.params.id]);
+    await db.delete(credits).where(eq(credits.id, req.params.id));
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -440,11 +660,23 @@ app.delete('/api/credits/:id', async (req, res) => {
 app.post('/api/expenses', async (req, res) => {
   const e = req.body;
   try {
-    await run(
-      `INSERT OR REPLACE INTO expenses (id, date, category, amount, description, recordedBy)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [e.id, e.date, e.category, e.amount, e.description || '', e.recordedBy || '']
-    );
+    await db.insert(expenses).values({
+      id: e.id,
+      date: e.date,
+      category: e.category,
+      amount: e.amount,
+      description: e.description || '',
+      recordedBy: e.recordedBy || ''
+    }).onConflictDoUpdate({
+      target: expenses.id,
+      set: {
+        date: e.date,
+        category: e.category,
+        amount: e.amount,
+        description: e.description || '',
+        recordedBy: e.recordedBy || ''
+      }
+    });
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -453,7 +685,7 @@ app.post('/api/expenses', async (req, res) => {
 
 app.delete('/api/expenses/:id', async (req, res) => {
   try {
-    await run('DELETE FROM expenses WHERE id = ?', [req.params.id]);
+    await db.delete(expenses).where(eq(expenses.id, req.params.id));
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -463,11 +695,25 @@ app.delete('/api/expenses/:id', async (req, res) => {
 app.post('/api/suppliers', async (req, res) => {
   const sup = req.body;
   try {
-    await run(
-      `INSERT OR REPLACE INTO suppliers (id, name, company, phone, email, address, balanceOwed)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [sup.id, sup.name, sup.company, sup.phone || null, sup.email || null, sup.address || null, sup.balanceOwed]
-    );
+    await db.insert(suppliers).values({
+      id: sup.id,
+      name: sup.name,
+      company: sup.company,
+      phone: sup.phone || null,
+      email: sup.email || null,
+      address: sup.address || null,
+      balanceOwed: sup.balanceOwed
+    }).onConflictDoUpdate({
+      target: suppliers.id,
+      set: {
+        name: sup.name,
+        company: sup.company,
+        phone: sup.phone || null,
+        email: sup.email || null,
+        address: sup.address || null,
+        balanceOwed: sup.balanceOwed
+      }
+    });
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -476,7 +722,7 @@ app.post('/api/suppliers', async (req, res) => {
 
 app.delete('/api/suppliers/:id', async (req, res) => {
   try {
-    await run('DELETE FROM suppliers WHERE id = ?', [req.params.id]);
+    await db.delete(suppliers).where(eq(suppliers.id, req.params.id));
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -486,11 +732,23 @@ app.delete('/api/suppliers/:id', async (req, res) => {
 app.post('/api/customers', async (req, res) => {
   const cust = req.body;
   try {
-    await run(
-      `INSERT OR REPLACE INTO customers (id, name, phone, email, address, balanceReceivable)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [cust.id, cust.name, cust.phone || null, cust.email || null, cust.address || null, cust.balanceReceivable]
-    );
+    await db.insert(customers).values({
+      id: cust.id,
+      name: cust.name,
+      phone: cust.phone || null,
+      email: cust.email || null,
+      address: cust.address || null,
+      balanceReceivable: cust.balanceReceivable
+    }).onConflictDoUpdate({
+      target: customers.id,
+      set: {
+        name: cust.name,
+        phone: cust.phone || null,
+        email: cust.email || null,
+        address: cust.address || null,
+        balanceReceivable: cust.balanceReceivable
+      }
+    });
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -499,7 +757,7 @@ app.post('/api/customers', async (req, res) => {
 
 app.delete('/api/customers/:id', async (req, res) => {
   try {
-    await run('DELETE FROM customers WHERE id = ?', [req.params.id]);
+    await db.delete(customers).where(eq(customers.id, req.params.id));
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -507,16 +765,39 @@ app.delete('/api/customers/:id', async (req, res) => {
 });
 
 app.post('/api/customer-transactions', async (req, res) => {
-  const tx = req.body;
+  const txItem = req.body;
   try {
-    await run(
-      `INSERT OR REPLACE INTO customer_transactions (id, customerId, customerName, date, type, referenceNo, description, itemsSummary, debit, credit, balance, paymentMethod, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        tx.id, tx.customerId, tx.customerName, tx.date, tx.type, tx.referenceNo, tx.description,
-        tx.itemsSummary || null, tx.debit, tx.credit, tx.balance, tx.paymentMethod || null, tx.notes || null
-      ]
-    );
+    await db.insert(customerTransactions).values({
+      id: txItem.id,
+      customerId: txItem.customerId,
+      customerName: txItem.customerName,
+      date: txItem.date,
+      type: txItem.type,
+      referenceNo: txItem.referenceNo,
+      description: txItem.description,
+      itemsSummary: txItem.itemsSummary || null,
+      debit: txItem.debit,
+      credit: txItem.credit,
+      balance: txItem.balance,
+      paymentMethod: txItem.paymentMethod || null,
+      notes: txItem.notes || null
+    }).onConflictDoUpdate({
+      target: customerTransactions.id,
+      set: {
+        customerId: txItem.customerId,
+        customerName: txItem.customerName,
+        date: txItem.date,
+        type: txItem.type,
+        referenceNo: txItem.referenceNo,
+        description: txItem.description,
+        itemsSummary: txItem.itemsSummary || null,
+        debit: txItem.debit,
+        credit: txItem.credit,
+        balance: txItem.balance,
+        paymentMethod: txItem.paymentMethod || null,
+        notes: txItem.notes || null
+      }
+    });
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -525,7 +806,7 @@ app.post('/api/customer-transactions', async (req, res) => {
 
 app.delete('/api/customer-transactions/:id', async (req, res) => {
   try {
-    await run('DELETE FROM customer_transactions WHERE id = ?', [req.params.id]);
+    await db.delete(customerTransactions).where(eq(customerTransactions.id, req.params.id));
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -533,16 +814,39 @@ app.delete('/api/customer-transactions/:id', async (req, res) => {
 });
 
 app.post('/api/supplier-transactions', async (req, res) => {
-  const tx = req.body;
+  const txItem = req.body;
   try {
-    await run(
-      `INSERT OR REPLACE INTO supplier_transactions (id, supplierId, supplierName, date, type, referenceNo, description, itemsSummary, debit, credit, balance, paymentMethod, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        tx.id, tx.supplierId, tx.supplierName, tx.date, tx.type, tx.referenceNo, tx.description,
-        tx.itemsSummary || null, tx.debit, tx.credit, tx.balance, tx.paymentMethod || null, tx.notes || null
-      ]
-    );
+    await db.insert(supplierTransactions).values({
+      id: txItem.id,
+      supplierId: txItem.supplierId,
+      supplierName: txItem.supplierName,
+      date: txItem.date,
+      type: txItem.type,
+      referenceNo: txItem.referenceNo,
+      description: txItem.description,
+      itemsSummary: txItem.itemsSummary || null,
+      debit: txItem.debit,
+      credit: txItem.credit,
+      balance: txItem.balance,
+      paymentMethod: txItem.paymentMethod || null,
+      notes: txItem.notes || null
+    }).onConflictDoUpdate({
+      target: supplierTransactions.id,
+      set: {
+        supplierId: txItem.supplierId,
+        supplierName: txItem.supplierName,
+        date: txItem.date,
+        type: txItem.type,
+        referenceNo: txItem.referenceNo,
+        description: txItem.description,
+        itemsSummary: txItem.itemsSummary || null,
+        debit: txItem.debit,
+        credit: txItem.credit,
+        balance: txItem.balance,
+        paymentMethod: txItem.paymentMethod || null,
+        notes: txItem.notes || null
+      }
+    });
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -551,7 +855,7 @@ app.post('/api/supplier-transactions', async (req, res) => {
 
 app.delete('/api/supplier-transactions/:id', async (req, res) => {
   try {
-    await run('DELETE FROM supplier_transactions WHERE id = ?', [req.params.id]);
+    await db.delete(supplierTransactions).where(eq(supplierTransactions.id, req.params.id));
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -561,11 +865,23 @@ app.delete('/api/supplier-transactions/:id', async (req, res) => {
 app.post('/api/user-accounts', async (req, res) => {
   const acc = req.body;
   try {
-    await run(
-      `INSERT OR REPLACE INTO user_accounts (id, name, email, password, role, permissions)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [acc.id, acc.name, acc.email, acc.password || '', acc.role, JSON.stringify(acc.permissions || {})]
-    );
+    await db.insert(userAccounts).values({
+      id: acc.id,
+      name: acc.name,
+      email: acc.email,
+      password: acc.password || '',
+      role: acc.role,
+      permissions: JSON.stringify(acc.permissions || {})
+    }).onConflictDoUpdate({
+      target: userAccounts.id,
+      set: {
+        name: acc.name,
+        email: acc.email,
+        password: acc.password || '',
+        role: acc.role,
+        permissions: JSON.stringify(acc.permissions || {})
+      }
+    });
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -574,7 +890,7 @@ app.post('/api/user-accounts', async (req, res) => {
 
 app.delete('/api/user-accounts/:id', async (req, res) => {
   try {
-    await run('DELETE FROM user_accounts WHERE id = ?', [req.params.id]);
+    await db.delete(userAccounts).where(eq(userAccounts.id, req.params.id));
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -582,5 +898,5 @@ app.delete('/api/user-accounts/:id', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`PostgreSQL-powered LimoPOS server running on port ${PORT}`);
 });
