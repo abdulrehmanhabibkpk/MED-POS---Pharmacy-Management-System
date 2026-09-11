@@ -531,7 +531,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [activeUserId, activeStoreId]);
 
-  // Firestore save helper (saves in user-nested subcollection: /users/{userId}/{colName}/{docId} with storeId)
+  // Firestore & Hostinger MySQL save helper
   const saveToFirestore = async (colName: string, docId: string, data: any) => {
     if (!activeUserId) return;
     try {
@@ -542,10 +542,17 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updatedAt: new Date().toISOString()
       };
 
-      // 1. Write inside user's specific subcollection
+      // 1. Sync directly to Hostinger Node.js MySQL Database
+      fetch(`/api/mysql/${activeUserId}/${colName}/${docId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => {});
+
+      // 2. Write inside user's specific Firebase Firestore subcollection
       await setDoc(doc(db, 'users', activeUserId, colName, docId), payload, { merge: true });
 
-      // 2. Ensure the parent user document exists and has storeId metadata
+      // 3. Ensure the parent user document exists
       await setDoc(doc(db, 'users', activeUserId), {
         id: activeUserId,
         email: currentUser?.email || firebaseUser?.email || '',
@@ -556,18 +563,25 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         lastUpdated: new Date().toISOString()
       }, { merge: true });
     } catch (err: any) {
-      console.warn(`Firestore save to /users/${activeUserId}/${colName}/${docId} note:`, err.message);
+      console.warn(`Save note:`, err.message);
     }
   };
 
   const deleteFromFirestore = async (colName: string, docId: string) => {
     if (!activeUserId) return;
     try {
+      // 1. Delete from Hostinger MySQL
+      fetch(`/api/mysql/${activeUserId}/${colName}/${docId}`, {
+        method: 'DELETE'
+      }).catch(() => {});
+
+      // 2. Delete from Firestore
       await deleteDoc(doc(db, 'users', activeUserId, colName, docId));
     } catch (err: any) {
-      console.warn(`Firestore delete from /users/${activeUserId}/${colName}/${docId} note:`, err.message);
+      console.warn(`Delete note:`, err.message);
     }
   };
+
 
   // Login
   const login = (u: string, p: string) => {
