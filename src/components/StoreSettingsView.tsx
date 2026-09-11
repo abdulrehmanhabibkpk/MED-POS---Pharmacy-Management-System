@@ -22,6 +22,10 @@ import {
   Search,
   Sparkles,
   Layout,
+  Cloud,
+  RefreshCw,
+  Server,
+  FolderTree,
 } from 'lucide-react';
 import { usePOS } from '../context/POSContext';
 import { ThermalPaperSize, Supplier } from '../types';
@@ -52,6 +56,11 @@ export const StoreSettingsView: React.FC = () => {
     products,
     exportDatabase,
     importDatabase,
+    seedSampleDataToCloud,
+    syncAllToCloud,
+    firebaseUser,
+    currentUser,
+    isCloudSyncing,
   } = usePOS();
 
   const [activeSubTab, setActiveSubTab] = useState<SettingsSubTab>('profile');
@@ -1174,11 +1183,94 @@ export const StoreSettingsView: React.FC = () => {
       {/* 6. DATABASE & BACKUP */}
       {activeSubTab === 'backup' && (
         <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-xs max-w-5xl space-y-6">
-          <div className="border-b border-slate-100 pb-4">
-            <h3 className="text-sm font-black text-slate-900 uppercase">Database Backup, Export & System Maintenance</h3>
-            <p className="text-xs text-slate-500 font-semibold mt-0.5">
-              Download complete local JSON database backups or restore previous records securely.
-            </p>
+          <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-black text-slate-900 uppercase">Database Backup, Cloud Sync & System Maintenance</h3>
+              <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                Real-time Firebase Firestore cloud persistence and offline JSON backups.
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-black">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Firebase Cloud Live</span>
+            </div>
+          </div>
+
+          {/* Cloud Database Hierarchy Info Card */}
+          <div className="bg-blue-50/50 border border-blue-200/70 p-5 rounded-2xl space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-600 text-white">
+                  <Cloud className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-black text-slate-900 text-xs uppercase tracking-wider">
+                    Firebase Cloud Database Hierarchy
+                  </h4>
+                  <p className="text-[11px] text-slate-600 font-semibold mt-0.5">
+                    Isolated under user path:{' '}
+                    <code className="bg-white px-2 py-0.5 rounded-md font-mono text-blue-700 font-bold border border-blue-200">
+                      /users/{firebaseUser?.uid || currentUser?.id || 'active_user'}/
+                    </code>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 text-[11px] font-semibold">
+              <div className="bg-white p-2.5 rounded-xl border border-blue-100/80 text-slate-700">
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Products</span>
+                <span className="font-mono font-black text-blue-600">{products.length} Items</span>
+              </div>
+              <div className="bg-white p-2.5 rounded-xl border border-blue-100/80 text-slate-700">
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Suppliers</span>
+                <span className="font-mono font-black text-blue-600">{suppliers.length} Vendors</span>
+              </div>
+              <div className="bg-white p-2.5 rounded-xl border border-blue-100/80 text-slate-700">
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Cloud Status</span>
+                <span className="font-bold text-emerald-700">{isCloudSyncing ? 'Syncing...' : 'Connected'}</span>
+              </div>
+              <div className="bg-white p-2.5 rounded-xl border border-blue-100/80 text-slate-700">
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">User UID</span>
+                <span className="font-mono text-[10px] truncate block text-slate-600 font-bold">
+                  {firebaseUser?.uid || currentUser?.id || 'User'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  showFeedback('Syncing all local store records to Firebase Cloud...');
+                  const res = await syncAllToCloud();
+                  if (res.success) {
+                    showFeedback('All products, sales, khata & settings successfully synced to /users/{userId} in Cloud!');
+                  }
+                }}
+                disabled={isCloudSyncing}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer shadow-sm shadow-blue-150 transition-all active:scale-95 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${isCloudSyncing ? 'animate-spin' : ''}`} />
+                <span>Force Sync All Data to Firebase Cloud</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  showFeedback('Seeding sample medicines & vendors into your Cloud store...');
+                  const res = await seedSampleDataToCloud();
+                  if (res.success) {
+                    showFeedback(`Successfully seeded ${res.count} pharmacy medicines & vendors into your Cloud store!`);
+                  }
+                }}
+                disabled={isCloudSyncing}
+                className="flex-1 bg-white hover:bg-slate-50 text-blue-700 border border-blue-300 font-extrabold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+              >
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>Seed Sample Pharmacy Items into Cloud</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs font-semibold">

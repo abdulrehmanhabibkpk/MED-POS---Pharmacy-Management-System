@@ -37,6 +37,9 @@ import {
 } from '../types';
 import {
   initialStoreSettings,
+  sampleSeedProducts,
+  sampleSeedSuppliers,
+  sampleSeedCustomers,
 } from '../data/initialData';
 
 interface POSContextType {
@@ -125,6 +128,8 @@ interface POSContextType {
   deleteUserAccount: (id: string) => void;
   currentUser: UserAccount | null;
   setCurrentUser: (user: UserAccount | null) => void;
+  seedSampleDataToCloud: () => Promise<{ success: boolean; count: number }>;
+  syncAllToCloud: () => Promise<{ success: boolean }>;
 }
 
 const POSContext = createContext<POSContextType | undefined>(undefined);
@@ -240,19 +245,22 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           (a) => a.email.trim().toLowerCase() === emailLower
         );
 
+        const isMaster = emailLower === 'alitrader@gmail.com';
+        const userRoleResolved: UserRole = isMaster ? 'Admin' : (existing?.role || 'Admin');
+        const userStoreId = existing?.storeId || `store_${fbUser.uid}`;
+
         if (existing) {
-          const withStore = { ...existing, storeId: existing.storeId || `store_${fbUser.uid}` };
+          const withStore = { ...existing, storeId: userStoreId };
           setCurrentUser(withStore);
           setUserRoleState(withStore.role);
           setIsAuthenticated(true);
         } else {
-          const isMaster = emailLower === 'alitrader@gmail.com';
           const newAccount: UserAccount = {
             id: fbUser.uid,
-            storeId: `store_${fbUser.uid}`,
+            storeId: userStoreId,
             name: fbUser.displayName || emailLower.split('@')[0] || 'LimoPOS User',
             email: fbUser.email,
-            role: isMaster ? 'Admin' : 'Admin',
+            role: userRoleResolved,
             permissions: {
               canDashboard: true,
               canSale: true,
@@ -282,6 +290,19 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setIsAuthenticated(true);
           setDoc(doc(db, 'userAccounts', newAccount.id), newAccount, { merge: true }).catch(() => {});
         }
+
+        // Real-time initialize parent user document in Firestore: /users/{userId}
+        setDoc(doc(db, 'users', fbUser.uid), {
+          id: fbUser.uid,
+          storeId: userStoreId,
+          email: fbUser.email,
+          name: fbUser.displayName || emailLower.split('@')[0] || 'LimoPOS User',
+          role: userRoleResolved,
+          storeName: storeSettings?.storeName || 'Ali Traders',
+          lastLoginAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(() => {});
+
       } else {
         // Clear all state on logout
         setCurrentUser(null);
@@ -304,18 +325,18 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [userAccounts]);
 
   // =========================================================
-  // CLOUD FIRESTORE USER & STORE-NESTED HIERARCHY
-  // Queries are automatically filtered by storeId for complete data isolation:
-  // /users/{userId}/products where storeId == activeStoreId
-  // /users/{userId}/sales where storeId == activeStoreId
-  // /users/{userId}/returns where storeId == activeStoreId
-  // /users/{userId}/purchases where storeId == activeStoreId
-  // /users/{userId}/credits where storeId == activeStoreId
-  // /users/{userId}/expenses where storeId == activeStoreId
-  // /users/{userId}/suppliers where storeId == activeStoreId
-  // /users/{userId}/customers where storeId == activeStoreId
-  // /users/{userId}/customerTransactions where storeId == activeStoreId
-  // /users/{userId}/supplierTransactions where storeId == activeStoreId
+  // CLOUD FIRESTORE USER-NESTED REALTIME HIERARCHY
+  // Everything is stored inside /users/{userId}/...
+  // /users/{userId}/products
+  // /users/{userId}/sales
+  // /users/{userId}/returns
+  // /users/{userId}/purchases
+  // /users/{userId}/credits
+  // /users/{userId}/expenses
+  // /users/{userId}/suppliers
+  // /users/{userId}/customers
+  // /users/{userId}/customerTransactions
+  // /users/{userId}/supplierTransactions
   // /users/{userId}/settings/store_config
   // =========================================================
   useEffect(() => {
@@ -335,12 +356,19 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setIsCloudSyncing(true);
 
-    // 1. User's isolated Products (filtered by storeId)
-    const qProducts = query(
-      collection(db, 'users', activeUserId, 'products'),
-      where('storeId', '==', activeStoreId)
-    );
-    const unsubProducts = onSnapshot(qProducts, (snapshot) => {
+    // Ensure root user document exists in Firestore
+    setDoc(doc(db, 'users', activeUserId), {
+      id: activeUserId,
+      storeId: activeStoreId,
+      email: currentUser?.email || firebaseUser?.email || '',
+      name: currentUser?.name || firebaseUser?.displayName || 'LimoPOS User',
+      role: userRole,
+      storeName: storeSettings?.storeName || 'Ali Traders',
+      updatedAt: new Date().toISOString()
+    }, { merge: true }).catch(() => {});
+
+    // 1. User's isolated Products: /users/{userId}/products
+    const unsubProducts = onSnapshot(collection(db, 'users', activeUserId, 'products'), (snapshot) => {
       const list: Product[] = [];
       snapshot.forEach((docSnap) => {
         list.push(docSnap.data() as Product);
@@ -352,12 +380,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsCloudSyncing(false);
     });
 
-    // 2. User's isolated Sales (filtered by storeId)
-    const qSales = query(
-      collection(db, 'users', activeUserId, 'sales'),
-      where('storeId', '==', activeStoreId)
-    );
-    const unsubSales = onSnapshot(qSales, (snapshot) => {
+    // 2. User's isolated Sales: /users/{userId}/sales
+    const unsubSales = onSnapshot(collection(db, 'users', activeUserId, 'sales'), (snapshot) => {
       const list: SaleInvoice[] = [];
       snapshot.forEach((docSnap) => {
         list.push(docSnap.data() as SaleInvoice);
@@ -368,12 +392,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Sales sync note:', err.message);
     });
 
-    // 3. User's isolated Returns (filtered by storeId)
-    const qReturns = query(
-      collection(db, 'users', activeUserId, 'returns'),
-      where('storeId', '==', activeStoreId)
-    );
-    const unsubReturns = onSnapshot(qReturns, (snapshot) => {
+    // 3. User's isolated Returns: /users/{userId}/returns
+    const unsubReturns = onSnapshot(collection(db, 'users', activeUserId, 'returns'), (snapshot) => {
       const list: SaleReturn[] = [];
       snapshot.forEach((docSnap) => {
         list.push(docSnap.data() as SaleReturn);
@@ -383,12 +403,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Returns sync note:', err.message);
     });
 
-    // 4. User's isolated Purchases (filtered by storeId)
-    const qPurchases = query(
-      collection(db, 'users', activeUserId, 'purchases'),
-      where('storeId', '==', activeStoreId)
-    );
-    const unsubPurchases = onSnapshot(qPurchases, (snapshot) => {
+    // 4. User's isolated Purchases: /users/{userId}/purchases
+    const unsubPurchases = onSnapshot(collection(db, 'users', activeUserId, 'purchases'), (snapshot) => {
       const list: PurchaseRecord[] = [];
       snapshot.forEach((docSnap) => {
         list.push(docSnap.data() as PurchaseRecord);
@@ -398,12 +414,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Purchases sync note:', err.message);
     });
 
-    // 5. User's isolated Credits (filtered by storeId)
-    const qCredits = query(
-      collection(db, 'users', activeUserId, 'credits'),
-      where('storeId', '==', activeStoreId)
-    );
-    const unsubCredits = onSnapshot(qCredits, (snapshot) => {
+    // 5. User's isolated Credits: /users/{userId}/credits
+    const unsubCredits = onSnapshot(collection(db, 'users', activeUserId, 'credits'), (snapshot) => {
       const list: CreditPayment[] = [];
       snapshot.forEach((docSnap) => {
         list.push(docSnap.data() as CreditPayment);
@@ -413,12 +425,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Credits sync note:', err.message);
     });
 
-    // 6. User's isolated Expenses (filtered by storeId)
-    const qExpenses = query(
-      collection(db, 'users', activeUserId, 'expenses'),
-      where('storeId', '==', activeStoreId)
-    );
-    const unsubExpenses = onSnapshot(qExpenses, (snapshot) => {
+    // 6. User's isolated Expenses: /users/{userId}/expenses
+    const unsubExpenses = onSnapshot(collection(db, 'users', activeUserId, 'expenses'), (snapshot) => {
       const list: ExpenseRecord[] = [];
       snapshot.forEach((docSnap) => {
         list.push(docSnap.data() as ExpenseRecord);
@@ -428,12 +436,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Expenses sync note:', err.message);
     });
 
-    // 7. User's isolated Suppliers (filtered by storeId)
-    const qSuppliers = query(
-      collection(db, 'users', activeUserId, 'suppliers'),
-      where('storeId', '==', activeStoreId)
-    );
-    const unsubSuppliers = onSnapshot(qSuppliers, (snapshot) => {
+    // 7. User's isolated Suppliers: /users/{userId}/suppliers
+    const unsubSuppliers = onSnapshot(collection(db, 'users', activeUserId, 'suppliers'), (snapshot) => {
       const list: Supplier[] = [];
       snapshot.forEach((docSnap) => {
         list.push(docSnap.data() as Supplier);
@@ -443,12 +447,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Suppliers sync note:', err.message);
     });
 
-    // 8. User's isolated Customers (filtered by storeId)
-    const qCustomers = query(
-      collection(db, 'users', activeUserId, 'customers'),
-      where('storeId', '==', activeStoreId)
-    );
-    const unsubCustomers = onSnapshot(qCustomers, (snapshot) => {
+    // 8. User's isolated Customers: /users/{userId}/customers
+    const unsubCustomers = onSnapshot(collection(db, 'users', activeUserId, 'customers'), (snapshot) => {
       const list: Customer[] = [];
       snapshot.forEach((docSnap) => {
         list.push(docSnap.data() as Customer);
@@ -458,12 +458,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Customers sync note:', err.message);
     });
 
-    // 9. User's isolated Customer Transactions (filtered by storeId)
-    const qCustomerTx = query(
-      collection(db, 'users', activeUserId, 'customerTransactions'),
-      where('storeId', '==', activeStoreId)
-    );
-    const unsubCustomerTx = onSnapshot(qCustomerTx, (snapshot) => {
+    // 9. User's isolated Customer Transactions: /users/{userId}/customerTransactions
+    const unsubCustomerTx = onSnapshot(collection(db, 'users', activeUserId, 'customerTransactions'), (snapshot) => {
       const list: CustomerTransaction[] = [];
       snapshot.forEach((docSnap) => {
         list.push(docSnap.data() as CustomerTransaction);
@@ -473,12 +469,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Customer transactions sync note:', err.message);
     });
 
-    // 10. User's isolated Supplier Transactions (filtered by storeId)
-    const qSupplierTx = query(
-      collection(db, 'users', activeUserId, 'supplierTransactions'),
-      where('storeId', '==', activeStoreId)
-    );
-    const unsubSupplierTx = onSnapshot(qSupplierTx, (snapshot) => {
+    // 10. User's isolated Supplier Transactions: /users/{userId}/supplierTransactions
+    const unsubSupplierTx = onSnapshot(collection(db, 'users', activeUserId, 'supplierTransactions'), (snapshot) => {
       const list: SupplierTransaction[] = [];
       snapshot.forEach((docSnap) => {
         list.push(docSnap.data() as SupplierTransaction);
@@ -510,9 +502,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Settings sync note:', err.message);
     });
 
-    // 12. User accounts collection (filtered by storeId)
-    const qAccounts = query(collection(db, 'userAccounts'), where('storeId', '==', activeStoreId));
-    const unsubAccounts = onSnapshot(qAccounts, (snapshot) => {
+    // 12. User accounts collection
+    const unsubAccounts = onSnapshot(collection(db, 'userAccounts'), (snapshot) => {
       const list: UserAccount[] = [];
       snapshot.forEach((docSnap) => {
         list.push(docSnap.data() as UserAccount);
@@ -1572,7 +1563,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (data.storeSettings) {
         setStoreSettings(data.storeSettings);
         if (activeUserId) {
-          saveToFirestore('settings', `${activeUserId}_settings`, {
+          saveToFirestore('settings', 'store_config', {
+            userId: activeUserId,
+            storeId: activeStoreId,
             storeSettings: data.storeSettings,
             categories: data.categories || defaultCategories,
             brands: data.brands || defaultBrands,
@@ -1584,6 +1577,71 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.error('Import error:', e);
       return false;
+    }
+  };
+
+  const seedSampleDataToCloud = async (): Promise<{ success: boolean; count: number }> => {
+    if (!activeUserId) return { success: false, count: 0 };
+    try {
+      setIsCloudSyncing(true);
+      // 1. Seed sample products into /users/{userId}/products
+      for (const p of sampleSeedProducts) {
+        await saveToFirestore('products', p.id, p);
+      }
+      // 2. Seed sample suppliers into /users/{userId}/suppliers
+      for (const s of sampleSeedSuppliers) {
+        await saveToFirestore('suppliers', s.id, s);
+      }
+      // 3. Seed sample customers into /users/{userId}/customers
+      for (const c of sampleSeedCustomers) {
+        await saveToFirestore('customers', c.id, c);
+      }
+      // 4. Seed settings into /users/{userId}/settings/store_config
+      await saveToFirestore('settings', 'store_config', {
+        userId: activeUserId,
+        storeId: activeStoreId,
+        storeSettings: storeSettings,
+        categories: categories.length ? categories : defaultCategories,
+        brands: brands.length ? brands : defaultBrands,
+        updatedAt: new Date().toISOString()
+      });
+      setIsCloudSyncing(false);
+      return { success: true, count: sampleSeedProducts.length };
+    } catch (e) {
+      console.error('Seed sample data error:', e);
+      setIsCloudSyncing(false);
+      return { success: false, count: 0 };
+    }
+  };
+
+  const syncAllToCloud = async (): Promise<{ success: boolean }> => {
+    if (!activeUserId) return { success: false };
+    try {
+      setIsCloudSyncing(true);
+      products.forEach((p) => saveToFirestore('products', p.id, p));
+      sales.forEach((s) => saveToFirestore('sales', s.id, s));
+      returns.forEach((r) => saveToFirestore('returns', r.id, r));
+      purchases.forEach((p) => saveToFirestore('purchases', p.id, p));
+      credits.forEach((c) => saveToFirestore('credits', c.id, c));
+      expenses.forEach((e) => saveToFirestore('expenses', e.id, e));
+      suppliers.forEach((s) => saveToFirestore('suppliers', s.id, s));
+      customers.forEach((c) => saveToFirestore('customers', c.id, c));
+      customerTransactions.forEach((tx) => saveToFirestore('customerTransactions', tx.id, tx));
+      supplierTransactions.forEach((tx) => saveToFirestore('supplierTransactions', tx.id, tx));
+      await saveToFirestore('settings', 'store_config', {
+        userId: activeUserId,
+        storeId: activeStoreId,
+        storeSettings: storeSettings,
+        categories: categories,
+        brands: brands,
+        updatedAt: new Date().toISOString()
+      });
+      setIsCloudSyncing(false);
+      return { success: true };
+    } catch (e) {
+      console.error('Sync all to cloud error:', e);
+      setIsCloudSyncing(false);
+      return { success: false };
     }
   };
 
@@ -1675,6 +1733,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteUserAccount,
         currentUser,
         setCurrentUser,
+        seedSampleDataToCloud,
+        syncAllToCloud,
       }}
     >
       {children}
