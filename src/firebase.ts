@@ -1,104 +1,35 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAnalytics, isSupported } from 'firebase/analytics';
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  sendPasswordResetEmail,
-  updateProfile,
-  GoogleAuthProvider,
-  signInWithPopup,
-  User,
-  Auth
-} from 'firebase/auth';
-import {
-  getFirestore,
-  Firestore,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  collection,
-  onSnapshot,
-  getDocs,
-  writeBatch,
-  serverTimestamp,
-  query,
-  orderBy,
-  where,
-  enableIndexedDbPersistence
-} from 'firebase/firestore';
+// Standalone Firebase Stub for LimoPOS (Hostinger Node.js & MySQL Edition)
+// All Auth and Database queries are handled natively by Node.js and Hostinger MySQL.
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-export const firebaseConfig = {
-  apiKey: "AIzaSyCGX6XsXTh-JS2S5fSwq3_enwdvp1cXkOM",
-  authDomain: "limo-pos.firebaseapp.com",
-  projectId: "limo-pos",
-  storageBucket: "limo-pos.firebasestorage.app",
-  messagingSenderId: "760819692733",
-  appId: "1:760819692733:web:dd7f3de80af8797f6d33d4",
-  measurementId: "G-FDLRVLFHQY"
+export const auth: any = null;
+export const db: any = null;
+export const googleProvider: any = null;
+export const analytics: any = null;
+
+export const signInWithEmailAndPassword = async () => ({ user: { uid: 'user_1', email: 'demo@limopos.com' } });
+export const createUserWithEmailAndPassword = async () => ({ user: { uid: 'user_1', email: 'demo@limopos.com' } });
+export const signOut = async () => {};
+export const onAuthStateChanged = (_auth: any, callback: any) => {
+  return () => {};
 };
+export const sendPasswordResetEmail = async () => {};
+export const updateProfile = async () => {};
+export const signInWithPopup = async () => {};
+export const GoogleAuthProvider = class {};
 
-// Initialize Firebase App
-export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-
-// Initialize Firebase Authentication
-export const auth: Auth = getAuth(app);
-
-// Initialize Cloud Firestore
-export const db: Firestore = getFirestore(app);
-
-// Google Auth Provider
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({
-  prompt: 'select_account'
-});
-
-// Initialize Firebase Analytics safely
-export let analytics: any = null;
-if (typeof window !== 'undefined') {
-  isSupported().then((supported) => {
-    if (supported) {
-      analytics = getAnalytics(app);
-      console.log('Firebase Analytics initialized successfully for limo-pos');
-    }
-  }).catch((err) => {
-    console.warn('Firebase Analytics initialization skipped:', err);
-  });
-}
-
-// Export Auth helpers
-export {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  sendPasswordResetEmail,
-  updateProfile,
-  signInWithPopup,
-  GoogleAuthProvider
+export const doc = () => ({});
+export const getDoc = async () => ({ exists: () => false, data: () => ({}) });
+export const setDoc = async () => {};
+export const updateDoc = async () => {};
+export const deleteDoc = async () => {};
+export const collection = () => ({});
+export const onSnapshot = (_ref: any, callback: any) => {
+  return () => {};
 };
-
-// Export Firestore helpers
-export {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  collection,
-  onSnapshot,
-  getDocs,
-  writeBatch,
-  serverTimestamp,
-  query,
-  orderBy,
-  where
-};
-
-export type { User, Firestore };
+export const getDocs = async () => ({ docs: [], forEach: () => {} });
+export const writeBatch = () => ({ set: () => {}, commit: async () => {} });
+export const serverTimestamp = () => new Date().toISOString();
+export const query = () => ({});
+export const orderBy = () => ({});
+export const where = () => ({});
+export const enableIndexedDbPersistence = async () => {};

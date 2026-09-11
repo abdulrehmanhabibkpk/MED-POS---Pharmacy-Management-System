@@ -1,23 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import {
-  auth,
-  db,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  sendPasswordResetEmail,
-  updateProfile,
-  onAuthStateChanged,
-  User as FirebaseUser,
-  doc,
-  getDoc,
-  setDoc,
-  deleteDoc,
-  collection,
-  onSnapshot,
-  query,
-  where,
-} from '../firebase';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   Product,
   SaleInvoice,
@@ -49,7 +30,7 @@ interface POSContextType {
   loginWithFirebase: (u: string, p: string) => Promise<{ success: boolean; error?: string }>;
   registerWithFirebase: (u: string, p: string, name?: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>;
   resetPasswordFirebase: (email: string) => Promise<{ success: boolean; error?: string }>;
-  firebaseUser: FirebaseUser | null;
+  firebaseUser: any | null;
   firebaseAuthLoading: boolean;
   isCloudSyncing: boolean;
   logout: () => void;
@@ -161,8 +142,8 @@ const defaultBrands = [
 ];
 
 export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [firebaseAuthLoading, setFirebaseAuthLoading] = useState<boolean>(true);
+  const [firebaseUser, setFirebaseUser] = useState<any | null>(null);
+  const [firebaseAuthLoading, setFirebaseAuthLoading] = useState<boolean>(false);
   const [isCloudSyncing, setIsCloudSyncing] = useState<boolean>(false);
 
   // User Accounts
@@ -215,12 +196,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [showSyncModal, setShowSyncModal] = useState<boolean>(false);
 
-  // Active user identifier (Firebase UID or sanitized user ID)
-  const activeUserId = firebaseUser?.uid || currentUser?.id || null;
-  // Active store identifier (scoped to authenticated user's store)
-  const activeStoreId = currentUser?.storeId || (activeUserId ? `store_${activeUserId}` : 'store_default');
+  // Active user identifier (from Node.js auth)
+  const activeUserId = currentUser?.id || 'default_user';
+  const activeStoreId = currentUser?.storeId || `store_${activeUserId}`;
 
-  // Sync current user role & auth state
+  // Sync auth state to local storage
   useEffect(() => {
     localStorage.setItem('medpos_auth', JSON.stringify(isAuthenticated));
   }, [isAuthenticated]);
@@ -228,311 +208,83 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem('medpos_current_user', JSON.stringify(currentUser));
+      setFirebaseUser({
+        uid: currentUser.id,
+        email: currentUser.email,
+        displayName: currentUser.name
+      });
     } else {
       localStorage.removeItem('medpos_current_user');
+      setFirebaseUser(null);
     }
   }, [currentUser]);
 
-  // Auth State Listener
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
-      setFirebaseUser(fbUser);
-      setFirebaseAuthLoading(false);
-
-      if (fbUser && fbUser.email) {
-        const emailLower = fbUser.email.trim().toLowerCase();
-        const existing = userAccounts.find(
-          (a) => a.email.trim().toLowerCase() === emailLower
-        );
-
-        const isMaster = emailLower === 'alitrader@gmail.com';
-        const userRoleResolved: UserRole = isMaster ? 'Admin' : (existing?.role || 'Admin');
-        const userStoreId = existing?.storeId || `store_${fbUser.uid}`;
-
-        if (existing) {
-          const withStore = { ...existing, storeId: userStoreId };
-          setCurrentUser(withStore);
-          setUserRoleState(withStore.role);
-          setIsAuthenticated(true);
-        } else {
-          const newAccount: UserAccount = {
-            id: fbUser.uid,
-            storeId: userStoreId,
-            name: fbUser.displayName || emailLower.split('@')[0] || 'LimoPOS User',
-            email: fbUser.email,
-            role: userRoleResolved,
-            permissions: {
-              canDashboard: true,
-              canSale: true,
-              canReturn: true,
-              canBillHistory: true,
-              canCreditReceive: true,
-              canPurchaseStock: true,
-              canProducts: true,
-              canSuppliers: true,
-              canCustomers: true,
-              canBarcodeLabel: true,
-              canDayClosing: true,
-              canExpenses: true,
-              canReports: true,
-              canSettings: true,
-              canPlanPRD: true,
-            },
-          };
-          setUserAccounts((prev) => {
-            if (!prev.some((p) => p.email.toLowerCase() === emailLower)) {
-              return [...prev, newAccount];
-            }
-            return prev;
-          });
-          setCurrentUser(newAccount);
-          setUserRoleState(newAccount.role);
-          setIsAuthenticated(true);
-          setDoc(doc(db, 'userAccounts', newAccount.id), newAccount, { merge: true }).catch(() => {});
-        }
-
-        // Real-time initialize parent user document in Firestore: /users/{userId}
-        setDoc(doc(db, 'users', fbUser.uid), {
-          id: fbUser.uid,
-          storeId: userStoreId,
-          email: fbUser.email,
-          name: fbUser.displayName || emailLower.split('@')[0] || 'LimoPOS User',
-          role: userRoleResolved,
-          storeName: storeSettings?.storeName || 'Ali Traders',
-          lastLoginAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }, { merge: true }).catch(() => {});
-
-      } else {
-        // Clear all state on logout
-        setCurrentUser(null);
-        setIsAuthenticated(false);
-        setProducts([]);
-        setSales([]);
-        setReturns([]);
-        setPurchases([]);
-        setCredits([]);
-        setExpenses([]);
-        setSuppliers([]);
-        setCustomers([]);
-        setCustomerTransactions([]);
-        setSupplierTransactions([]);
-        setStoreSettings(initialStoreSettings);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [userAccounts]);
-
-  // =========================================================
-  // CLOUD FIRESTORE USER-NESTED REALTIME HIERARCHY
-  // Everything is stored inside /users/{userId}/...
-  // /users/{userId}/products
-  // /users/{userId}/sales
-  // /users/{userId}/returns
-  // /users/{userId}/purchases
-  // /users/{userId}/credits
-  // /users/{userId}/expenses
-  // /users/{userId}/suppliers
-  // /users/{userId}/customers
-  // /users/{userId}/customerTransactions
-  // /users/{userId}/supplierTransactions
-  // /users/{userId}/settings/store_config
-  // =========================================================
-  useEffect(() => {
-    if (!activeUserId) {
-      setProducts([]);
-      setSales([]);
-      setReturns([]);
-      setPurchases([]);
-      setCredits([]);
-      setExpenses([]);
-      setSuppliers([]);
-      setCustomers([]);
-      setCustomerTransactions([]);
-      setSupplierTransactions([]);
-      return;
-    }
-
+  // Load User Data from Hostinger Node.js & MySQL
+  const loadUserDataFromMySQL = useCallback(async (userId: string) => {
+    if (!userId) return;
     setIsCloudSyncing(true);
 
-    // Ensure root user document exists in Firestore
-    setDoc(doc(db, 'users', activeUserId), {
-      id: activeUserId,
-      storeId: activeStoreId,
-      email: currentUser?.email || firebaseUser?.email || '',
-      name: currentUser?.name || firebaseUser?.displayName || 'LimoPOS User',
-      role: userRole,
-      storeName: storeSettings?.storeName || 'Ali Traders',
-      updatedAt: new Date().toISOString()
-    }, { merge: true }).catch(() => {});
+    try {
+      const collections = [
+        'products',
+        'sales',
+        'returns',
+        'purchases',
+        'credits',
+        'expenses',
+        'suppliers',
+        'customers',
+        'customerTransactions',
+        'supplierTransactions',
+        'settings'
+      ];
 
-    // 1. User's isolated Products: /users/{userId}/products
-    const unsubProducts = onSnapshot(collection(db, 'users', activeUserId, 'products'), (snapshot) => {
-      const list: Product[] = [];
-      snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as Product);
+      const results = await Promise.allSettled(
+        collections.map((col) => fetch(`/api/mysql/${userId}/${col}`).then((r) => r.json()))
+      );
+
+      results.forEach((res, idx) => {
+        if (res.status === 'fulfilled' && res.value && res.value.success) {
+          const colName = collections[idx];
+          const data = res.value.data || [];
+
+          if (colName === 'products') setProducts(data);
+          else if (colName === 'sales') {
+            data.sort((a: any, b: any) => (b.invoiceNo || 0) - (a.invoiceNo || 0));
+            setSales(data);
+          }
+          else if (colName === 'returns') setReturns(data);
+          else if (colName === 'purchases') setPurchases(data);
+          else if (colName === 'credits') setCredits(data);
+          else if (colName === 'expenses') setExpenses(data);
+          else if (colName === 'suppliers') setSuppliers(data);
+          else if (colName === 'customers') setCustomers(data);
+          else if (colName === 'customerTransactions') setCustomerTransactions(data);
+          else if (colName === 'supplierTransactions') setSupplierTransactions(data);
+          else if (colName === 'settings' && data.length > 0) {
+            const s = data[0];
+            if (s.store_settings) setStoreSettings(s.store_settings);
+            if (s.categories) setCategories(s.categories);
+            if (s.brands) setBrands(s.brands);
+          }
+        }
       });
-      setProducts(list);
+    } catch (err) {
+      console.warn('MySQL data load notice:', err);
+    } finally {
       setIsCloudSyncing(false);
-    }, (err) => {
-      console.warn('Products sync note:', err.message);
-      setIsCloudSyncing(false);
-    });
+    }
+  }, []);
 
-    // 2. User's isolated Sales: /users/{userId}/sales
-    const unsubSales = onSnapshot(collection(db, 'users', activeUserId, 'sales'), (snapshot) => {
-      const list: SaleInvoice[] = [];
-      snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as SaleInvoice);
-      });
-      list.sort((a, b) => (b.invoiceNo || 0) - (a.invoiceNo || 0));
-      setSales(list);
-    }, (err) => {
-      console.warn('Sales sync note:', err.message);
-    });
+  // Trigger load when authenticated user changes
+  useEffect(() => {
+    if (isAuthenticated && activeUserId) {
+      loadUserDataFromMySQL(activeUserId);
+    }
+  }, [isAuthenticated, activeUserId, loadUserDataFromMySQL]);
 
-    // 3. User's isolated Returns: /users/{userId}/returns
-    const unsubReturns = onSnapshot(collection(db, 'users', activeUserId, 'returns'), (snapshot) => {
-      const list: SaleReturn[] = [];
-      snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as SaleReturn);
-      });
-      setReturns(list);
-    }, (err) => {
-      console.warn('Returns sync note:', err.message);
-    });
-
-    // 4. User's isolated Purchases: /users/{userId}/purchases
-    const unsubPurchases = onSnapshot(collection(db, 'users', activeUserId, 'purchases'), (snapshot) => {
-      const list: PurchaseRecord[] = [];
-      snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as PurchaseRecord);
-      });
-      setPurchases(list);
-    }, (err) => {
-      console.warn('Purchases sync note:', err.message);
-    });
-
-    // 5. User's isolated Credits: /users/{userId}/credits
-    const unsubCredits = onSnapshot(collection(db, 'users', activeUserId, 'credits'), (snapshot) => {
-      const list: CreditPayment[] = [];
-      snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as CreditPayment);
-      });
-      setCredits(list);
-    }, (err) => {
-      console.warn('Credits sync note:', err.message);
-    });
-
-    // 6. User's isolated Expenses: /users/{userId}/expenses
-    const unsubExpenses = onSnapshot(collection(db, 'users', activeUserId, 'expenses'), (snapshot) => {
-      const list: ExpenseRecord[] = [];
-      snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as ExpenseRecord);
-      });
-      setExpenses(list);
-    }, (err) => {
-      console.warn('Expenses sync note:', err.message);
-    });
-
-    // 7. User's isolated Suppliers: /users/{userId}/suppliers
-    const unsubSuppliers = onSnapshot(collection(db, 'users', activeUserId, 'suppliers'), (snapshot) => {
-      const list: Supplier[] = [];
-      snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as Supplier);
-      });
-      setSuppliers(list);
-    }, (err) => {
-      console.warn('Suppliers sync note:', err.message);
-    });
-
-    // 8. User's isolated Customers: /users/{userId}/customers
-    const unsubCustomers = onSnapshot(collection(db, 'users', activeUserId, 'customers'), (snapshot) => {
-      const list: Customer[] = [];
-      snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as Customer);
-      });
-      setCustomers(list);
-    }, (err) => {
-      console.warn('Customers sync note:', err.message);
-    });
-
-    // 9. User's isolated Customer Transactions: /users/{userId}/customerTransactions
-    const unsubCustomerTx = onSnapshot(collection(db, 'users', activeUserId, 'customerTransactions'), (snapshot) => {
-      const list: CustomerTransaction[] = [];
-      snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as CustomerTransaction);
-      });
-      setCustomerTransactions(list);
-    }, (err) => {
-      console.warn('Customer transactions sync note:', err.message);
-    });
-
-    // 10. User's isolated Supplier Transactions: /users/{userId}/supplierTransactions
-    const unsubSupplierTx = onSnapshot(collection(db, 'users', activeUserId, 'supplierTransactions'), (snapshot) => {
-      const list: SupplierTransaction[] = [];
-      snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as SupplierTransaction);
-      });
-      setSupplierTransactions(list);
-    }, (err) => {
-      console.warn('Supplier transactions sync note:', err.message);
-    });
-
-    // 11. User's isolated Settings document: /users/{userId}/settings/store_config
-    const unsubSettings = onSnapshot(doc(db, 'users', activeUserId, 'settings', 'store_config'), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.storeSettings) setStoreSettings(data.storeSettings);
-        if (data.categories) setCategories(data.categories);
-        if (data.brands) setBrands(data.brands);
-      } else {
-        // Initialize default settings doc inside user's folder
-        setDoc(doc(db, 'users', activeUserId, 'settings', 'store_config'), {
-          userId: activeUserId,
-          storeId: activeStoreId,
-          storeSettings: { ...initialStoreSettings, storeId: activeStoreId },
-          categories: defaultCategories,
-          brands: defaultBrands,
-          updatedAt: new Date().toISOString()
-        }, { merge: true }).catch(() => {});
-      }
-    }, (err) => {
-      console.warn('Settings sync note:', err.message);
-    });
-
-    // 12. User accounts collection
-    const unsubAccounts = onSnapshot(collection(db, 'userAccounts'), (snapshot) => {
-      const list: UserAccount[] = [];
-      snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as UserAccount);
-      });
-      if (list.length > 0) {
-        setUserAccounts(list);
-      }
-    }, (err) => {
-      console.warn('User accounts sync note:', err.message);
-    });
-
-    return () => {
-      unsubProducts();
-      unsubSales();
-      unsubReturns();
-      unsubPurchases();
-      unsubCredits();
-      unsubExpenses();
-      unsubSuppliers();
-      unsubCustomers();
-      unsubCustomerTx();
-      unsubSupplierTx();
-      unsubSettings();
-      unsubAccounts();
-    };
-  }, [activeUserId, activeStoreId]);
-
-  // Firestore & Hostinger MySQL save helper
-  const saveToFirestore = async (colName: string, docId: string, data: any) => {
+  // Save Record Helper to Node.js & MySQL
+  const saveToStorage = async (colName: string, docId: string, data: any) => {
     if (!activeUserId) return;
     try {
       const payload = {
@@ -542,48 +294,28 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updatedAt: new Date().toISOString()
       };
 
-      // 1. Sync directly to Hostinger Node.js MySQL Database
-      fetch(`/api/mysql/${activeUserId}/${colName}/${docId}`, {
+      await fetch(`/api/mysql/${activeUserId}/${colName}/${docId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }).catch(() => {});
-
-      // 2. Write inside user's specific Firebase Firestore subcollection
-      await setDoc(doc(db, 'users', activeUserId, colName, docId), payload, { merge: true });
-
-      // 3. Ensure the parent user document exists
-      await setDoc(doc(db, 'users', activeUserId), {
-        id: activeUserId,
-        email: currentUser?.email || firebaseUser?.email || '',
-        name: currentUser?.name || firebaseUser?.displayName || 'LimoPOS User',
-        role: userRole,
-        storeId: activeStoreId,
-        storeName: storeSettings?.storeName || 'LimoPOS Store',
-        lastUpdated: new Date().toISOString()
-      }, { merge: true });
+      });
     } catch (err: any) {
-      console.warn(`Save note:`, err.message);
+      console.warn(`Storage save note:`, err.message);
     }
   };
 
-  const deleteFromFirestore = async (colName: string, docId: string) => {
+  const deleteFromStorage = async (colName: string, docId: string) => {
     if (!activeUserId) return;
     try {
-      // 1. Delete from Hostinger MySQL
-      fetch(`/api/mysql/${activeUserId}/${colName}/${docId}`, {
+      await fetch(`/api/mysql/${activeUserId}/${colName}/${docId}`, {
         method: 'DELETE'
-      }).catch(() => {});
-
-      // 2. Delete from Firestore
-      await deleteDoc(doc(db, 'users', activeUserId, colName, docId));
+      });
     } catch (err: any) {
-      console.warn(`Delete note:`, err.message);
+      console.warn(`Storage delete note:`, err.message);
     }
   };
 
-
-  // Login
+  // Node.js Native Login
   const login = (u: string, p: string) => {
     const emailLower = u.trim().toLowerCase();
     const passwordLower = p.trim();
@@ -603,75 +335,65 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   };
 
-  // Firebase Email/Password Sign In
+  // Node.js & MySQL Authentication
   const loginWithFirebase = async (u: string, p: string): Promise<{ success: boolean; error?: string }> => {
     const email = u.trim();
     const password = p.trim();
     if (!email || !password) {
       return { success: false, error: 'Email and password are required' };
     }
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const fbUser = userCredential.user;
-      setFirebaseUser(fbUser);
 
-      const emailLower = fbUser.email?.toLowerCase() || '';
-      const existing = userAccounts.find((a) => a.email.toLowerCase() === emailLower);
-      if (existing) {
-        setCurrentUser(existing);
-        setUserRole(existing.role);
-      } else {
-        const isMaster = emailLower === 'alitrader@gmail.com';
-        const newAccount: UserAccount = {
-          id: fbUser.uid,
-          name: fbUser.displayName || emailLower.split('@')[0] || 'LimoPOS User',
-          email: fbUser.email || email,
-          role: isMaster ? 'Admin' : 'Admin',
-          permissions: {
-            canDashboard: true,
-            canSale: true,
-            canReturn: true,
-            canBillHistory: true,
-            canCreditReceive: true,
-            canPurchaseStock: true,
-            canProducts: true,
-            canSuppliers: true,
-            canCustomers: true,
-            canBarcodeLabel: true,
-            canDayClosing: true,
-            canExpenses: true,
-            canReports: true,
-            canSettings: true,
-            canPlanPRD: true,
-          },
-        };
-        setUserAccounts((prev) => [...prev, newAccount]);
-        setCurrentUser(newAccount);
-        setUserRole(newAccount.role);
-        setDoc(doc(db, 'userAccounts', newAccount.id), newAccount, { merge: true }).catch(() => {});
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        return { success: false, error: result.error || 'Invalid credentials' };
       }
+
+      const user = result.user;
+      const newAccount: UserAccount = {
+        id: user.id,
+        storeId: `store_${user.id}`,
+        name: user.name,
+        email: user.email,
+        role: (user.role as UserRole) || 'Admin',
+        permissions: {
+          canDashboard: true,
+          canSale: true,
+          canReturn: true,
+          canBillHistory: true,
+          canCreditReceive: true,
+          canPurchaseStock: true,
+          canProducts: true,
+          canSuppliers: true,
+          canCustomers: true,
+          canBarcodeLabel: true,
+          canDayClosing: true,
+          canExpenses: true,
+          canReports: true,
+          canSettings: true,
+          canPlanPRD: true,
+        },
+      };
+
+      setCurrentUser(newAccount);
+      setUserRole(newAccount.role);
       setIsAuthenticated(true);
       setActiveTab('dashboard');
+
       return { success: true };
     } catch (err: any) {
-      console.error('LimoPOS login error:', err);
-      let errorMsg = 'Failed to sign in. Please check your credentials.';
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        errorMsg = 'Invalid email or password. Please verify your credentials.';
-      } else if (err.code === 'auth/invalid-email') {
-        errorMsg = 'Invalid email address format.';
-      } else if (err.code === 'auth/user-disabled') {
-        errorMsg = 'This account has been disabled.';
-      } else if (err.code === 'auth/too-many-requests') {
-        errorMsg = 'Too many failed attempts. Please try again later.';
-      } else if (err.message) {
-        errorMsg = err.message;
-      }
-      return { success: false, error: errorMsg };
+      console.error('Login error:', err);
+      return { success: false, error: 'Failed to connect to authentication server' };
     }
   };
 
-  // Firebase Email/Password Registration
+  // Node.js & MySQL Registration
   const registerWithFirebase = async (
     u: string,
     p: string,
@@ -686,115 +408,77 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (password.length < 6) {
       return { success: false, error: 'Password must be at least 6 characters long' };
     }
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const fbUser = userCredential.user;
 
-      if (displayName) {
-        await updateProfile(fbUser, { displayName });
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name: displayName, role })
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        return { success: false, error: result.error || 'Failed to register account' };
       }
 
-      setFirebaseUser(fbUser);
-      const isMaster = email.toLowerCase() === 'alitrader@gmail.com';
-      const actualRole: UserRole = isMaster ? 'Admin' : role;
-
+      const user = result.user;
       const newAccount: UserAccount = {
-        id: fbUser.uid,
-        storeId: `store_${fbUser.uid}`,
-        name: displayName || email.split('@')[0],
-        email: email,
-        password: password,
-        role: actualRole,
+        id: user.id,
+        storeId: `store_${user.id}`,
+        name: user.name,
+        email: user.email,
+        role: (user.role as UserRole) || role,
         permissions: {
           canDashboard: true,
           canSale: true,
           canReturn: true,
           canBillHistory: true,
-          canCreditReceive: actualRole !== 'Cashier',
-          canPurchaseStock: actualRole !== 'Cashier',
-          canProducts: actualRole !== 'Cashier',
-          canSuppliers: actualRole !== 'Cashier',
-          canCustomers: actualRole !== 'Cashier',
+          canCreditReceive: role !== 'Cashier',
+          canPurchaseStock: role !== 'Cashier',
+          canProducts: role !== 'Cashier',
+          canSuppliers: role !== 'Cashier',
+          canCustomers: role !== 'Cashier',
           canBarcodeLabel: true,
-          canDayClosing: actualRole !== 'Cashier',
-          canExpenses: actualRole !== 'Cashier',
-          canReports: actualRole !== 'Cashier',
-          canSettings: actualRole === 'Admin',
+          canDayClosing: role !== 'Cashier',
+          canExpenses: role !== 'Cashier',
+          canReports: role !== 'Cashier',
+          canSettings: role === 'Admin',
           canPlanPRD: true,
         },
       };
 
-      setUserAccounts((prev) => [...prev, newAccount]);
       setCurrentUser(newAccount);
       setUserRole(newAccount.role);
       setIsAuthenticated(true);
       setActiveTab('dashboard');
 
-      setDoc(doc(db, 'userAccounts', newAccount.id), newAccount, { merge: true }).catch(() => {});
-
-      // Seed root user document and settings inside user hierarchy with storeId
-      setDoc(doc(db, 'users', fbUser.uid), {
-        id: fbUser.uid,
-        storeId: `store_${fbUser.uid}`,
-        email: email,
-        name: displayName || email.split('@')[0],
-        role: actualRole,
-        storeName: 'LimoPOS Store',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }, { merge: true }).catch(() => {});
-
-      setDoc(doc(db, 'users', fbUser.uid, 'settings', 'store_config'), {
-        userId: fbUser.uid,
-        storeId: `store_${fbUser.uid}`,
-        storeSettings: { ...initialStoreSettings, storeId: `store_${fbUser.uid}` },
-        categories: defaultCategories,
-        brands: defaultBrands,
-        updatedAt: new Date().toISOString()
-      }, { merge: true }).catch(() => {});
-
       return { success: true };
     } catch (err: any) {
-      console.error('Firebase register error:', err);
-      let errorMsg = 'Failed to create account.';
-      if (err.code === 'auth/email-already-in-use') {
-        errorMsg = 'An account with this email already exists. Please sign in instead.';
-      } else if (err.code === 'auth/weak-password') {
-        errorMsg = 'Password is too weak. Please use at least 6 characters.';
-      } else if (err.code === 'auth/invalid-email') {
-        errorMsg = 'Invalid email address format.';
-      } else if (err.message) {
-        errorMsg = err.message;
-      }
-      return { success: false, error: errorMsg };
+      console.error('Register error:', err);
+      return { success: false, error: 'Failed to register account' };
     }
   };
 
-  // Password Reset Email
+  // Password Reset
   const resetPasswordFirebase = async (email: string): Promise<{ success: boolean; error?: string }> => {
     const trimmed = email.trim();
     if (!trimmed) {
       return { success: false, error: 'Please enter your email address' };
     }
     try {
-      await sendPasswordResetEmail(auth, trimmed);
-      return { success: true };
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmed })
+      });
+      const data = await res.json();
+      return { success: data.success, error: data.error };
     } catch (err: any) {
-      console.error('Firebase password reset error:', err);
-      let errorMsg = 'Failed to send password reset email.';
-      if (err.code === 'auth/user-not-found') {
-        errorMsg = 'No user account found with this email.';
-      } else if (err.code === 'auth/invalid-email') {
-        errorMsg = 'Invalid email address format.';
-      } else if (err.message) {
-        errorMsg = err.message;
-      }
-      return { success: false, error: errorMsg };
+      return { success: false, error: err.message };
     }
   };
 
   const logout = () => {
-    signOut(auth).catch((e) => console.warn('Firebase signout note:', e));
     setIsAuthenticated(false);
     setCurrentUser(null);
     setFirebaseUser(null);
@@ -819,7 +503,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       storeId: acc.storeId || activeStoreId,
     };
     setUserAccounts((prev) => [...prev, newAcc]);
-    setDoc(doc(db, 'userAccounts', newAcc.id), newAcc, { merge: true }).catch(() => {});
+    saveToStorage('userAccounts', newAcc.id, newAcc);
   };
 
   const updateUserAccount = (acc: UserAccount) => {
@@ -828,13 +512,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (currentUser && currentUser.id === acc.id) {
       setCurrentUser(updatedAcc);
     }
-    setDoc(doc(db, 'userAccounts', acc.id), updatedAcc, { merge: true }).catch(() => {});
+    saveToStorage('userAccounts', acc.id, updatedAcc);
   };
 
   const deleteUserAccount = (id: string) => {
     if (id === 'acc-master') return;
     setUserAccounts((prev) => prev.filter((item) => item.id !== id));
-    deleteDoc(doc(db, 'userAccounts', id)).catch(() => {});
+    deleteFromStorage('userAccounts', id);
     if (currentUser && currentUser.id === id) {
       logout();
     }
@@ -849,7 +533,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `p-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
     };
     setProducts((prev) => [newProduct, ...prev]);
-    saveToFirestore('products', newProduct.id, newProduct);
+    saveToStorage('products', newProduct.id, newProduct);
   };
 
   const addMultipleProducts = (newProds: Omit<Product, 'id'>[]) => {
@@ -859,18 +543,18 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
     setProducts((prev) => [...created, ...prev]);
     created.forEach((item) => {
-      saveToFirestore('products', item.id, item);
+      saveToStorage('products', item.id, item);
     });
   };
 
   const updateProduct = (p: Product) => {
     setProducts((prev) => prev.map((item) => (item.id === p.id ? p : item)));
-    saveToFirestore('products', p.id, p);
+    saveToStorage('products', p.id, p);
   };
 
   const deleteProduct = (id: string) => {
     setProducts((prev) => prev.filter((item) => item.id !== id));
-    deleteFromFirestore('products', id);
+    deleteFromStorage('products', id);
   };
 
   const bulkUpdateProducts = (updatedProds: Product[]) => {
@@ -879,7 +563,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return prev.map((p) => map.get(p.id) || p);
     });
     updatedProds.forEach((prod) => {
-      saveToFirestore('products', prod.id, prod);
+      saveToStorage('products', prod.id, prod);
     });
   };
 
@@ -887,7 +571,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const idSet = new Set(ids);
     setProducts((prev) => prev.filter((p) => !idSet.has(p.id)));
     ids.forEach((id) => {
-      deleteFromFirestore('products', id);
+      deleteFromStorage('products', id);
     });
   };
 
@@ -898,19 +582,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const idx = updated.findIndex(
           (p) =>
             p.barcode.trim().toLowerCase() === newP.barcode.trim().toLowerCase() &&
-            Number(p.retailPrice) === Number(newP.retailPrice)
+            p.barcode.trim() !== ''
         );
-        if (idx !== -1) {
-          const updatedItem = { ...updated[idx], ...newP, id: updated[idx].id };
-          updated[idx] = updatedItem;
-          saveToFirestore('products', updatedItem.id, updatedItem);
+        if (idx >= 0) {
+          updated[idx] = { ...newP, id: updated[idx].id };
+          saveToStorage('products', updated[idx].id, updated[idx]);
         } else {
-          const newItem = {
-            ...newP,
-            id: newP.id || `p-${Date.now()}-${Math.floor(Math.random() * 1000000)}`
-          };
-          updated.push(newItem);
-          saveToFirestore('products', newItem.id, newItem);
+          updated.push(newP);
+          saveToStorage('products', newP.id, newP);
         }
       });
       return updated;
@@ -918,678 +597,365 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Categories & Brands
-  const addCategory = (catName: string) => {
-    const trimmed = catName.trim();
-    if (!trimmed || !activeUserId) return;
-    setCategories((prev) => {
-      if (prev.some((c) => c.toLowerCase() === trimmed.toLowerCase())) return prev;
-      const updated = [...prev, trimmed];
-      saveToFirestore('settings', 'store_config', {
-        storeSettings,
-        categories: updated,
-        brands,
-        updatedAt: new Date().toISOString()
-      });
-      return updated;
-    });
+  const addCategory = (name: string) => {
+    const trimmed = name.trim();
+    if (trimmed && !categories.includes(trimmed)) {
+      const updated = [...categories, trimmed];
+      setCategories(updated);
+      saveToStorage('settings', 'store_config', { storeSettings, categories: updated, brands });
+    }
   };
 
   const updateCategory = (oldName: string, newName: string) => {
-    const trimmedNew = newName.trim();
-    if (!trimmedNew || oldName === trimmedNew || !activeUserId) return;
-    setCategories((prev) => {
-      const updated = prev.map((c) => (c === oldName ? trimmedNew : c));
-      saveToFirestore('settings', 'store_config', {
-        storeSettings,
-        categories: updated,
-        brands,
-        updatedAt: new Date().toISOString()
-      });
-      return updated;
-    });
-    setProducts((prev) =>
-      prev.map((p) => (p.category === oldName ? { ...p, category: trimmedNew } : p))
-    );
+    const trimmed = newName.trim();
+    if (trimmed && trimmed !== oldName) {
+      const updated = categories.map((c) => (c === oldName ? trimmed : c));
+      setCategories(updated);
+      saveToStorage('settings', 'store_config', { storeSettings, categories: updated, brands });
+    }
   };
 
-  const deleteCategory = (catName: string) => {
-    if (!activeUserId) return;
-    setCategories((prev) => {
-      const updated = prev.filter((c) => c !== catName);
-      saveToFirestore('settings', 'store_config', {
-        storeSettings,
-        categories: updated,
-        brands,
-        updatedAt: new Date().toISOString()
-      });
-      return updated;
-    });
+  const deleteCategory = (name: string) => {
+    const updated = categories.filter((c) => c !== name);
+    setCategories(updated);
+    saveToStorage('settings', 'store_config', { storeSettings, categories: updated, brands });
   };
 
-  const addBrand = (brandName: string) => {
-    const trimmed = brandName.trim();
-    if (!trimmed || !activeUserId) return;
-    setBrands((prev) => {
-      if (prev.some((b) => b.toLowerCase() === trimmed.toLowerCase())) return prev;
-      const updated = [...prev, trimmed];
-      saveToFirestore('settings', 'store_config', {
-        storeSettings,
-        categories,
-        brands: updated,
-        updatedAt: new Date().toISOString()
-      });
-      return updated;
-    });
+  const addBrand = (name: string) => {
+    const trimmed = name.trim();
+    if (trimmed && !brands.includes(trimmed)) {
+      const updated = [...brands, trimmed];
+      setBrands(updated);
+      saveToStorage('settings', 'store_config', { storeSettings, categories, brands: updated });
+    }
   };
 
   const updateBrand = (oldName: string, newName: string) => {
-    const trimmedNew = newName.trim();
-    if (!trimmedNew || oldName === trimmedNew || !activeUserId) return;
-    setBrands((prev) => {
-      const updated = prev.map((b) => (b === oldName ? trimmedNew : b));
-      saveToFirestore('settings', 'store_config', {
-        storeSettings,
-        categories,
-        brands: updated,
-        updatedAt: new Date().toISOString()
-      });
-      return updated;
-    });
-    setProducts((prev) =>
-      prev.map((p) => (p.company === oldName ? { ...p, company: trimmedNew } : p))
-    );
-  };
-
-  const deleteBrand = (brandName: string) => {
-    if (!activeUserId) return;
-    setBrands((prev) => {
-      const updated = prev.filter((b) => b !== brandName);
-      saveToFirestore('settings', 'store_config', {
-        storeSettings,
-        categories,
-        brands: updated,
-        updatedAt: new Date().toISOString()
-      });
-      return updated;
-    });
-  };
-
-  // Suppliers
-  const addSupplier = (s: Omit<Supplier, 'id'>) => {
-    const newSup: Supplier = {
-      ...s,
-      id: `sup-${Date.now()}`,
-    };
-    setSuppliers((prev) => [newSup, ...prev]);
-    saveToFirestore('suppliers', newSup.id, newSup);
-  };
-
-  const updateSupplier = (s: Supplier) => {
-    setSuppliers((prev) => prev.map((item) => (item.id === s.id ? s : item)));
-    saveToFirestore('suppliers', s.id, s);
-  };
-
-  const deleteSupplier = (id: string) => {
-    setSuppliers((prev) => prev.filter((item) => item.id !== id));
-    deleteFromFirestore('suppliers', id);
-  };
-
-  // Customers
-  const addCustomer = (c: Omit<Customer, 'id'>) => {
-    const newCust: Customer = {
-      ...c,
-      id: `cust-${Date.now()}`,
-    };
-    setCustomers((prev) => [newCust, ...prev]);
-    saveToFirestore('customers', newCust.id, newCust);
-
-    if (c.balanceReceivable > 0) {
-      const now = new Date();
-      const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-      const opTx: CustomerTransaction = {
-        id: `ctx-${Date.now()}`,
-        customerId: newCust.id,
-        customerName: newCust.name,
-        date: formattedDate,
-        type: 'OPENING_BALANCE',
-        referenceNo: `#OP-${Math.floor(100 + Math.random() * 900)}`,
-        description: 'Opening Khata Balance',
-        itemsSummary: 'Opening account balance carried forward',
-        debit: c.balanceReceivable,
-        credit: 0,
-        balance: c.balanceReceivable,
-        paymentMethod: 'Cash',
-        notes: 'Initial opening balance',
-      };
-      setCustomerTransactions((prev) => [opTx, ...prev]);
-      saveToFirestore('customerTransactions', opTx.id, opTx);
+    const trimmed = newName.trim();
+    if (trimmed && trimmed !== oldName) {
+      const updated = brands.map((b) => (b === oldName ? trimmed : b));
+      setBrands(updated);
+      saveToStorage('settings', 'store_config', { storeSettings, categories, brands: updated });
     }
   };
 
-  const updateCustomer = (c: Customer) => {
-    setCustomers((prev) => prev.map((item) => (item.id === c.id ? c : item)));
-    saveToFirestore('customers', c.id, c);
+  const deleteBrand = (name: string) => {
+    const updated = brands.filter((b) => b !== name);
+    setBrands(updated);
+    saveToStorage('settings', 'store_config', { storeSettings, categories, brands: updated });
   };
 
-  const deleteCustomer = (id: string) => {
-    setCustomers((prev) => prev.filter((item) => item.id !== id));
-    setCustomerTransactions((prev) => prev.filter((tx) => tx.customerId !== id));
-    deleteFromFirestore('customers', id);
-  };
-
-  const addCustomerTransaction = (txData: Omit<CustomerTransaction, 'id'>) => {
-    const newTx: CustomerTransaction = {
-      ...txData,
-      id: `ctx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-    };
-
-    setCustomerTransactions((prev) => [newTx, ...prev]);
-    saveToFirestore('customerTransactions', newTx.id, newTx);
-
-    setCustomers((prev) =>
-      prev.map((c) => {
-        if (c.id === txData.customerId || c.name.toLowerCase() === txData.customerName.toLowerCase()) {
-          const delta = txData.debit - txData.credit;
-          const updated = { ...c, balanceReceivable: c.balanceReceivable + delta };
-          saveToFirestore('customers', updated.id, updated);
-          return updated;
-        }
-        return c;
-      })
-    );
-  };
-
-  const updateCustomerTransaction = (updatedTx: CustomerTransaction) => {
-    setCustomerTransactions((prev) =>
-      prev.map((tx) => (tx.id === updatedTx.id ? updatedTx : tx))
-    );
-    saveToFirestore('customerTransactions', updatedTx.id, updatedTx);
-  };
-
-  const deleteCustomerTransaction = (id: string) => {
-    const target = customerTransactions.find((tx) => tx.id === id);
-    if (target) {
-      setCustomers((prev) =>
-        prev.map((c) => {
-          if (c.id === target.customerId || c.name.toLowerCase() === target.customerName.toLowerCase()) {
-            const delta = target.debit - target.credit;
-            const updated = { ...c, balanceReceivable: Math.max(0, c.balanceReceivable - delta) };
-            saveToFirestore('customers', updated.id, updated);
-            return updated;
-          }
-          return c;
-        })
-      );
-    }
-    setCustomerTransactions((prev) => prev.filter((tx) => tx.id !== id));
-    deleteFromFirestore('customerTransactions', id);
-  };
-
-  const addSupplierTransaction = (txData: Omit<SupplierTransaction, 'id'>) => {
-    const newTx: SupplierTransaction = {
-      ...txData,
-      id: `stx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-    };
-
-    setSupplierTransactions((prev) => [newTx, ...prev]);
-    saveToFirestore('supplierTransactions', newTx.id, newTx);
-
-    setSuppliers((prev) =>
-      prev.map((s) => {
-        if (s.id === txData.supplierId || s.name.toLowerCase() === txData.supplierName.toLowerCase()) {
-          const delta = txData.credit - txData.debit;
-          const updated = { ...s, balanceOwed: Math.max(0, s.balanceOwed + delta) };
-          saveToFirestore('suppliers', updated.id, updated);
-          return updated;
-        }
-        return s;
-      })
-    );
-  };
-
-  const updateSupplierTransaction = (updatedTx: SupplierTransaction) => {
-    setSupplierTransactions((prev) =>
-      prev.map((tx) => (tx.id === updatedTx.id ? updatedTx : tx))
-    );
-    saveToFirestore('supplierTransactions', updatedTx.id, updatedTx);
-  };
-
-  const deleteSupplierTransaction = (id: string) => {
-    const target = supplierTransactions.find((tx) => tx.id === id);
-    if (target) {
-      setSuppliers((prev) =>
-        prev.map((s) => {
-          if (s.id === target.supplierId || s.name.toLowerCase() === target.supplierName.toLowerCase()) {
-            const delta = target.credit - target.debit;
-            const updated = { ...s, balanceOwed: Math.max(0, s.balanceOwed - delta) };
-            saveToFirestore('suppliers', updated.id, updated);
-            return updated;
-          }
-          return s;
-        })
-      );
-    }
-    setSupplierTransactions((prev) => prev.filter((tx) => tx.id !== id));
-    deleteFromFirestore('supplierTransactions', id);
-  };
-
-  // ==========================================
-  // SALE INVOICES & RETURNS
-  // ==========================================
+  // Sales
   const addSale = (saleData: Omit<SaleInvoice, 'id' | 'invoiceNo'>): SaleInvoice => {
-    const nextInvoiceNo = sales.length > 0 ? Math.max(...sales.map((s) => s.invoiceNo)) + 1 : 1;
+    const nextInvoiceNo = (sales.length > 0 ? Math.max(...sales.map((s) => s.invoiceNo || 0)) : 0) + 1;
     const newSale: SaleInvoice = {
       ...saleData,
-      id: `inv-${Date.now()}`,
+      id: `inv-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
       invoiceNo: nextInvoiceNo,
     };
 
+    setSales((prev) => [newSale, ...prev]);
+    saveToStorage('sales', newSale.id, newSale);
+
+    // Adjust product inventory
     setProducts((prev) =>
       prev.map((prod) => {
-        const soldItem = saleData.items.find(
-          (item) => item.barcode.trim().toLowerCase() === prod.barcode.trim().toLowerCase()
-        );
-        if (soldItem) {
-          const updatedStock = parseFloat(Math.max(0, prod.stock - soldItem.qty).toFixed(3));
-          const updatedProd = { ...prod, stock: updatedStock };
-          saveToFirestore('products', updatedProd.id, updatedProd);
-          return updatedProd;
+        const item = newSale.items.find((i) => i.barcode === prod.barcode);
+        if (item) {
+          const updated = { ...prod, stock: Math.max(0, prod.stock - item.qty) };
+          saveToStorage('products', updated.id, updated);
+          return updated;
         }
         return prod;
       })
     );
 
-    setSales((prev) => [newSale, ...prev]);
-    saveToFirestore('sales', newSale.id, newSale);
-
     return newSale;
   };
 
-  const updateSale = (updatedSale: SaleInvoice) => {
-    setSales((prev) => prev.map((s) => (s.id === updatedSale.id ? updatedSale : s)));
-    saveToFirestore('sales', updatedSale.id, updatedSale);
+  const updateSale = (sale: SaleInvoice) => {
+    setSales((prev) => prev.map((s) => (s.id === sale.id ? sale : s)));
+    saveToStorage('sales', sale.id, sale);
   };
 
   const deleteSale = (id: string) => {
-    const targetSale = sales.find((s) => s.id === id);
-    if (targetSale) {
-      setProducts((prev) =>
-        prev.map((prod) => {
-          const soldItem = targetSale.items.find(
-            (item) => item.barcode.trim().toLowerCase() === prod.barcode.trim().toLowerCase()
-          );
-          if (soldItem) {
-            const updatedStock = parseFloat((prod.stock + soldItem.qty).toFixed(3));
-            const updatedProd = { ...prod, stock: updatedStock };
-            saveToFirestore('products', updatedProd.id, updatedProd);
-            return updatedProd;
-          }
-          return prod;
-        })
-      );
-    }
     setSales((prev) => prev.filter((s) => s.id !== id));
-    deleteFromFirestore('sales', id);
+    deleteFromStorage('sales', id);
   };
 
-  const addReturn = (ret: Omit<SaleReturn, 'id' | 'date'>) => {
-    const now = new Date();
-    const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-    
+  // Returns
+  const addReturn = (retData: Omit<SaleReturn, 'id' | 'date'>) => {
     const newReturn: SaleReturn = {
-      ...ret,
-      id: `ret-${Date.now()}`,
-      date: formattedDate,
+      ...retData,
+      id: `ret-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      date: new Date().toISOString(),
     };
 
+    setReturns((prev) => [newReturn, ...prev]);
+    saveToStorage('returns', newReturn.id, newReturn);
+
+    // Restock returned items
     setProducts((prev) =>
-      prev.map((p) => {
-        if (p.barcode.trim().toLowerCase() === ret.barcode.trim().toLowerCase()) {
-          const updatedProd = { ...p, stock: p.stock + ret.qty };
-          saveToFirestore('products', updatedProd.id, updatedProd);
-          return updatedProd;
+      prev.map((prod) => {
+        if (prod.barcode === newReturn.barcode) {
+          const updated = { ...prod, stock: prod.stock + (newReturn.qty || 1) };
+          saveToStorage('products', updated.id, updated);
+          return updated;
         }
-        return p;
+        return prod;
       })
     );
-
-    setReturns((prev) => [newReturn, ...prev]);
-    saveToFirestore('returns', newReturn.id, newReturn);
   };
 
-  const updateReturn = (updatedRet: SaleReturn) => {
-    setReturns((prev) => prev.map((r) => (r.id === updatedRet.id ? updatedRet : r)));
-    saveToFirestore('returns', updatedRet.id, updatedRet);
+  const updateReturn = (ret: SaleReturn) => {
+    setReturns((prev) => prev.map((r) => (r.id === ret.id ? ret : r)));
+    saveToStorage('returns', ret.id, ret);
   };
 
   const deleteReturn = (id: string) => {
     setReturns((prev) => prev.filter((r) => r.id !== id));
-    deleteFromFirestore('returns', id);
+    deleteFromStorage('returns', id);
   };
 
-  // ==========================================
-  // PURCHASES, CREDITS & EXPENSES
-  // ==========================================
-  const addPurchase = (pur: Omit<PurchaseRecord, 'id' | 'date'>, mode?: 'update_existing' | 'create_batch') => {
-    const now = new Date();
-    const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-    
-    let targetSupplier = suppliers.find(
-      (s) => (pur.supplierId && s.id === pur.supplierId) || (pur.supplierName && s.name.toLowerCase() === pur.supplierName.trim().toLowerCase())
-    );
-
-    if (!targetSupplier && pur.supplierName && pur.supplierName.trim() && pur.supplierName.trim().toLowerCase() !== 'general') {
-      const newSupId = `sup-${Date.now()}`;
-      const newSup: Supplier = {
-        id: newSupId,
-        name: pur.supplierName.trim(),
-        company: pur.supplierName.trim(),
-        phone: '',
-        email: '',
-        address: '',
-        balanceOwed: pur.totalCost,
-      };
-      setSuppliers((prev) => [newSup, ...prev]);
-      saveToFirestore('suppliers', newSup.id, newSup);
-      targetSupplier = newSup;
-    } else if (targetSupplier) {
-      setSuppliers((prev) =>
-        prev.map((s) => {
-          if (s.id === targetSupplier!.id) {
-            const updated = { ...s, balanceOwed: s.balanceOwed + pur.totalCost };
-            saveToFirestore('suppliers', updated.id, updated);
-            return updated;
-          }
-          return s;
-        })
-      );
-    }
-
-    const matchedSupplierId = targetSupplier ? targetSupplier.id : pur.supplierId;
-    const matchedSupplierName = targetSupplier ? targetSupplier.name : (pur.supplierName || 'General');
-
+  // Purchases
+  const addPurchase = (
+    pData: Omit<PurchaseRecord, 'id' | 'date'>,
+    mode: 'update_existing' | 'create_batch' = 'update_existing'
+  ) => {
     const newPurchase: PurchaseRecord = {
-      ...pur,
-      supplierId: matchedSupplierId,
-      supplierName: matchedSupplierName,
-      id: `pur-${Date.now()}`,
-      date: formattedDate,
+      ...pData,
+      id: `pur-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      date: new Date().toISOString(),
     };
 
-    if (targetSupplier || (matchedSupplierName && matchedSupplierName !== 'General')) {
-      const supTx: SupplierTransaction = {
-        id: `stx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        supplierId: matchedSupplierId || 'sup-gen',
-        supplierName: matchedSupplierName,
-        date: formattedDate,
-        type: 'PURCHASE_BILL',
-        referenceNo: `#PUR-${Math.floor(1000 + Math.random() * 9000)}`,
-        description: `Stock Inward: ${pur.itemName}`,
-        itemsSummary: `${pur.itemName} (${pur.qtyReceived} units @ Rs. ${pur.unitCostPrice})`,
-        debit: 0,
-        credit: pur.totalCost,
-        balance: (targetSupplier ? targetSupplier.balanceOwed : 0) + pur.totalCost,
-        paymentMethod: 'Credit Bill',
-        notes: `Inwarded to Inventory (Barcode: ${pur.barcode})`,
-      };
-      setSupplierTransactions((prev) => [supTx, ...prev]);
-      saveToFirestore('supplierTransactions', supTx.id, supTx);
-    }
-
-    setProducts((prev) => {
-      const existing = prev.find((p) => p.barcode.trim().toLowerCase() === pur.barcode.trim().toLowerCase());
-
-      if (mode === 'create_batch') {
-        const batchProduct: Product = {
-          id: `p-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-          barcode: pur.barcode,
-          name: pur.itemName,
-          company: pur.supplierName || 'General',
-          category: 'Pharmacy',
-          supplierId: matchedSupplierId,
-          supplierName: matchedSupplierName,
-          purchasePrice: pur.unitCostPrice,
-          retailPrice: pur.salePriceRetail,
-          wholesalePrice: pur.wholesalePrice,
-          stock: pur.qtyReceived,
-          minStockAlert: 5,
-          batchNo: `B-${Date.now().toString().slice(-4)}`,
-          unitOfSale: 'Count',
-        };
-        saveToFirestore('products', batchProduct.id, batchProduct);
-        return [batchProduct, ...prev];
-      }
-
-      if (existing) {
-        return prev.map((p) => {
-          if (p.id === existing.id) {
-            const updatedProd = {
-              ...p,
-              stock: p.stock + pur.qtyReceived,
-              supplierId: matchedSupplierId || p.supplierId,
-              supplierName: matchedSupplierName || p.supplierName,
-              purchasePrice: pur.unitCostPrice > 0 ? pur.unitCostPrice : p.purchasePrice,
-              retailPrice: pur.salePriceRetail > 0 ? pur.salePriceRetail : p.retailPrice,
-              wholesalePrice: pur.wholesalePrice > 0 ? pur.wholesalePrice : p.wholesalePrice,
-            };
-            saveToFirestore('products', updatedProd.id, updatedProd);
-            return updatedProd;
-          }
-          return p;
-        });
-      } else {
-        const created: Product = {
-          id: `p-${Date.now()}`,
-          barcode: pur.barcode,
-          name: pur.itemName,
-          company: pur.supplierName || 'General',
-          category: 'General',
-          supplierId: matchedSupplierId,
-          supplierName: matchedSupplierName,
-          purchasePrice: pur.unitCostPrice,
-          retailPrice: pur.salePriceRetail,
-          wholesalePrice: pur.wholesalePrice,
-          stock: pur.qtyReceived,
-          minStockAlert: 10,
-          unitOfSale: 'Count',
-        };
-        saveToFirestore('products', created.id, created);
-        return [created, ...prev];
-      }
-    });
-
     setPurchases((prev) => [newPurchase, ...prev]);
-    saveToFirestore('purchases', newPurchase.id, newPurchase);
+    saveToStorage('purchases', newPurchase.id, newPurchase);
+
+    // Update product stock and prices
+    setProducts((prev) => {
+      const updated = [...prev];
+      const idx = updated.findIndex((p) => p.barcode === newPurchase.barcode);
+      if (idx >= 0) {
+        const prod = updated[idx];
+        const newQty = (prod.stock || 0) + (newPurchase.qtyReceived || 0);
+        updated[idx] = {
+          ...prod,
+          stock: newQty,
+          purchasePrice: newPurchase.unitCostPrice > 0 ? newPurchase.unitCostPrice : prod.purchasePrice,
+          retailPrice: newPurchase.salePriceRetail > 0 ? newPurchase.salePriceRetail : prod.retailPrice,
+          wholesalePrice: newPurchase.wholesalePrice && newPurchase.wholesalePrice > 0 ? newPurchase.wholesalePrice : prod.wholesalePrice,
+        };
+        saveToStorage('products', updated[idx].id, updated[idx]);
+      }
+      return updated;
+    });
   };
 
-  const updatePurchase = (updatedPur: PurchaseRecord) => {
-    setPurchases((prev) => prev.map((p) => (p.id === updatedPur.id ? updatedPur : p)));
-    saveToFirestore('purchases', updatedPur.id, updatedPur);
+  const updatePurchase = (p: PurchaseRecord) => {
+    setPurchases((prev) => prev.map((item) => (item.id === p.id ? p : item)));
+    saveToStorage('purchases', p.id, p);
   };
 
   const deletePurchase = (id: string) => {
-    setPurchases((prev) => prev.filter((p) => p.id !== id));
-    deleteFromFirestore('purchases', id);
+    setPurchases((prev) => prev.filter((item) => item.id !== id));
+    deleteFromStorage('purchases', id);
   };
 
-  const addCredit = (c: Omit<CreditPayment, 'id' | 'date'>) => {
-    const now = new Date();
-    const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-    
+  // Credits
+  const addCredit = (cData: Omit<CreditPayment, 'id' | 'date'>) => {
     const newCredit: CreditPayment = {
-      ...c,
-      id: `c-${Date.now()}`,
-      date: formattedDate,
+      ...cData,
+      id: `crd-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      date: new Date().toISOString(),
     };
     setCredits((prev) => [newCredit, ...prev]);
-    saveToFirestore('credits', newCredit.id, newCredit);
+    saveToStorage('credits', newCredit.id, newCredit);
   };
 
-  const updateCredit = (updatedCredit: CreditPayment) => {
-    setCredits((prev) => prev.map((c) => (c.id === updatedCredit.id ? updatedCredit : c)));
-    saveToFirestore('credits', updatedCredit.id, updatedCredit);
+  const updateCredit = (c: CreditPayment) => {
+    setCredits((prev) => prev.map((item) => (item.id === c.id ? c : item)));
+    saveToStorage('credits', c.id, c);
   };
 
   const deleteCredit = (id: string) => {
-    setCredits((prev) => prev.filter((c) => c.id !== id));
-    deleteFromFirestore('credits', id);
+    setCredits((prev) => prev.filter((item) => item.id !== id));
+    deleteFromStorage('credits', id);
   };
 
-  const addExpense = (e: Omit<ExpenseRecord, 'id' | 'date'>) => {
-    const now = new Date();
-    const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-    
+  // Expenses
+  const addExpense = (eData: Omit<ExpenseRecord, 'id' | 'date'>) => {
     const newExpense: ExpenseRecord = {
-      ...e,
-      id: `exp-${Date.now()}`,
-      date: formattedDate,
+      ...eData,
+      id: `exp-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      date: new Date().toISOString(),
     };
     setExpenses((prev) => [newExpense, ...prev]);
-    saveToFirestore('expenses', newExpense.id, newExpense);
+    saveToStorage('expenses', newExpense.id, newExpense);
   };
 
-  const updateExpense = (updatedExp: ExpenseRecord) => {
-    setExpenses((prev) => prev.map((e) => (e.id === updatedExp.id ? updatedExp : e)));
-    saveToFirestore('expenses', updatedExp.id, updatedExp);
+  const updateExpense = (e: ExpenseRecord) => {
+    setExpenses((prev) => prev.map((item) => (item.id === e.id ? e : item)));
+    saveToStorage('expenses', e.id, e);
   };
 
   const deleteExpense = (id: string) => {
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
-    deleteFromFirestore('expenses', id);
+    setExpenses((prev) => prev.filter((item) => item.id !== id));
+    deleteFromStorage('expenses', id);
   };
 
+  // Suppliers
+  const addSupplier = (sData: Omit<Supplier, 'id'>) => {
+    const newSupplier: Supplier = {
+      ...sData,
+      id: `sup-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+    };
+    setSuppliers((prev) => [...prev, newSupplier]);
+    saveToStorage('suppliers', newSupplier.id, newSupplier);
+  };
+
+  const updateSupplier = (s: Supplier) => {
+    setSuppliers((prev) => prev.map((item) => (item.id === s.id ? s : item)));
+    saveToStorage('suppliers', s.id, s);
+  };
+
+  const deleteSupplier = (id: string) => {
+    setSuppliers((prev) => prev.filter((item) => item.id !== id));
+    deleteFromStorage('suppliers', id);
+  };
+
+  // Customers
+  const addCustomer = (cData: Omit<Customer, 'id'>) => {
+    const newCust: Customer = {
+      ...cData,
+      id: `cust-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+    };
+    setCustomers((prev) => [...prev, newCust]);
+    saveToStorage('customers', newCust.id, newCust);
+  };
+
+  const updateCustomer = (c: Customer) => {
+    setCustomers((prev) => prev.map((item) => (item.id === c.id ? c : item)));
+    saveToStorage('customers', c.id, c);
+  };
+
+  const deleteCustomer = (id: string) => {
+    setCustomers((prev) => prev.filter((item) => item.id !== id));
+    deleteFromStorage('customers', id);
+  };
+
+  // Transactions
+  const addCustomerTransaction = (tx: Omit<CustomerTransaction, 'id'>) => {
+    const newTx: CustomerTransaction = { ...tx, id: `ctx-${Date.now()}` };
+    setCustomerTransactions((prev) => [newTx, ...prev]);
+    saveToStorage('customerTransactions', newTx.id, newTx);
+  };
+
+  const updateCustomerTransaction = (tx: CustomerTransaction) => {
+    setCustomerTransactions((prev) => prev.map((item) => (item.id === tx.id ? tx : item)));
+    saveToStorage('customerTransactions', tx.id, tx);
+  };
+
+  const deleteCustomerTransaction = (id: string) => {
+    setCustomerTransactions((prev) => prev.filter((item) => item.id !== id));
+    deleteFromStorage('customerTransactions', id);
+  };
+
+  const addSupplierTransaction = (tx: Omit<SupplierTransaction, 'id'>) => {
+    const newTx: SupplierTransaction = { ...tx, id: `stx-${Date.now()}` };
+    setSupplierTransactions((prev) => [newTx, ...prev]);
+    saveToStorage('supplierTransactions', newTx.id, newTx);
+  };
+
+  const updateSupplierTransaction = (tx: SupplierTransaction) => {
+    setSupplierTransactions((prev) => prev.map((item) => (item.id === tx.id ? tx : item)));
+    saveToStorage('supplierTransactions', tx.id, tx);
+  };
+
+  const deleteSupplierTransaction = (id: string) => {
+    setSupplierTransactions((prev) => prev.filter((item) => item.id !== id));
+    deleteFromStorage('supplierTransactions', id);
+  };
+
+  // Settings
   const updateStoreSettings = (s: StoreSettings) => {
     setStoreSettings(s);
-    if (activeUserId) {
-      saveToFirestore('settings', 'store_config', {
-        storeSettings: s,
-        categories,
-        brands,
-        updatedAt: new Date().toISOString()
-      });
-    }
+    saveToStorage('settings', 'store_config', { storeSettings: s, categories, brands });
   };
 
-  const openThermalReceipt = (invoice: SaleInvoice, size: ThermalPaperSize = '80mm') => {
+  const openThermalReceipt = (invoice: SaleInvoice, size?: ThermalPaperSize) => {
     setPreviewInvoice(invoice);
-    setThermalPaperSize(size);
+    if (size) setThermalPaperSize(size);
   };
 
   const resetToDefaults = () => {
-    setProducts([]);
-    setSales([]);
-    setReturns([]);
-    setPurchases([]);
-    setCredits([]);
-    setExpenses([]);
-    setSuppliers([]);
-    setCustomers([]);
-    setCustomerTransactions([]);
-    setSupplierTransactions([]);
     setStoreSettings(initialStoreSettings);
+    setCategories(defaultCategories);
+    setBrands(defaultBrands);
+    saveToStorage('settings', 'store_config', {
+      storeSettings: initialStoreSettings,
+      categories: defaultCategories,
+      brands: defaultBrands,
+    });
   };
 
   const clearAllTemporaryData = () => {
-    setProducts([]);
     setSales([]);
     setReturns([]);
     setPurchases([]);
     setCredits([]);
     setExpenses([]);
-    setSuppliers([]);
-    setCustomers([]);
-    setCustomerTransactions([]);
-    setSupplierTransactions([]);
   };
 
   const exportDatabase = () => {
-    const data = {
-      version: '3.0.0',
-      exportDate: new Date().toISOString(),
+    const backup = {
+      storeSettings,
+      categories,
+      brands,
       products,
       sales,
       returns,
       purchases,
       credits,
       expenses,
-      storeSettings,
       suppliers,
       customers,
       customerTransactions,
       supplierTransactions,
-      categories,
-      brands,
-      userAccounts,
+      exportDate: new Date().toISOString(),
     };
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backup, null, 2));
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `limopos_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.setAttribute('href', dataStr);
+    a.setAttribute('download', `limopos_backup_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
   };
 
   const importDatabase = (jsonData: string): boolean => {
     try {
       const data = JSON.parse(jsonData);
-      if (data.products && Array.isArray(data.products)) {
+      if (data.products) {
         setProducts(data.products);
-        data.products.forEach((p: Product) => saveToFirestore('products', p.id, p));
+        data.products.forEach((p: Product) => saveToStorage('products', p.id, p));
       }
-      if (data.sales && Array.isArray(data.sales)) {
+      if (data.sales) {
         setSales(data.sales);
-        data.sales.forEach((s: SaleInvoice) => saveToFirestore('sales', s.id, s));
+        data.sales.forEach((s: SaleInvoice) => saveToStorage('sales', s.id, s));
       }
-      if (data.returns && Array.isArray(data.returns)) {
-        setReturns(data.returns);
-        data.returns.forEach((r: SaleReturn) => saveToFirestore('returns', r.id, r));
-      }
-      if (data.purchases && Array.isArray(data.purchases)) {
-        setPurchases(data.purchases);
-        data.purchases.forEach((p: PurchaseRecord) => saveToFirestore('purchases', p.id, p));
-      }
-      if (data.credits && Array.isArray(data.credits)) {
-        setCredits(data.credits);
-        data.credits.forEach((c: CreditPayment) => saveToFirestore('credits', c.id, c));
-      }
-      if (data.expenses && Array.isArray(data.expenses)) {
-        setExpenses(data.expenses);
-        data.expenses.forEach((e: ExpenseRecord) => saveToFirestore('expenses', e.id, e));
-      }
-      if (data.suppliers && Array.isArray(data.suppliers)) {
+      if (data.suppliers) {
         setSuppliers(data.suppliers);
-        data.suppliers.forEach((s: Supplier) => saveToFirestore('suppliers', s.id, s));
+        data.suppliers.forEach((s: Supplier) => saveToStorage('suppliers', s.id, s));
       }
-      if (data.customers && Array.isArray(data.customers)) {
+      if (data.customers) {
         setCustomers(data.customers);
-        data.customers.forEach((c: Customer) => saveToFirestore('customers', c.id, c));
-      }
-      if (data.customerTransactions && Array.isArray(data.customerTransactions)) {
-        setCustomerTransactions(data.customerTransactions);
-        data.customerTransactions.forEach((tx: CustomerTransaction) => saveToFirestore('customerTransactions', tx.id, tx));
-      }
-      if (data.supplierTransactions && Array.isArray(data.supplierTransactions)) {
-        setSupplierTransactions(data.supplierTransactions);
-        data.supplierTransactions.forEach((tx: SupplierTransaction) => saveToFirestore('supplierTransactions', tx.id, tx));
+        data.customers.forEach((c: Customer) => saveToStorage('customers', c.id, c));
       }
       if (data.storeSettings) {
         setStoreSettings(data.storeSettings);
-        if (activeUserId) {
-          saveToFirestore('settings', 'store_config', {
-            userId: activeUserId,
-            storeId: activeStoreId,
-            storeSettings: data.storeSettings,
-            categories: data.categories || defaultCategories,
-            brands: data.brands || defaultBrands,
-            updatedAt: new Date().toISOString()
-          });
-        }
       }
       return true;
-    } catch (e) {
-      console.error('Import error:', e);
+    } catch {
       return false;
     }
   };
@@ -1598,26 +964,19 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!activeUserId) return { success: false, count: 0 };
     try {
       setIsCloudSyncing(true);
-      // 1. Seed sample products into /users/{userId}/products
       for (const p of sampleSeedProducts) {
-        await saveToFirestore('products', p.id, p);
+        await saveToStorage('products', p.id, p);
       }
-      // 2. Seed sample suppliers into /users/{userId}/suppliers
       for (const s of sampleSeedSuppliers) {
-        await saveToFirestore('suppliers', s.id, s);
+        await saveToStorage('suppliers', s.id, s);
       }
-      // 3. Seed sample customers into /users/{userId}/customers
       for (const c of sampleSeedCustomers) {
-        await saveToFirestore('customers', c.id, c);
+        await saveToStorage('customers', c.id, c);
       }
-      // 4. Seed settings into /users/{userId}/settings/store_config
-      await saveToFirestore('settings', 'store_config', {
-        userId: activeUserId,
-        storeId: activeStoreId,
-        storeSettings: storeSettings,
+      await saveToStorage('settings', 'store_config', {
+        storeSettings,
         categories: categories.length ? categories : defaultCategories,
         brands: brands.length ? brands : defaultBrands,
-        updatedAt: new Date().toISOString()
       });
       setIsCloudSyncing(false);
       return { success: true, count: sampleSeedProducts.length };
@@ -1632,28 +991,25 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!activeUserId) return { success: false };
     try {
       setIsCloudSyncing(true);
-      products.forEach((p) => saveToFirestore('products', p.id, p));
-      sales.forEach((s) => saveToFirestore('sales', s.id, s));
-      returns.forEach((r) => saveToFirestore('returns', r.id, r));
-      purchases.forEach((p) => saveToFirestore('purchases', p.id, p));
-      credits.forEach((c) => saveToFirestore('credits', c.id, c));
-      expenses.forEach((e) => saveToFirestore('expenses', e.id, e));
-      suppliers.forEach((s) => saveToFirestore('suppliers', s.id, s));
-      customers.forEach((c) => saveToFirestore('customers', c.id, c));
-      customerTransactions.forEach((tx) => saveToFirestore('customerTransactions', tx.id, tx));
-      supplierTransactions.forEach((tx) => saveToFirestore('supplierTransactions', tx.id, tx));
-      await saveToFirestore('settings', 'store_config', {
-        userId: activeUserId,
-        storeId: activeStoreId,
-        storeSettings: storeSettings,
-        categories: categories,
-        brands: brands,
-        updatedAt: new Date().toISOString()
+      products.forEach((p) => saveToStorage('products', p.id, p));
+      sales.forEach((s) => saveToStorage('sales', s.id, s));
+      returns.forEach((r) => saveToStorage('returns', r.id, r));
+      purchases.forEach((p) => saveToStorage('purchases', p.id, p));
+      credits.forEach((c) => saveToStorage('credits', c.id, c));
+      expenses.forEach((e) => saveToStorage('expenses', e.id, e));
+      suppliers.forEach((s) => saveToStorage('suppliers', s.id, s));
+      customers.forEach((c) => saveToStorage('customers', c.id, c));
+      customerTransactions.forEach((tx) => saveToStorage('customerTransactions', tx.id, tx));
+      supplierTransactions.forEach((tx) => saveToStorage('supplierTransactions', tx.id, tx));
+      await saveToStorage('settings', 'store_config', {
+        storeSettings,
+        categories,
+        brands,
       });
       setIsCloudSyncing(false);
       return { success: true };
     } catch (e) {
-      console.error('Sync all to cloud error:', e);
+      console.error('Sync error:', e);
       setIsCloudSyncing(false);
       return { success: false };
     }
